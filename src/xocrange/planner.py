@@ -161,7 +161,8 @@ def plan(root: Path, *, preset="bootstrap", include=(), without=(), allow_fixtur
         if security_path and (manifest["status"] != "experimental" or not allow_experimental):
             raise XocError("experimental_component", "The security-path runtime requires explicit experimental selection.")
         siem = identifier == "siem" and manifest["kind"] == "component"
-        schema = "security-compose-fragment" if security_path else "siem-compose-fragment" if siem else "compose-fragment"
+        siem_ui = identifier == "siem-ui" and manifest["kind"] == "component"
+        schema = "security-compose-fragment" if security_path else "siem-compose-fragment" if siem else "siem-ui-compose-fragment" if siem_ui else "compose-fragment"
         fragment = validate(yaml_document(fragment_path), schema)
         if siem:
             service = fragment["services"]["siem"]
@@ -206,6 +207,10 @@ def plan(root: Path, *, preset="bootstrap", include=(), without=(), allow_fixtur
             compose["services"][name] = service
             owners[name] = identifier
 
+    if 'siem-ui' in selected:
+        # Only this reviewed built-in can add TLS material and the Dashboard route.
+        compose['services']['web']['volumes'].append('web-tls:/run/xoc-tls:ro')
+        compose['services']['web']['environment']['XOC_SIEM_UI'] = '1'
     check_addresses(compose)
     attach_http_targets(compose, [entries[key]["manifest"] for key in selected], owners)
     services = compose["services"]

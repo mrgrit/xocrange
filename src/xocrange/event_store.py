@@ -49,6 +49,10 @@ class Store:
         if 'source_id' not in {r[1] for r in self.db.execute('PRAGMA table_info(records)')}:
             self.db.execute('ALTER TABLE records ADD COLUMN source_id TEXT')
             self.db.commit()
+        if 'indexed' not in {r[1] for r in self.db.execute('PRAGMA table_info(events)')}:
+            self.db.execute('ALTER TABLE events ADD COLUMN indexed TEXT')
+            self.db.commit()
+        self.db.execute('CREATE INDEX IF NOT EXISTS events_indexing ON events(indexed,confirmed)')
 
     @contextmanager
     def transaction(self):
@@ -151,11 +155,16 @@ class Store:
         healthy = result['sources'] and all(r['status'] in ('ready', 'awaiting-file') and
             (current - datetime.fromisoformat(r['checked'].replace('Z', '+00:00'))).total_seconds() < 60 for r in result['sources'])
         result['status'] = 'ready' if healthy and not result['quarantined'] and result['oldest_pending_seconds'] < 120 else 'degraded'
+        if self.cursor('indexer-enabled'):
+            row=self.db.execute('SELECT COUNT(*),MIN(observed) FROM events WHERE confirmed IS NOT NULL AND indexed IS NULL').fetchone()
+            result['index_pending']=row[0]
+            result['oldest_index_pending_seconds']=max(0,int((current-datetime.fromisoformat(row[1].replace('Z','+00:00'))).total_seconds())) if row[1] else 0
+            if result['oldest_index_pending_seconds']>=120: result['status']='degraded'
         return result
 
     def prune(self, days=7):
         cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat().replace("+00:00", "Z")
         with self.db:
-            self.db.execute("DELETE FROM events WHERE observed<? AND confirmed IS NOT NULL", (cutoff,))
+            self.db.execute("DELETE FROM events WHERE observed<? AND confirmed IS NOT NULL AND (?=0 OR indexed IS NOT NULL)", (cutoff,int(bool(self.cursor('indexer-enabled')))))
             self.db.execute("DELETE FROM records WHERE observed<? AND ref NOT IN (SELECT ref FROM events)", (cutoff,))
         self.db.execute("PRAGMA wal_checkpoint(TRUNCATE)")

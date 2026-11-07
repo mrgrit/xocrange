@@ -37,5 +37,7 @@ jobs:
           docker compose -f .local/plans/ci-fixture/compose.yaml config --quiet
           xoc plan --preset security-path --allow-experimental --allow-fixtures --include fixture-security-probe --output ci-security
           docker compose -f .local/plans/ci-security/compose.yaml config --quiet
+          xoc plan --preset security-path --allow-experimental --include siem-ui --output ci-siem-ui
+          docker compose -f .local/plans/ci-siem-ui/compose.yaml config --quiet
       - name: Package CLI and schemas
         run: python -m pip wheel --no-deps --wheel-dir dist .

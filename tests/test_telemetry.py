@@ -184,3 +184,25 @@ def test_v01_validation_remains_available():
     validate(e | {'schema_version':'xoc.event/0.1.0'}, 'c1-event')
     with pytest.raises(XocError):
         validate(e | {'schema_version':'xoc.event/0.1.0','producer':'sysmon'}, 'c1-event')
+
+
+def test_large_and_binary_journal_messages_do_not_stall_collection(tmp_path,monkeypatch):
+    import io
+    import time
+    collector=Collector.__new__(Collector);collector.store=Store(tmp_path/'store')
+    raw=(FIXTURES/'sysmon-process.xml').read_text()
+    large=raw.replace('DO-NOT-EXPORT','x'*5000)
+    messages=[large,list(raw.encode()),None,[255,254],raw]
+    rows=[{'MESSAGE':message,'__CURSOR':str(i),'__REALTIME_TIMESTAMP':str(int(time.time()*1000000))} for i,message in enumerate(messages)]
+    class Process:
+        def __init__(self,args,**kwargs):
+            assert '--all' in args
+            self.stdout=io.BytesIO(('\n'.join(json.dumps(row) for row in rows)+'\n').encode())
+        def wait(self,**kwargs):return 0
+        def poll(self):return 0
+    monkeypatch.setattr('xocrange.collector.subprocess.Popen',Process)
+    assert collector.sysmon()=='ready'
+    assert collector.store.cursor('sysmon-journal')['cursor']=='4'
+    assert collector.store.status()['quarantined']==2
+    assert collector.store.db.execute('SELECT COUNT(*) FROM records WHERE raw=?',(b'\xff\xfe',)).fetchone()[0]==1
+    assert len(collector.store.query())==3

@@ -121,6 +121,14 @@ class Collector:
                 raise XocError('untrusted_log_volume', 'Log volume path is not a local, direct directory.')
             self.volumes[service] = (name, mount, base)
         self.store = Store(directory)
+        self.indexer = None
+        if 'siem-ui' in result['lock']['selected']:
+            from .indexer import Client
+            self.indexer = Client(self.engine,result['compose']['name'])
+        with self.store.transaction():
+            self.store.set_cursor('indexer-enabled', bool(self.indexer))
+            if not self.indexer:
+                self.store.db.execute("DELETE FROM health WHERE source='indexer'")
         self.lock = open(self.store.directory / 'collector.lock', 'a')
         try:
             fcntl.flock(self.lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -194,7 +202,8 @@ class Collector:
 
     def sysmon(self):
         state = self.store.cursor('sysmon-journal')
-        args = ['journalctl', '-t', 'sysmon', '--output=json', '--no-pager']
+        # Without --all, journald replaces fields over 4096 bytes with null.
+        args = ['journalctl', '-t', 'sysmon', '--output=json', '--all', '--no-pager']
         args += ['--after-cursor', state['cursor']] if state else ['--since', '-1 hour']
         process = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
         limited = False
@@ -212,10 +221,18 @@ class Collector:
                     raise XocError('journal_oversize', 'Sysmon journal record exceeds its budget.')
                 record = json.loads(line)
                 message, cursor = record.get('MESSAGE'), record.get('__CURSOR')
-                if not isinstance(message, str) or not isinstance(cursor, str):
-                    raise XocError('journal_format', 'Sysmon journal record is not a text message.')
+                if not isinstance(cursor, str):
+                    raise XocError('journal_format', 'Sysmon journal record has no usable cursor.')
+                if isinstance(message,str):
+                    raw_message=message.encode()
+                elif isinstance(message,list) and all(type(n) is int and 0 <= n <= 255 for n in message):
+                    raw_message=bytes(message)
+                else:
+                    # Preserve an invalid record for quarantine and advance past
+                    # it; one malformed MESSAGE must not stall the journal.
+                    raw_message=json.dumps(record).encode()
                 with self.store.transaction():
-                    self.store.ingest('sysmon', 'host-sysmon', cursor, message.encode())
+                    self.store.ingest('sysmon', 'host-sysmon', cursor, raw_message)
                     latest = int(record['__REALTIME_TIMESTAMP']) / 1000000
                     self.store.set_cursor('sysmon-journal', {'cursor': cursor, 'source_time': latest})
             else:
@@ -281,6 +298,12 @@ class Collector:
                 self.store.health(name, status or 'ready')
             except (XocError, OSError, ValueError, subprocess.TimeoutExpired) as exc:
                 self.store.health(name, getattr(exc, 'code', 'collection_failed'))
+        if self.indexer:
+            from .indexer import export
+            try:
+                self.store.health('indexer',export(self.store,self.indexer))
+            except (XocError,OSError,ValueError) as exc:
+                self.store.health('indexer',getattr(exc,'code','indexer_failed'))
         return self.store.status()
 
     def run(self):

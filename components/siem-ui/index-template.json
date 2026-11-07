@@ -1,0 +1,333 @@
+{
+  "index_patterns": [
+    "xoc-events-*"
+  ],
+  "priority": 100,
+  "template": {
+    "settings": {
+      "number_of_shards": 1,
+      "number_of_replicas": 0,
+      "refresh_interval": "5s"
+    },
+    "mappings": {
+      "dynamic": false,
+      "properties": {
+        "schema_version": {
+          "type": "keyword",
+          "ignore_above": 1024
+        },
+        "event_id": {
+          "type": "keyword",
+          "ignore_above": 1024
+        },
+        "tenant_id": {
+          "type": "keyword",
+          "ignore_above": 1024
+        },
+        "range_id": {
+          "type": "keyword",
+          "ignore_above": 1024
+        },
+        "producer": {
+          "type": "keyword",
+          "ignore_above": 1024
+        },
+        "source_id": {
+          "type": "keyword",
+          "ignore_above": 1024
+        },
+        "timestamp": {
+          "type": "date"
+        },
+        "observed_at": {
+          "type": "date"
+        },
+        "event": {
+          "properties": {
+            "type": {
+              "type": "keyword",
+              "ignore_above": 1024
+            },
+            "category": {
+              "type": "keyword",
+              "ignore_above": 1024
+            },
+            "action": {
+              "type": "keyword",
+              "ignore_above": 1024
+            },
+            "outcome": {
+              "type": "keyword",
+              "ignore_above": 1024
+            },
+            "severity": {
+              "type": "integer"
+            }
+          }
+        },
+        "evidence": {
+          "properties": {
+            "ref": {
+              "type": "keyword",
+              "ignore_above": 1024
+            },
+            "sha256": {
+              "type": "keyword",
+              "ignore_above": 1024
+            }
+          }
+        },
+        "rule": {
+          "properties": {
+            "id": {
+              "type": "keyword",
+              "ignore_above": 1024
+            },
+            "original_severity": {
+              "type": "keyword",
+              "ignore_above": 1024
+            }
+          }
+        },
+        "http": {
+          "properties": {
+            "method": {
+              "type": "keyword",
+              "ignore_above": 1024
+            },
+            "bytes": {
+              "type": "long"
+            },
+            "status_code": {
+              "type": "integer"
+            }
+          }
+        },
+        "process": {
+          "properties": {
+            "pid": {
+              "type": "long"
+            },
+            "parent_pid": {
+              "type": "long"
+            },
+            "executable": {
+              "type": "keyword",
+              "ignore_above": 1024
+            },
+            "name": {
+              "type": "keyword",
+              "ignore_above": 1024
+            },
+            "entity_id": {
+              "type": "keyword",
+              "ignore_above": 1024
+            }
+          }
+        },
+        "user": {
+          "properties": {
+            "id": {
+              "type": "keyword",
+              "ignore_above": 1024
+            }
+          }
+        },
+        "host": {
+          "properties": {
+            "name": {
+              "type": "keyword",
+              "ignore_above": 1024
+            }
+          }
+        },
+        "file": {
+          "properties": {
+            "path": {
+              "type": "keyword",
+              "ignore_above": 1024
+            }
+          }
+        },
+        "network": {
+          "properties": {
+            "source": {
+              "properties": {
+                "ip": {
+                  "type": "ip"
+                },
+                "port": {
+                  "type": "integer"
+                }
+              }
+            },
+            "destination": {
+              "properties": {
+                "ip": {
+                  "type": "ip"
+                },
+                "port": {
+                  "type": "integer"
+                }
+              }
+            },
+            "protocol": {
+              "type": "keyword",
+              "ignore_above": 1024
+            }
+          }
+        },
+        "wazuh": {
+          "properties": {
+            "confirmed_at": {
+              "type": "date"
+            },
+            "rule_id": {
+              "type": "keyword",
+              "ignore_above": 1024
+            }
+          }
+        },
+        "sysmon": {
+          "properties": {
+            "event_id": {
+              "type": "integer"
+            }
+          }
+        },
+        "log": {
+          "properties": {
+            "level": {
+              "type": "keyword",
+              "ignore_above": 1024
+            },
+            "module": {
+              "type": "keyword",
+              "ignore_above": 1024
+            },
+            "code": {
+              "type": "keyword",
+              "ignore_above": 1024
+            }
+          }
+        },
+        "osquery": {
+          "properties": {
+            "query": {
+              "type": "keyword",
+              "ignore_above": 1024
+            },
+            "row_index": {
+              "type": "integer"
+            },
+            "row_count": {
+              "type": "integer"
+            },
+            "columns": {
+              "properties": {
+                "pid": {
+                  "type": "keyword",
+                  "ignore_above": 1024
+                },
+                "parent": {
+                  "type": "keyword",
+                  "ignore_above": 1024
+                },
+                "uid": {
+                  "type": "keyword",
+                  "ignore_above": 1024
+                },
+                "gid": {
+                  "type": "keyword",
+                  "ignore_above": 1024
+                },
+                "name": {
+                  "type": "keyword",
+                  "ignore_above": 1024
+                },
+                "path": {
+                  "type": "keyword",
+                  "ignore_above": 1024
+                },
+                "version": {
+                  "type": "keyword",
+                  "ignore_above": 1024
+                },
+                "port": {
+                  "type": "keyword",
+                  "ignore_above": 1024
+                },
+                "address": {
+                  "type": "keyword",
+                  "ignore_above": 1024
+                },
+                "protocol": {
+                  "type": "keyword",
+                  "ignore_above": 1024
+                },
+                "family": {
+                  "type": "keyword",
+                  "ignore_above": 1024
+                },
+                "state": {
+                  "type": "keyword",
+                  "ignore_above": 1024
+                },
+                "sha256": {
+                  "type": "keyword",
+                  "ignore_above": 1024
+                }
+              }
+            }
+          }
+        },
+        "audit": {
+          "properties": {
+            "key": {
+              "type": "keyword",
+              "ignore_above": 1024
+            },
+            "serial": {
+              "type": "keyword",
+              "ignore_above": 1024
+            },
+            "complete": {
+              "type": "boolean"
+            },
+            "arch": {
+              "type": "keyword",
+              "ignore_above": 1024
+            },
+            "syscall": {
+              "type": "keyword",
+              "ignore_above": 1024
+            },
+            "record_types": {
+              "type": "keyword",
+              "ignore_above": 1024
+            }
+          }
+        },
+        "time_basis": {
+          "type": "keyword",
+          "ignore_above": 1024
+        },
+        "correlation": {
+          "properties": {
+            "transaction_id": {
+              "type": "keyword",
+              "ignore_above": 1024
+            },
+            "parent_event_id": {
+              "type": "keyword",
+              "ignore_above": 1024
+            },
+            "message_index": {
+              "type": "integer"
+            }
+          }
+        }
+      }
+    }
+  }
+}

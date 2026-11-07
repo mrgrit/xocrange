@@ -66,3 +66,5 @@ YAML은 SafeLoader 기반이며 중복 키·별칭·임의 객체 태그를 거�
 ## SIEM 내장 역할
 
 선택 가능한 `siem`은 experimental이며 `--allow-experimental --include siem`으로 계획한다. 일반 모듈은 volume/추가 capability 권한을 얻지 않는다. 내장 security-path의 장비별 로그 볼륨과 내장 siem의 자체 로그 볼륨·큐 tmpfs만 별도 스키마와 역할 검사로 허용한다. Compose 기동은 검증된 전용 프로젝트에서 제거된 서비스의 orphan을 정리하되 볼륨을 삭제하지 않는다. [결정 근거](../adr/0005-core-telemetry.md)
+
+선택 가능한 `siem-ui`는 `siem`과 `security-path`를 요구한다. [전용 고정 스키마](../../src/xocrange/contracts/siem-ui-compose-fragment.json)는 검토한 Indexer·Dashboard·HAProxy 구성과 여섯 전용 볼륨만 허용한다. 외부 포트는 ingress의 80/443뿐이며, web에는 공개 CA·로고·호스트 예외 설정을 읽기 전용으로 연결한다. 일반 확장 모듈의 권한은 늘리지 않는다. 구성·인증·Rule 예외는 [SIEM 웹 관제](SIEM-WEB.md)에 기록한다.

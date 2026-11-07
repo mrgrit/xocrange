@@ -50,10 +50,18 @@ else
     sysmon -accepteula -i /etc/xocrange/sysmon.xml
 fi
 systemctl enable sysmon.service
-install -m 0600 "$release/components/siem/audit.rules" /etc/audit/rules.d/70-xocrange.rules
-systemctl enable --now auditd.service
+systemctl enable auditd.service
+# On Ubuntu 26.04 auditd Wants a non-persistent audit-rules oneshot. Starting
+# an already active auditd can re-run that loader concurrently with our updates.
+if ! systemctl is-active --quiet auditd.service; then systemctl start auditd.service; fi
+for ((attempt=0; attempt<30; attempt++)); do
+    audit_job=$(systemctl show audit-rules.service --property=Job --value 2>/dev/null || true)
+    [[ -z $audit_job || $audit_job == 0 ]] && break
+    sleep 1
+done
+[[ -z $audit_job || $audit_job == 0 ]] || { printf 'Audit rule loader did not finish\n' >&2; exit 2; }
 # Add only xOC's rules; never flush the host audit rules or change immutable mode.
-python3 "$release/scripts/configure-audit.py" /etc/audit/rules.d/70-xocrange.rules
+python3 "$release/scripts/configure-audit.py" "$release/components/siem/audit.rules" --output /etc/audit/rules.d/70-xocrange.rules
 cat > /etc/systemd/system/xocrange-collector.service <<EOF
 [Unit]
 Description=xOC Core durable collection and Wazuh decoding

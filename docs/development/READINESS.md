@@ -2,7 +2,7 @@
 
 확인일: 2026-11-07. 계획 기준: `xocrange_plan@5599078`. 이번 범위는 K01/K02 준비 작업이며 모든 준비 항목의 완료를 선언하지 않는다.
 
-아래는 착수 전 점검 기록이다. 이후 C1·설치 계획기, 실제 보안 경로와 단일 명령 설치, 8종 SIEM 수집·디코딩을 구현했다. 현재 범위와 실환경 결과는 [SIEM 구성](SIEM.md), [SIEM 검증](SIEM-VALIDATION-2026-11-07.md), [VM 설치 검증](VM-VALIDATION-2026-11-07.md)을 기준으로 본다. 초기 구현 기록은 [IMPLEMENTATION-01](IMPLEMENTATION-01.md)에 남긴다.
+아래는 착수 전 점검 기록이다. 이후 C1·설치 계획기, 실제 보안 경로와 단일 명령 설치, 8종 SIEM 수집·디코딩을 구현했다. 이후 선택형 Indexer·HTTPS 웹 관제와 제한된 WAF Rule 예외도 구현했다. [SIEM 웹 관제](SIEM-WEB.md)와 [웹 관제 검증](SIEM-WEB-VALIDATION-2026-11-07.md)을 추가로 참고한다. 현재 범위와 실환경 결과는 [SIEM 구성](SIEM.md), [SIEM 검증](SIEM-VALIDATION-2026-11-07.md), [VM 설치 검증](VM-VALIDATION-2026-11-07.md)을 기준으로 본다. 초기 구현 기록은 [IMPLEMENTATION-01](IMPLEMENTATION-01.md)에 남긴다.
 
 ## 지금 완료한 준비
 

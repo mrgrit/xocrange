@@ -7,10 +7,11 @@ name = "xocrange-core"
 version = "0.1.0"
 description = "xOC Range Core contract and installation planner"
 requires-python = ">=3.10"
-dependencies = ["PyYAML>=5.4.1,<7", "jsonschema>=3.2,<5"]
+dependencies = ["PyYAML>=5.4.1,<7", "jsonschema>=3.2,<5", "bcrypt>=4,<6"]
 
 [project.optional-dependencies]
 test = ["pytest>=7,<10"]
+browser-test = ["playwright>=1.55,<2"]
 
 [project.scripts]
 xoc = "xocrange.cli:main"

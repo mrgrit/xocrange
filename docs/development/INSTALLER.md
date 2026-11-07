@@ -10,9 +10,9 @@
 sudo bash install.sh
 ```
 
-현재는 개발 버전이라 위 실행이 experimental security-path를 선택한다. platform·fw·IPS·WAF, SIEM 분석 백엔드, osquery·Sysmon·auditd와 무해한 검증용 client/backend를 설치한다. `--without siem`으로 SIEM 및 xOC 호스트 수집을 제외한다. Wazuh Indexer/Dashboard·콘솔·포털은 아직 포함하지 않으며, 전체 Community 완성본으로 성공을 표시하지 않는다. [8종 수집·검증](SIEM.md)을 함께 참고한다.
+현재는 개발 버전이라 위 실행이 experimental security-path를 선택한다. platform·fw·IPS·WAF, SIEM 분석 백엔드, osquery·Sysmon·auditd와 무해한 검증용 client/backend를 설치한다. 기본 선택인 `siem-ui`는 Wazuh Indexer와 OpenSearch Dashboards, HTTPS 진입점을 추가한다. `--without siem-ui`는 웹 관제만, `--without siem`은 웹 관제와 SIEM·xOC 호스트 수집을 함께 제외한다. 장비 콘솔·사용자 포털은 아직 포함하지 않으며, 전체 Community 완성본으로 성공을 표시하지 않는다. [8종 수집·검증](SIEM.md)을 함께 참고한다.
 
-현재 프로필의 실행 전 검사는 2 vCPU, RAM 약 4GB, 데이터 경로 여유 20GB 이상이다. 이는 전체 Core 최소 사양을 실측한 값이 아니다. 전체 개발을 위한 권장 예산은 8 vCPU·32GB RAM·OS 80GB + 데이터 300GB다.
+현재 프로필의 실행 전 검사는 2 vCPU, 웹 관제 포함 시 RAM 약 8GB(제외 시 약 4GB), 데이터 경로 여유 20GB 이상이다. 이번 웹 관제 검증 VM은 8 vCPU·16GB RAM이다. 이는 전체 Core 최소 사양을 실측한 값이 아니다. 전체 개발을 위한 권장 예산은 8 vCPU·32GB RAM·OS 80GB + 데이터 300GB다.
 
 ## 자동 수행
 
@@ -23,9 +23,9 @@ sudo bash install.sh
 5. Docker 공식 apt 저장소와 Docker Engine·containerd·Compose·Buildx를 설치한다. 전체 OS 업그레이드는 하지 않는다.
 6. Docker와 containerd의 데이터 경로를 함께 설정한다. 원래 설정은 별도로 보존한다.
 7. br_netfilter·nfnetlink_queue를 로드하고 원래 bridge sysctl 값을 보존한 뒤 필요한 값을 적용한다. 호스트 방화벽 체인을 초기화하지 않는다.
-8. 이미지를 빌드하고 검증 계획으로 기동한다.
+8. 웹 관제 선택 시 설치별 비밀번호·CA·TLS 인증서와 전용 설정 볼륨을 준비하고 `vm.max_map_count`를 확인한다. 이미지를 빌드하고 검증 계획으로 기동한다.
 9. 실제 통신·차단·우회 방지·출처 보존·C1 증거·IPS 중단/복구와 platform health를 확인한다.
-10. systemd 서비스를 등록하고 시작한다. 이 경로에서도 수용 검증이 통과해야 완료 상태를 쓴다.
+10. systemd 서비스를 등록하고 시작한다. Indexer 매핑·보존 정책·기본 Dashboard를 초기화하고, 8종 Wazuh 디코딩과 실제 HTTPS·WAF·로그인·검색 수용 검증이 통과해야 완료 상태를 쓴다.
 
 패키지 설치·이미지 빌드·검증 중 하나라도 실패하면 비정상 종료한다. 상태 파일에는 실패 단계와 로그 위치를 기록한다. 조사할 수 있도록 해당 프로젝트의 컨테이너·로그를 보존한다.
 
@@ -40,6 +40,12 @@ sudo bash install.sh --data-dir /srv/xoc-data
 
 # 설치 가능한 모듈 선택/제외. ID는 catalog에 등록된 것만 허용한다.
 sudo bash install.sh --include <module-id> --without <optional-module-id>
+
+# 브라우저에서 사용할 DNS 이름 또는 IPv4 (생략 시 호스트 주소 자동 선택)
+sudo bash install.sh --public-host xoc.example.test
+
+# 웹 관제 제외, 로컬 SIEM 백엔드는 유지
+sudo bash install.sh --without siem-ui
 
 # 별도로 받은 스크립트에서 특정 소스 커밋 설치
 sudo bash install.sh --ref <40-character-commit-sha>
@@ -57,6 +63,9 @@ sudo bash install.sh --ref <40-character-commit-sha>
 | `/opt/xocrange/venvs/<source-hash>` | 해당 소스의 Python 실행 환경 |
 | `/opt/xocrange/current` | 마지막으로 설치에 성공한 소스 |
 | `/var/lib/xocrange/last-install.json` | 마지막 실행 성공/실패, 로그·검증 증거 위치 |
+| `/var/lib/xocrange/ui/` | root 전용 비밀번호·CA·TLS 키 |
+| `/etc/xocrange/ca.crt` | 브라우저 PC에서 신뢰할 공개 CA 인증서 |
+| `/var/lib/xocrange/siem-ui-acceptance.json` | 실제 HTTPS·WAF·UI 수용 검사 |
 | `/var/lib/xocrange/original-config/` | 설치 전 런타임 설정 |
 | `/var/lib/xocrange/original-bridge-nf` | 설치 전 bridge sysctl 값 |
 | `/var/log/xocrange/install-*.log` | 설치 실행 로그 |
@@ -75,9 +84,9 @@ sudo journalctl -u xocrange-core.service --no-pager
 sudo xoc catalog
 ```
 
-현재 외부 사용자 포털과 게시된 호스트 포트는 없다. platform health는 컨테이너 내부의 `127.0.0.1:8080/healthz`에서 확인하고, 실습 경로는 내부 probe로 검증한다. 서비스 등록 성공은 실제 재부팅 검증과 구분하며 결과의 `reboot_verified`는 별도 검증 전까지 false다.
+웹 관제 선택 시 HTTPS 443과 HTTPS로 리다이렉트하는 HTTP 80만 게시한다. Indexer 9200·Dashboard 5601은 게시하지 않는다. `sudo xoc siem credentials`로 URL과 초기 로그인 정보를 확인한다. 브라우저 PC에는 설치별 CA를 한 번 신뢰 등록한다. 상세 경로와 Rule 예외는 [SIEM 웹 관제](SIEM-WEB.md)를 따른다. 외부 사용자 포털은 아직 없다. platform health는 컨테이너 내부의 `127.0.0.1:8080/healthz`에서 확인하고, 실습 경로는 내부 probe로 검증한다. 서비스 등록 성공은 실제 재부팅 검증과 구분하며 결과의 `reboot_verified`는 별도 검증 전까지 false다.
 
-부팅 시 검증된 계획·로컬 이미지로 `lab start`를 실행하고 `lab verify`까지 통과해야 서비스 성공으로 표시한다. `lab start`는 `--no-build --pull never`를 사용한다. 종료는 해당 프로젝트의 `lab down`만 호출한다.
+부팅 시 검증된 계획·로컬 이미지로 `lab start`를 실행하고 `lab verify`와 선택한 웹 관제 초기화까지 통과해야 서비스 성공으로 표시한다. `lab start`는 `--no-build --pull never`를 사용한다. 종료는 해당 프로젝트의 `lab down`만 호출한다.
 
 ## 근거
 
@@ -88,3 +97,5 @@ sudo xoc catalog
 ## SIEM 선택과 데이터 유지
 
 기본 설치는 SIEM을 포함하며 15개 통신 검사에 이어 실제 8종 로그가 Wazuh에서 디코딩되는지 검사한다. xOC collector·osquery·Sysmon·auditd 구성을 설치기가 수행한다. `last-install.json`에 선택 모듈과 SIEM 검사 결과를 기록한다. 제외·재포함 시 컨테이너 로그 볼륨과 원본 DB를 삭제하지 않으며, source volume의 안정된 식별자로 재수집 중복을 방지한다. 실험 중 초기 디코더 오류는 원본을 보관한 채 수정 후 재처리했다.
+
+웹 관제 제외 시 Indexer·Dashboard 데이터와 설치별 CA·비밀번호를 보존한다. 재포함 또는 재설치는 기본 saved object를 덮어쓰지 않는다. 빈 Indexer로 복구할 때는 보존한 원본 C1을 다시 전송하며, 미전송·미확인 데이터는 성공 처리하지 않는다. Ubuntu 26.04의 심볼릭 링크 명령은 auditd 규칙에 실제 실행 파일 경로를 기록한다. 수용 검사는 `xoc_probe` 실행 이벤트를 확인한다. 이미 실행 중인 auditd를 다시 start하여 Ubuntu 26.04의 `audit-rules` oneshot과 충돌하지 않도록 하며, 진행 중인 규칙 로더가 끝난 뒤 자체 규칙만 조정한다.

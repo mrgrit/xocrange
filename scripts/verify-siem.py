@@ -21,7 +21,7 @@ deadline = time.monotonic() + 180
 expected = set(SOURCES)
 while True:
     report = store.status()
-    available = {row[0] for row in store.db.execute("SELECT DISTINCT producer FROM events WHERE observed>=? AND confirmed IS NOT NULL AND julianday(json_extract(event, '$.timestamp'))>=julianday(?) AND (producer!='sysmon' OR json_extract(event, '$.event.type')='observation')", (cutoff,cutoff))}
+    available = {row[0] for row in store.db.execute("SELECT DISTINCT producer FROM events WHERE observed>=? AND confirmed IS NOT NULL AND julianday(json_extract(event, '$.timestamp'))>=julianday(?) AND (producer!='sysmon' OR json_extract(event, '$.event.type')='observation') AND (producer!='auditd' OR json_extract(event, '$.audit.key')='xoc_probe')", (cutoff,cutoff))}
     sources_ready = {row['source']: row['status'] for row in report['sources']}
     passed = expected <= available and sources_ready.get('wazuh') == 'ready'
     if passed or time.monotonic() >= deadline:

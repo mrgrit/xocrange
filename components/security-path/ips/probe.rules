@@ -1,2 +1,2 @@
 # Harmless, deterministic inline-path probe. Not a general attack rules feed.
-drop http any any -> 172.29.12.80 8080 (msg:"xOC inline verification marker"; flow:established,to_server; http.header; content:"X-Xoc-Probe|3a 20|ips-block"; nocase; sid:1000001; rev:1;)
+drop http any any -> 172.29.12.80 [8080,8443] (msg:"xOC inline verification marker"; flow:established,to_server; http.header; content:"X-Xoc-Probe|3a 20|ips-block"; nocase; sid:1000001; rev:2;)

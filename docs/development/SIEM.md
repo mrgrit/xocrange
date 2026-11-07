@@ -1,6 +1,6 @@
 # Core SIEM 수집·디코딩 백엔드
 
-현재 구성은 `원본 로그 → C1 v0.2 → Wazuh 분석 → 로컬 검색`이다. Wazuh 4.14.10의 실제 analysisd/DB를 사용한다. Wazuh Indexer·Dashboard와 웹 관제 화면은 아직 설치하지 않는다. 관리자 CLI에서 검색하며 이 단계의 완료를 전체 K06/Community 완료로 표시하지 않는다.
+현재 구성은 `원본 로그 → C1 v0.2 → Wazuh 분석 → 로컬 증거 저장소 → Indexer → 웹 관제`다. Wazuh 4.14.10의 실제 analysisd/DB를 사용한다. 선택형 `siem-ui`가 Wazuh Indexer 4.14.10과 OpenSearch Dashboards 2.19.6을 연결한다. [웹 관제·WAF 예외](SIEM-WEB.md)를 함께 참고한다. 원격 에이전트 관리·전체 K06/Community 완료를 뜻하지 않는다.
 
 ## 소스와 매핑
 
@@ -23,8 +23,10 @@ osquery는 processes 메타데이터를 60초, 센서 상태 snapshot을 30초�
 
 ```bash
 sudo bash install.sh                 # 기본 보안 경로 + SIEM + 호스트 관측
+sudo bash install.sh --without siem-ui # 로컬 수집·분석만 유지
 sudo bash install.sh --without siem  # 보안 경로만 선택
 sudo xoc siem status
+sudo xoc siem credentials             # 웹 주소와 관리자 자격 증명
 sudo xoc siem query --source auditd --confirmed --limit 20
 sudo xoc siem evidence --ref xoc-evidence:실제_참조값
 sudo xoc siem retry --source auditd
@@ -53,5 +55,7 @@ Wazuh queue에 넣었다고 바로 성공 처리하지 않는다. 실제 `alerts
 단위 검증은 8종 fixture, 신뢰 컨텍스트·민감 필드 제외, audit ENRICHED 구분 문자·다중 record·중간 종료, XML 외부 엔티티 거부, 부분 로그·회전·재시작·원본 충돌·오류 재처리·Wazuh 분석 확인을 다룬다. VM 수용 검사는 실제 fw·IPS·WAF 표식 트래픽과 host telemetry를 생성하고 **검사 시작 이후 발생하고 관측된 8종 이벤트**가 Wazuh에서 디코딩될 때 통과한다. Sysmon 시작 배너만으로 통과하지 않는다.
 
 소프트웨어 기준은 Ubuntu 26.04.1/kernel 7.0, Wazuh 4.14.10, osquery 5.24.1, Sysmon for Linux 1.6.0, auditd 4.1.2다. 이미지 digest와 모든 패키지 버전이 고정된 재현 배포본은 아직 아니다.
+
+웹 관제를 선택하면 Wazuh가 확인한 C1만 `xoc-events-*` 색인으로 전송한다. 각 문서의 `_id`는 원래 event ID이며 원본 로그 본문은 전송하지 않는다. 개별 bulk 응답이 성공해야 SQLite에 색인 완료를 기록한다. 최근 이벤트를 우선 보내면서 과거 데이터를 채우고, Indexer 중단·429 응답은 다음 회차에 재시도한다. 매핑 또는 Indexer cluster UUID 변경을 감지하면 보존 중인 확인 이벤트를 재전송한다. 아직 색인되지 않은 증거는 기본 보존 기간만으로 지우지 않는다. Indexer의 일별 색인에는 7일 수명 정책을 적용한다.
 
 공식 형식·설치 근거: [Wazuh JSON decoder](https://documentation.wazuh.com/current/user-manual/ruleset/decoders/json-decoder.html), [Wazuh 규칙 검증](https://documentation.wazuh.com/current/user-manual/ruleset/testing.html), [Wazuh 로그 회전](https://documentation.wazuh.com/current/user-manual/reference/ossec-conf/global.html), [osquery 로그](https://osquery.readthedocs.io/en/stable/deployment/logging/), [Sysmon Linux 설치](https://github.com/microsoft/Sysmon-Linux/blob/main/INSTALL.md), [NFLOG/ulogd](https://www.netfilter.org/projects/ulogd/).

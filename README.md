@@ -6,7 +6,7 @@
 
 선택한 기능으로 구성하는 보안 운영 실습 환경. Core의 공통 계약 위에 Live Fire·Joint Force 모듈을 연결한다.
 
-**개발 초기 단계:** Ubuntu 26.04 VM에서 자동 설치와 fw·IPS·WAF의 실제 통신·차단 검증을 통과했다. 8종 보안 로그의 C1 정규화·원본 보관·Wazuh 분석·로컬 검색을 구현했다. 웹 SIEM 대시보드·콘솔·포털은 후속 범위다. `bootstrap`은 설치 기반 확인용 health 서비스이며, 훈련 가능한 Community 배포본은 아직 아니다.
+**개발 초기 단계:** Ubuntu 26.04 VM에서 자동 설치와 fw·IPS·WAF의 실제 통신·차단을 검증했다. 8종 보안 로그의 C1 정규화·원본 보관·Wazuh 분석, Indexer 검색과 HTTPS SIEM 대시보드를 구현했다. 장비 콘솔·포털과 전체 Community 배포본은 개발 중이다. `bootstrap`은 설치 기반 확인용 health 서비스다.
 
 ## 지금 실행할 수 있는 것
 
@@ -14,9 +14,10 @@
 |---|---|
 | C1 이벤트 계약 | v0.2 JSON Schema, nftables·Suricata·ModSecurity·osquery·Sysmon·auditd·Apache access/error 정규화 |
 | SIEM 백엔드 | 실제 로그 수집, 원본 SHA-256, 오류 격리·재처리, Wazuh 규칙 분석 확인, 로컬 검색 |
+| SIEM 웹 관제 | Wazuh Indexer + OpenSearch Dashboards, 8종 통합 검색·차트·필터, HTTPS 인증, 범위를 제한한 WAF Rule 예외 |
 | 설치 계획 | manifest 검증, 의존성·충돌·포트 검사, Compose·입력 해시 생성 |
 | 구성 진단 | `xoc doctor`: 로컬 구성과 Docker CLI 존재 확인 |
-| 구성요소 목록 | 필수 platform + 선택 기능 11개; 준비된 기능과 계획 단계 구분 |
+| 구성요소 목록 | 필수 platform + 선택 기능 12개; 준비된 기능과 계획 단계 구분 |
 | 확장 경계 | 명시적으로 선택한 테스트 fixture 조합; C7 구현 전 상용 모듈 거부 |
 | 보안 경로 실험 | fw DNAT·Suricata NFQUEUE·WAF, 선택 타깃 등록, 전용 VM 검사·기동·검증 명령 |
 | 단일 실행 설치기 | OS 검사 → 의존성 설치 → 모듈 구성 → 빌드·기동 → 통신 검사 → 부팅 서비스 등록; 실제 VM에서 실행 완료 |
@@ -31,7 +32,9 @@ Ubuntu Server 26.04 LTS amd64 전용 VM에서 저장소 또는 별도로 받은 
 sudo bash install.sh
 ```
 
-**현재 개발 버전의 설치 범위는 platform + 방화벽 + IPS + WAF + SIEM 분석 백엔드 + 호스트 관측 도구 + 통신 검증용 타깃이다.** 실행 시 이 실험 구성을 선택한다. Wazuh Indexer·Dashboard와 콘솔·포털까지 완성된 Core 전체 설치로 표시하지 않는다. `--without siem`으로 SIEM과 호스트 관측 도구를 제외할 수 있다. 실제 환경과 설치·재실행·재부팅 결과는 [VM 검증 기록](docs/development/VM-VALIDATION-2026-11-07.md)에 구분해 기록한다.
+**현재 개발 버전의 설치 범위는 platform + 방화벽 + IPS + WAF + SIEM 백엔드·웹 관제 + 호스트 관측 도구 + 통신 검증용 타깃이다.** 웹 관제를 포함하면 최소 8 GiB RAM을 요구하며 실제 검증 VM은 16 GiB다. `--without siem-ui`로 웹 관제만 제외하거나 `--without siem`으로 SIEM 전체를 제외할 수 있다. 콘솔·포털까지 완성된 Core 전체 설치를 뜻하지 않는다. [웹 관제 구성·WAF 예외·검증](docs/development/SIEM-WEB.md)
+
+설치 후 `sudo xoc siem credentials`로 HTTPS 주소와 생성된 관리자 비밀번호를 확인한다. 기본 주소는 `https://VM주소/siem/`이며 `--public-host siem.example.test`로 DNS 이름을 지정할 수 있다. 설치기가 만든 로컬 CA(`/etc/xocrange/ca.crt`)는 접속 PC에 한 번 신뢰 등록해야 브라우저 인증서 경고가 없어진다. 인증서와 비밀번호는 재설치 시 유지한다.
 
 설치기는 필요한 패키지를 설치하고 Docker와 containerd의 데이터 경로를 함께 구성한다. 기동 후 실제 차단·우회 방지·출처 보존·장애 복구 검사에 실패하면 비정상 종료하며 완료 상태를 기록하지 않는다. [설치 동작·선택 옵션·재실행](docs/development/INSTALLER.md)
 
@@ -95,6 +98,7 @@ xoc events validate --input /tmp/xoc-events.json
 
 ```bash
 sudo xoc siem status
+sudo xoc siem credentials
 sudo xoc siem query --source suricata --confirmed --limit 10
 sudo xoc siem query --source sysmon --confirmed --limit 10
 sudo xoc siem retry --source auditd
@@ -105,6 +109,7 @@ sudo xoc siem retry --source auditd
 ## 개발 문서
 
 - [SIEM 백엔드와 8종 디코더](docs/development/SIEM.md)
+- [SIEM 웹 관제와 WAF Rule 예외](docs/development/SIEM-WEB.md)
 - [첫 구현 결과와 다음 작업](docs/development/IMPLEMENTATION-01.md)
 - [보안 경로 분리 결과와 검증 대기 항목](docs/development/IMPLEMENTATION-02.md)
 - [한 번 실행 설치기](docs/development/INSTALLER.md) · [설치기 구현·검증 상태](docs/development/IMPLEMENTATION-03.md)

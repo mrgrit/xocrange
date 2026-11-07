@@ -1,0 +1,140 @@
+{
+  "date": "2026-11-07",
+  "scope": "Experimental Core SIEM web UI; not a complete Community release",
+  "runtime_source_sha256": "7fff737a8024799e5d7a21bb9391c120a1079494f4d17528e4a1438c3497fbda",
+  "environment": {
+    "os": "Ubuntu Server 26.04.1",
+    "kernel": "7.0.0-43-generic",
+    "architecture": "amd64",
+    "vcpus": 8,
+    "ram_gib": 16,
+    "disk_gb": 300
+  },
+  "versions": {
+    "wazuh": "4.14.10",
+    "wazuh_indexer": "4.14.10",
+    "opensearch_in_indexer": "2.19.6",
+    "dashboards": "2.19.6",
+    "modsecurity": "2.9.12",
+    "crs": "3.3.8"
+  },
+  "unit_tests": {
+    "python_3_10": 181,
+    "python_3_14": 181,
+    "status": "passed"
+  },
+  "security_path": {
+    "checks": 15,
+    "status": "passed"
+  },
+  "live_decoding": {
+    "sources": [
+      "nftables",
+      "suricata",
+      "modsecurity",
+      "osquery",
+      "sysmon",
+      "auditd",
+      "apache-access",
+      "apache-error"
+    ],
+    "status": "passed",
+    "auditd_probe_key_required": true
+  },
+  "https_waf_acceptance": {
+    "status": "passed",
+    "checks": {
+      "http_redirect_preserves_path_query": true,
+      "anonymous_api_requires_login": true,
+      "rule_exception_preserves_authentication": true,
+      "wrong_password_rejected": true,
+      "login_through_waf": true,
+      "secure_httponly_session_cookie": true,
+      "authenticated_api": true,
+      "dashboard_html": true,
+      "static_javascript": true,
+      "discover_highlight_rule_exception": true,
+      "other_search_field_still_inspected": true,
+      "other_path_still_inspected": true,
+      "unrelated_put_still_blocked": true,
+      "xss_still_blocked": true,
+      "file_path_investigation_allowed": true,
+      "unrelated_field_keeps_lfi_detection": true,
+      "oversized_request_rejected": true,
+      "malformed_json_rejected": true,
+      "truncated_json_fails_closed_in_waf": true,
+      "waf_marker_blocks_siem": true,
+      "forwarded_client_header_cannot_be_spoofed": true,
+      "ips_inspects_decrypted_https": true,
+      "ui_recovers_after_block": true,
+      "all_eight_fresh_sources_indexed": true,
+      "writer_cannot_read_events": true,
+      "logout": true,
+      "logout_revokes_browser_session": true,
+      "create_index_pattern": true,
+      "field_definition_rule_exceptions": true,
+      "wrong_method_gets_no_field_exception": true,
+      "other_attribute_still_inspected": true,
+      "large_field_list_allowed": true,
+      "temporary_object_deleted": true
+    },
+    "evidence": "Successful installer completion requires every listed check to pass; observed in the VM installation log."
+  },
+  "browser": {
+    "status": "passed",
+    "checks": {
+      "login_form": true,
+      "four_dashboard_panels": true,
+      "secure_httponly_cookie": true,
+      "custom_logo_loaded": true,
+      "session_survives_reload": true,
+      "source_filter": true,
+      "file_path_search": true,
+      "all_events": true,
+      "discover_deep_link_reload": true,
+      "no_authenticated_http_errors": true,
+      "no_search_error_notice": true
+    },
+    "http_errors": []
+  },
+  "indexer_outage": {
+    "status": "passed",
+    "local_wazuh_confirmation_continued": true,
+    "indexer_failure_reported": true,
+    "queued_events_checked": 100,
+    "recovered_unique_documents": 100
+  },
+  "ui_exclusion": {
+    "status": "passed",
+    "backend_services": 7,
+    "host_published_ports": 0,
+    "ui_volumes_preserved": 6,
+    "revision_scope": "Before final auditd and JSON acceptance refinements; selection configuration unchanged."
+  },
+  "empty_search_store_bootstrap": {
+    "status": "passed",
+    "original_evidence_retained": true,
+    "scope": "Existing Core VM with empty UI data stores after preserving development prototype data; not a pristine full OS installation."
+  },
+  "same_source_reinstall": {
+    "status": "pending",
+    "reason": "Windows SSH tunnel disconnected after preservation baseline was captured."
+  },
+  "reboot": {
+    "status": "pending",
+    "reason": "Windows SSH tunnel disconnected before reboot."
+  },
+  "known_limitations": [
+    "Truncated JSON is rejected with HTTP 500 by ModSecurity 2.x upstream issue #2807; ordinary malformed JSON is rejected with 400.",
+    "Local CA must be trusted once on the browser PC.",
+    "No multiuser institution acceptance, production load certification, Wazuh agent management plugin, or complete Community portal."
+  ],
+  "private_data_excluded": [
+    "credentials",
+    "private keys",
+    "raw events",
+    "screenshots",
+    "evidence identifiers",
+    "VM network addresses"
+  ]
+}

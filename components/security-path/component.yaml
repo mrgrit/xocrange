@@ -38,5 +38,6 @@ build_inputs:
 - web/apache.conf
 - web/envvars
 - web/modsecurity.conf
+- web/siem.conf
 - web/start.py
 compose: compose.yaml

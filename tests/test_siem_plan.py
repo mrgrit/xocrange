@@ -39,7 +39,10 @@ def test_siem_cannot_expand_its_host_privileges(siem_checkout,change):
 
 def test_audit_rule_setup_resumes_partial_install_without_flushing():
     configure=runpy.run_path(str(ROOT/'scripts/configure-audit.py'))['configure']
-    desired=(ROOT/'components/siem/audit.rules').read_text().splitlines()
+    import shlex
+    desired=[]
+    for line in (ROOT/'components/siem/audit.rules').read_text().splitlines():
+        args=shlex.split(line);args[1]=str(Path(args[1]).resolve());desired.append(shlex.join(args))
     calls=[]
     def run(args,**kwargs):
         calls.append(args)
@@ -52,3 +55,42 @@ def test_audit_rule_setup_resumes_partial_install_without_flushing():
         return SimpleNamespace(stdout='\n'.join(desired))
     configure(ROOT/'components/siem/audit.rules',run=complete)
     assert calls==[['auditctl','-l']]
+
+
+def test_audit_symlink_watch_migrates_and_persists_real_executable(tmp_path):
+    configure=runpy.run_path(str(ROOT/'scripts/configure-audit.py'))['configure']
+    executable=tmp_path/'gnutrue';executable.write_text('')
+    link=tmp_path/'true';link.symlink_to(executable)
+    rules=tmp_path/'source.rules';rules.write_text(f'-w {link} -p x -k xoc_probe\n')
+    installed=tmp_path/'installed.rules';calls=[]
+    def run(args,**kwargs):
+        calls.append(args);return SimpleNamespace(stdout=rules.read_text())
+    configure(rules,run=run,output=installed)
+    assert calls==[['auditctl','-l'],['auditctl','-W',str(link),'-p','x','-k','xoc_probe'],['auditctl','-w',str(executable),'-p','x','-k','xoc_probe']]
+    assert installed.read_text()==f'-w {executable} -p x -k xoc_probe\n'
+    assert installed.stat().st_mode & 0o777==0o600
+
+
+def test_audit_conflicting_owned_key_fails_before_changing_any_rule(tmp_path):
+    configure=runpy.run_path(str(ROOT/'scripts/configure-audit.py'))['configure']
+    rules=tmp_path/'source.rules';rules.write_text('-w /etc/xocrange -p wa -k xoc_config\n-w /usr/bin/true -p x -k xoc_probe\n')
+    calls=[]
+    def run(args,**kwargs):
+        calls.append(args);return SimpleNamespace(stdout='-w /unrelated -p x -k xoc_probe')
+    with pytest.raises(ValueError):configure(rules,run=run)
+    assert calls==[['auditctl','-l']]
+
+
+def test_audit_failed_delete_requires_observed_absence(tmp_path):
+    configure=runpy.run_path(str(ROOT/'scripts/configure-audit.py'))['configure']
+    rules=tmp_path/'source.rules';rules.write_text('-w /etc/xocrange -p wa -k xoc_config\n')
+    calls=[]
+    def run(args,**kwargs):
+        calls.append(args)
+        return SimpleNamespace(returncode=255 if '-W' in args else 0,stdout=rules.read_text() if len(calls)==1 else '')
+    configure(rules,remove=True,run=run)
+    assert calls[-1]==['auditctl','-l']
+    def stuck(args,**kwargs):
+        return SimpleNamespace(returncode=255 if '-W' in args else 0,stdout=rules.read_text())
+    import subprocess
+    with pytest.raises(subprocess.CalledProcessError):configure(rules,remove=True,run=stuck)

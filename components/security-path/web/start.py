@@ -49,5 +49,8 @@ if __name__ == "__main__":
     (base / "xoc-sites.conf").write_text(config)
     (base / "site/index.html").write_text(page)
     (base / "site/healthz").write_text('{"service":"xoc-web","status":"experimental"}\n')
+    if os.environ.get('XOC_SIEM_UI') == '1':
+        with (base / 'xoc-sites.conf').open('a') as stream:
+            stream.write('\nInclude /etc/xoc/siem.conf\n')
     subprocess.run(["apache2ctl", "configtest"], check=True)
     os.execvp("apache2ctl", ["apache2ctl", "-D", "FOREGROUND"])

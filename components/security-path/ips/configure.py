@@ -10,8 +10,8 @@ def configure(original):
     original["default-log-dir"] = "/var/log/suricata"
     original["default-rule-path"] = "/etc/xoc"
     original["rule-files"] = ["probe.rules"]
-    original["stats"] = {"enabled": False}
-    original["unix-command"] = {"enabled": False}
+    original["stats"] = {"enabled": True, "interval": 8}
+    original["unix-command"] = {"enabled": True, "filename": "/run/suricata-command.socket"}
     original["pid-file"] = "/run/suricata.pid"
     original.pop("run-as", None)
     original["outputs"] = [{"eve-log": {"enabled": True, "filetype": "regular", "filename": "eve.json",

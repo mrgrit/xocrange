@@ -10,7 +10,8 @@ Usage: sudo bash install.sh [options]
 Install the current experimental Core security path on a dedicated Ubuntu 26.04
 amd64 VM. Docker, Python, network prerequisites, images and verification are automatic.
 The current default includes platform, fw, IPS, WAF and harmless acceptance probes.
-SIEM collection and eight decoders are included; --without siem omits them.
+SIEM collection, eight decoders and HTTPS dashboards are included.
+--without siem omits them; --without siem-ui keeps local collection without web UI.
 Portals and the complete Community release remain under development.
 
   --include ID       Add an implemented module (repeatable)
@@ -18,6 +19,7 @@ Portals and the complete Community release remain under development.
   --data-dir PATH    Docker AND containerd data directory; no disk formatting
                     Default: /var/lib/xocrange/data
   --ref COMMIT       Download an exact 40-character Git commit instead of local source
+  --public-host HOST IPv4 address or DNS name for HTTPS (default: host's route IP)
   --dry-run          Describe operations without installing or accessing the network
   --help            Show this help
 
@@ -31,6 +33,8 @@ stage() { current_stage=$1; printf '\n[xOC] %s\n' "$current_stage"; }
 need_value() { [[ $# -ge 2 && -n $2 && $2 != --* ]] || fail "Missing value for $1"; }
 selection=()
 siem_selection=(--include siem)
+ui_selection=(--include siem-ui)
+public_host=
 data_directory=/var/lib/xocrange/data
 source_ref=
 dry_run=false
@@ -41,6 +45,7 @@ while (($#)); do
             [[ $2 =~ ^[a-z][a-z0-9-]{0,63}$ ]] || fail 'Invalid module ID'
             selection+=("$1" "$2"); shift 2 ;;
         --data-dir) need_value "$@"; data_directory=$2; shift 2 ;;
+        --public-host) need_value "$@"; public_host=$2; shift 2 ;;
         --ref)
             need_value "$@"
             [[ $2 =~ ^[0-9a-f]{40}$ ]] || fail '--ref requires a full Git commit hash'
@@ -51,9 +56,11 @@ while (($#)); do
     esac
 done
 for ((i=0; i<${#selection[@]}; i++)); do
-    if [[ ${selection[i]} == --without && ${selection[i+1]:-} == siem ]]; then siem_selection=(); fi
+    if [[ ${selection[i]} == --without && ${selection[i+1]:-} == siem ]]; then siem_selection=(); ui_selection=(); fi
+    if [[ ${selection[i]} == --without && ${selection[i+1]:-} == siem-ui ]]; then ui_selection=(); fi
 done
 [[ $data_directory =~ ^/[A-Za-z0-9_/-]+$ && $data_directory != / ]] || fail 'Invalid data directory'
+[[ -z $public_host || $public_host =~ ^[A-Za-z0-9][A-Za-z0-9.-]{0,252}$ ]] || fail 'Invalid public hostname'
 if $dry_run; then
     usage
     printf '\nData directory: %s\n' "$data_directory"
@@ -75,6 +82,9 @@ source /etc/os-release
 systemd-detect-virt --vm >/dev/null || fail 'Use a dedicated VM for this experimental release'
 [[ -d /run/systemd/system ]] || fail 'systemd is required'
 awk '/MemTotal/ {exit ($2 < 3500000)}' /proc/meminfo || fail 'At least 4 GB RAM is needed for this profile'
+if ((${#ui_selection[@]})); then
+    awk '/MemTotal/ {exit ($2 < 7500000)}' /proc/meminfo || fail 'SIEM dashboards require at least 8 GB RAM'
+fi
 [[ $(nproc) -ge 2 ]] || fail 'At least 2 vCPUs are needed for this profile'
 exec 9>/run/lock/xocrange-install.lock
 flock -n 9 || fail 'Another xOC installation is in progress'
@@ -133,7 +143,7 @@ printf 'xocrange installer v1\n' > "$state/installer-owned"
 stage base-packages
 apt_options=(-o DPkg::Lock::Timeout=120 -o Acquire::Retries=3 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30)
 apt-get "${apt_options[@]}" update
-apt-get "${apt_options[@]}" install -y --no-install-recommends ca-certificates curl git python3 python3-venv iproute2 kmod
+apt-get "${apt_options[@]}" install -y --no-install-recommends ca-certificates curl git python3 python3-venv iproute2 kmod openssl
 
 stage source-snapshot
 source_directory=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
@@ -154,11 +164,11 @@ xoc=("$runtime/bin/xoc" --root "$release")
 stage module-plan
 plan_json=$state/plan-$run_id.json
 "${xoc[@]}" plan --preset security-path --allow-experimental --allow-fixtures \
-    --include fixture-security-probe "${siem_selection[@]}" "${selection[@]}" > "$plan_json"
+    --include fixture-security-probe "${siem_selection[@]}" "${ui_selection[@]}" "${selection[@]}" > "$plan_json"
 plan_name=install-$("$runtime/bin/python" -c 'import json,sys; print(json.load(open(sys.argv[1]))["lock"]["plan_id"])' "$plan_json")
 if [[ ! -d $release/.local/plans/$plan_name ]]; then
     "${xoc[@]}" plan --preset security-path --allow-experimental --allow-fixtures \
-        --include fixture-security-probe "${siem_selection[@]}" "${selection[@]}" --output "$plan_name" > "$plan_json"
+        --include fixture-security-probe "${siem_selection[@]}" "${ui_selection[@]}" "${selection[@]}" --output "$plan_name" > "$plan_json"
 fi
 # Prevent exclusion of a required acceptance service, before any Docker installation.
 "$runtime/bin/python" - "$release" "$plan_name" <<'PY'
@@ -242,6 +252,12 @@ sysctl -w net.bridge.bridge-nf-call-iptables=0
 "${xoc[@]}" lab check --plan "$plan_name"
 
 stage image-build
+if "$runtime/bin/python" -c 'import json,sys; sys.exit("siem-ui" not in json.load(open(sys.argv[1]))["lock"]["selected"])' "$plan_json"; then
+    stage siem-ui-identities
+    "$runtime/bin/python" "$release/scripts/setup-siem-ui.py" prepare "$release" "$plan_name" "$public_host"
+    printf 'vm.max_map_count = 262144\n' > /etc/sysctl.d/70-xocrange-indexer.conf
+    if [[ $(sysctl -n vm.max_map_count) -lt 262144 ]]; then sysctl -w vm.max_map_count=262144; fi
+fi
 "${compose[@]}" build
 stage start-services
 systemctl disable --now xocrange-collector.service 2>/dev/null || true
@@ -271,8 +287,9 @@ ExecStartPre=/usr/sbin/modprobe -a br_netfilter nfnetlink_queue nfnetlink_log
 ExecStartPre=/usr/sbin/sysctl -w net.bridge.bridge-nf-call-iptables=0
 ExecStart=$runtime/bin/xoc --root $release lab start --plan $plan_name --isolated-vm
 ExecStartPost=$runtime/bin/xoc --root $release lab verify --plan $plan_name --isolated-vm
+ExecStartPost=$runtime/bin/python $release/scripts/setup-siem-ui.py initialize $release $plan_name
 ExecStop=$runtime/bin/xoc --root $release lab down --plan $plan_name --isolated-vm
-TimeoutStartSec=240
+TimeoutStartSec=600
 TimeoutStopSec=120
 UMask=0077
 
@@ -285,6 +302,10 @@ if "$runtime/bin/python" -c 'import json,sys; sys.exit("siem" not in json.load(o
     stage siem-telemetry
     bash "$release/scripts/install-telemetry.sh" "$release" "$runtime" "$plan_name"
     "$runtime/bin/python" "$release/scripts/verify-siem.py" "$release" "$plan_name"
+    if "$runtime/bin/python" -c 'import json,sys; sys.exit("siem-ui" not in json.load(open(sys.argv[1]))["lock"]["selected"])' "$plan_json"; then
+        stage siem-ui-acceptance
+        "$runtime/bin/python" "$release/scripts/verify-siem-ui.py" "$release" "$plan_name"
+    fi
 else
     systemctl disable --now xocrange-collector.service xocrange-osquery.service 2>/dev/null || true
     if [[ -f $state/telemetry-owned ]]; then
@@ -312,8 +333,15 @@ if 'siem' in selected:
     siem = json.loads(Path('/var/lib/xocrange/siem-acceptance.json').read_text())
     assert siem['status'] == 'passed' and all(siem['checks'].values())
     result.update(scope='experimental-security-path-and-siem', siem_acceptance=siem)
+if 'siem-ui' in selected:
+    ui=json.loads(Path('/var/lib/xocrange/siem-ui-acceptance.json').read_text())
+    assert ui['status']=='passed' and all(ui['checks'].values())
+    result.update(scope='experimental-security-path-and-siem-ui',siem_ui_acceptance=ui)
 Path(sys.argv[1]).write_text(json.dumps(result, indent=2) + '\n')
 PY
 printf '\nInstalled and verified: experimental platform + fw + IPS + WAF.\n'
 printf 'State: %s/last-install.json\nLogs: %s\n' "$state" "$log"
 printf 'Portals and the complete Community release remain under development.\n'
+if ((${#ui_selection[@]})); then
+    printf 'SIEM login details: sudo xoc siem credentials\nLocal CA certificate: /etc/xocrange/ca.crt\n'
+fi

@@ -8,5 +8,7 @@ table inet xoc_ips {
         # Both directions are queued so Suricata sees the complete TCP session.
         ip saddr 172.29.10.0/24 ip daddr 172.29.12.80 tcp dport 8080 counter name inspected queue num 0
         ip saddr 172.29.12.80 ip daddr 172.29.10.0/24 tcp sport 8080 counter name inspected queue num 0
+        ip saddr 172.29.10.20 ip daddr 172.29.12.80 tcp dport 8443 counter name inspected queue num 0
+        ip saddr 172.29.12.80 ip daddr 172.29.10.20 tcp sport 8443 counter name inspected queue num 0
     }
 }

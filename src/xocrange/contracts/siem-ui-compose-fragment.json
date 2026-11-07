@@ -1,0 +1,144 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Reviewed Core SIEM UI services and private mounts",
+  "const": {
+    "services": {
+      "indexer": {
+        "read_only": true,
+        "cap_drop": [
+          "ALL"
+        ],
+        "security_opt": [
+          "no-new-privileges:true"
+        ],
+        "restart": "no",
+        "build": {
+          "context": ".",
+          "dockerfile": "indexer.Dockerfile"
+        },
+        "user": "1000:1000",
+        "networks": [
+          "int"
+        ],
+        "environment": {
+          "OPENSEARCH_JAVA_OPTS": "-Xms2g -Xmx2g"
+        },
+        "tmpfs": [
+          "/run/xoc-indexer:size=16m,mode=0700,uid=1000,gid=1000",
+          "/var/log/wazuh-indexer:size=64m,mode=0700,uid=1000,gid=1000",
+          "/tmp:size=256m,mode=1777"
+        ],
+        "volumes": [
+          "indexer-data:/var/lib/wazuh-indexer",
+          "indexer-config:/run/xoc-secrets:ro"
+        ],
+        "ulimits": {
+          "nofile": {
+            "soft": 65536,
+            "hard": 65536
+          }
+        }
+      },
+      "dashboard": {
+        "read_only": true,
+        "cap_drop": [
+          "ALL"
+        ],
+        "security_opt": [
+          "no-new-privileges:true"
+        ],
+        "restart": "no",
+        "build": {
+          "context": ".",
+          "dockerfile": "dashboard.Dockerfile"
+        },
+        "user": "1000:1000",
+        "networks": [
+          "int"
+        ],
+        "tmpfs": [
+          "/tmp:size=64m,mode=1777"
+        ],
+        "volumes": [
+          "dashboard-data:/usr/share/opensearch-dashboards/data",
+          "dashboard-config:/run/xoc-secrets:ro"
+        ],
+        "depends_on": [
+          "indexer"
+        ]
+      },
+      "ingress": {
+        "read_only": true,
+        "cap_drop": [
+          "ALL"
+        ],
+        "security_opt": [
+          "no-new-privileges:true"
+        ],
+        "restart": "no",
+        "build": {
+          "context": ".",
+          "dockerfile": "ingress.Dockerfile"
+        },
+        "user": "65532:65532",
+        "networks": {
+          "user": {},
+          "ext": {
+            "ipv4_address": "172.29.10.20"
+          }
+        },
+        "ports": [
+          {
+            "target": 8080,
+            "published": 80,
+            "host_ip": "0.0.0.0",
+            "protocol": "tcp"
+          },
+          {
+            "target": 8443,
+            "published": 443,
+            "host_ip": "0.0.0.0",
+            "protocol": "tcp"
+          }
+        ],
+        "volumes": [
+          "ingress-config:/run/xoc-secrets:ro"
+        ],
+        "depends_on": [
+          "web"
+        ]
+      }
+    },
+    "networks": {
+      "int": {
+        "internal": true
+      },
+      "user": {
+        "internal": false
+      },
+      "ext": {
+        "internal": true,
+        "driver": "bridge",
+        "driver_opts": {
+          "com.docker.network.bridge.enable_ip_masquerade": "false"
+        },
+        "ipam": {
+          "config": [
+            {
+              "subnet": "172.29.10.0/24",
+              "gateway": "172.29.10.254"
+            }
+          ]
+        }
+      }
+    },
+    "volumes": {
+      "indexer-data": {},
+      "indexer-config": {},
+      "dashboard-data": {},
+      "dashboard-config": {},
+      "ingress-config": {},
+      "web-tls": {}
+    }
+  }
+}
