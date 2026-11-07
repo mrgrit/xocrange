@@ -20,6 +20,11 @@ def configure(original):
     return original
 
 
+def render(original):
+    # Suricata's loader requires an explicit YAML 1.1 document header.
+    return yaml.safe_dump(configure(original), sort_keys=False, version=(1, 1), explicit_start=True)
+
+
 if __name__ == "__main__":
     source = yaml.safe_load(Path("/etc/suricata/suricata.yaml").read_text())
-    Path("/run/xoc-suricata.yaml").write_text(yaml.safe_dump(configure(source), sort_keys=False))
+    Path("/run/xoc-suricata.yaml").write_text(render(source))

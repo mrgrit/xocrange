@@ -35,7 +35,11 @@ ext/pipe/dmz는 내부 브리지이고 masquerade를 끈다. web의 IP forwardin
 
 fw·IPS·WAF에는 호스트 포트·host network·privileged·Docker socket·host bind mount를 사용하지 않는다. bootstrap platform의 기존 `127.0.0.1:18080` health 포트만 남는다. 장비 콘솔·SSH·Wazuh agent·평가 수집은 장비 이미지에 포함하지 않는다.
 
-## 실행 순서
+## 자동 설치
+
+빈 VM의 일반 설치 경로는 `sudo bash install.sh`다. 의존성 준비, Docker 설치, 커널·네트워크 전제 조건, 이미지 빌드, 통신 검증, 부팅 등록을 설치기가 처리한다. [자동 설치기](INSTALLER.md)를 참조한다. 아래 명령은 개발자가 개별 단계를 조사할 때 사용하는 절차다.
+
+## 개발자 개별 실행 순서
 
 1. 빈 VM에 [Docker 공식 Ubuntu 설치 절차](https://docs.docker.com/engine/install/ubuntu/)로 Engine·Compose 플러그인을 설치한다. 이 단계에서 기존 서버의 Docker 설정을 복사하지 않는다.
 2. 저장소를 새로 체크아웃하고 Python venv에 설치한다.

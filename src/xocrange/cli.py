@@ -1,4 +1,4 @@
-"""The first Core CLI: local contracts and dry-run installation planning."""
+"""Core contracts, modular installation planning and isolated VM lifecycle."""
 from __future__ import annotations
 
 import argparse
@@ -41,7 +41,7 @@ def parser():
     for name in ("tenant-id", "range-id", "source-id", "evidence-ref", "observed-at"):
         converting.add_argument(f"--{name}", required=True)
     lab = commands.add_parser("lab", help="run packet-path checks on a dedicated Ubuntu 26.04 VM")
-    lab.add_argument("action", choices=("check", "up", "verify", "down"))
+    lab.add_argument("action", choices=("check", "up", "start", "verify", "down"))
     lab.add_argument("--plan", required=True, help="plan directory name beneath .local/plans")
     lab.add_argument("--isolated-vm", action="store_true", help="confirm this is the dedicated lab VM")
     return cli

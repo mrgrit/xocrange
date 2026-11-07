@@ -18,8 +18,23 @@
 | 구성요소 목록 | 필수 platform + 선택 기능 11개; 준비된 기능과 계획 단계 구분 |
 | 확장 경계 | 명시적으로 선택한 테스트 fixture 조합; C7 구현 전 상용 모듈 거부 |
 | 보안 경로 실험 | fw DNAT·Suricata NFQUEUE·WAF, 선택 타깃 등록, 전용 VM 검사·기동·검증 명령 |
+| 단일 실행 설치기 | OS 검사 → 의존성 설치 → 모듈 구성 → 빌드·기동 → 통신 검사 → 부팅 서비스 등록; 실제 VM 설치 검증 대기 |
 
-## 시작하기
+## 빈 Linux에서 설치
+
+xOC의 설치 원칙은 **Linux 설치 후 설치 프로그램 한 번 실행으로 선택한 기능의 설치와 검증을 마치는 것**이다. Docker·Python·커널 모듈 등의 준비도 설치기가 담당한다.
+
+Ubuntu Server 26.04 LTS amd64 전용 VM에서 저장소 또는 별도로 받은 `install.sh`를 실행한다. 스크립트만 받은 경우 소스도 자동 다운로드한다.
+
+```bash
+sudo bash install.sh
+```
+
+**현재 개발 버전의 설치 범위는 platform + 방화벽 + IPS + WAF + 통신 검증용 타깃이다.** 실행 시 이 실험 구성을 선택한다. SIEM·콘솔·포털까지 완성된 Core 전체 설치로 표시하지 않는다. 원격 VM에서 설치·통신·재부팅 검증은 아직 완료하지 않았다.
+
+설치기는 필요한 패키지를 설치하고 Docker와 containerd의 데이터 경로를 함께 구성한다. 기동 후 실제 차단·우회 방지·출처 보존·장애 복구 검사에 실패하면 비정상 종료하며 완료 상태를 기록하지 않는다. [설치 동작·선택 옵션·재실행](docs/development/INSTALLER.md)
+
+## 개발 CLI 사용
 
 개발 CLI는 Python 3.10 이상을 사용한다. 저장소 루트에서 실행한다.
 
@@ -58,7 +73,7 @@ xoc plan --preset security-path --allow-experimental \
 xoc lab check --plan security-lab
 ```
 
-실제 `lab up/verify/down`은 [전용 VM 실행 절차](docs/development/SECURITY-PATH-LAB.md)를 따른다. fw·ips·web에는 호스트 포트를 게시하지 않고 내부 테스트 클라이언트로 경로를 검증한다. 설치된 타깃만 WAF에 등록한다. 현재 IPS 룰은 동작 검증용 표식 룰이며 일반 공격 탐지 룰셋 구축은 후속 작업이다.
+실제 `lab up/start/verify/down`은 [전용 VM 실행 절차](docs/development/SECURITY-PATH-LAB.md)를 따른다. fw·ips·web에는 호스트 포트를 게시하지 않고 내부 테스트 클라이언트로 경로를 검증한다. 설치된 타깃만 WAF에 등록한다. 현재 IPS 룰은 동작 검증용 표식 룰이며 일반 공격 탐지 룰셋 구축은 후속 작업이다.
 
 ## C1 로그 정규화 예제
 
@@ -79,6 +94,7 @@ xoc events validate --input /tmp/xoc-events.json
 
 - [첫 구현 결과와 다음 작업](docs/development/IMPLEMENTATION-01.md)
 - [보안 경로 분리 결과와 검증 대기 항목](docs/development/IMPLEMENTATION-02.md)
+- [한 번 실행 설치기](docs/development/INSTALLER.md) · [설치기 구현·검증 상태](docs/development/IMPLEMENTATION-03.md)
 - [Ubuntu 26.04 VM 구성·실행 절차](docs/development/SECURITY-PATH-LAB.md)
 - [C1 v0.1 계약과 소스별 매핑](docs/contracts/C1-EVENT.md)
 - [설치 manifest·CLI 사용법](docs/development/PLANNER.md)

@@ -52,6 +52,14 @@ def test_blocked_preflight_never_starts_containers(lab_checkout, monkeypatch):
     assert lab.run_lab(lab_checkout, "test-lab", "up", True)["status"] == "blocked"
 
 
+def test_boot_start_uses_validated_local_images_without_build_or_pull(lab_checkout, monkeypatch):
+    monkeypatch.setattr(lab, "host_check", lambda *_: {"status": "ready", "checks": {"dedicated_daemon": True}})
+    calls = []
+    monkeypatch.setattr(lab.Docker, "run", lambda self, args, **kwargs: calls.append(args))
+    assert lab.run_lab(lab_checkout, "test-lab", "start", True)["status"] == "started"
+    assert calls == [["up", "--detach", "--no-build", "--pull", "never"]]
+
+
 def test_cleanup_works_after_bridge_configuration_changes(lab_checkout, monkeypatch):
     checks = {key: True for key in ("ubuntu_26_04", "virtual_machine", "local_daemon", "linux_daemon", "rootful_daemon", "dedicated_daemon")}
     checks["bridge_netfilter_disabled"] = False

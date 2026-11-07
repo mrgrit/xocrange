@@ -133,6 +133,15 @@ def test_web_render_contains_only_current_selection():
     assert "ProxyPass" not in empty
 
 
+def test_suricata_config_includes_required_yaml_version_and_inline_policy():
+    render = runpy.run_path(str(ROOT / "components/security-path/ips/configure.py"))["render"]
+    rendered = render({"run-as": {"user": "suricata"}})
+    assert rendered.startswith("%YAML 1.1\n---\n")
+    config = yaml.safe_load(rendered)
+    assert config["stream"]["inline"] is True and config["nfq"]["fail-open"] is False
+    assert "run-as" not in config and config["rule-files"] == ["probe.rules"]
+
+
 @pytest.mark.parametrize("value", [
     [{"id": "bad\nInclude /tmp/evil", "service": "lab-target", "port": 8080}],
     [{"id": "sample", "service": "http://other/", "port": 8080}],
