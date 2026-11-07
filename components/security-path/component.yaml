@@ -1,0 +1,18 @@
+schema_version: xoc.manifest/0.1.0
+id: security-path
+kind: component
+title: Firewall, IPS, Web and routing
+version: 0.1.0
+core: ">=0.1.0 <0.2.0"
+status: planned
+commercial: false
+minimum_tier: community
+requires:
+  components: ["platform"]
+  capabilities: []
+provides: ["security.path"]
+conflicts: []
+networks: ["ext","pipe","dmz","int","app","ot"]
+config_keys: []
+contracts: {}
+build_inputs: []

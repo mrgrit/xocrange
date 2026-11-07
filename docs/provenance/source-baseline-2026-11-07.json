@@ -1,0 +1,143 @@
+{
+  "observed_on": "2026-11-07",
+  "plan_commit": "55990788987426734db5f8cf6bad03a249542a8a",
+  "scope": "Selected 19 files from the reviewed planning baseline, not a complete source backup or code import.",
+  "sources": [
+    {
+      "path": "~/work/kt66",
+      "head": "b179231073b25fb797b9c6443da393d02cc12340",
+      "dirty_paths": 27,
+      "observation": "local checkout; no full runtime verification"
+    },
+    {
+      "path": "~/pjt/nft_edu_gui",
+      "head": "898d4969fce34ec5479f13bee2f2b12769a8b667",
+      "dirty_paths": 0,
+      "observation": "local checkout; no full runtime verification"
+    },
+    {
+      "path": "~/pjt/modsec_edu_gui",
+      "head": "9eadb4239b98039a2c5895002a73b1a86a8b65bf",
+      "dirty_paths": 0,
+      "observation": "local checkout; no full runtime verification"
+    },
+    {
+      "path": "~/pjt/suricata_edu_gui",
+      "head": "18849976ff90b0a99779f3138092420dc32abf20",
+      "dirty_paths": 0,
+      "observation": "local checkout; no full runtime verification"
+    }
+  ],
+  "files": [
+    {
+      "source": "~/work/kt66/docker-compose.yaml",
+      "sha256": "0d28e508105d3ba8b8605b0d5b5bb12b6c461dc9b2e716a141fccf1613470cd6",
+      "snapshot": ".local/provenance/2026-11-07/files/work/kt66/docker-compose.yaml"
+    },
+    {
+      "source": "~/work/kt66/deployment/configure.py",
+      "sha256": "2f57fada6756a4a259c78a4482f22e1c0bea1f952f24dc1fd4b6ec8bd55a0f48",
+      "snapshot": ".local/provenance/2026-11-07/files/work/kt66/deployment/configure.py"
+    },
+    {
+      "source": "~/work/kt66/deployment/tests/test_configuration.py",
+      "sha256": "13b7363f801169e63bd130f8e657e4943220a664fa426bdad4630920f3957fe9",
+      "snapshot": ".local/provenance/2026-11-07/files/work/kt66/deployment/tests/test_configuration.py"
+    },
+    {
+      "source": "~/work/kt66/web/vhosts/090-siem.conf",
+      "sha256": "5130a7540aa82cd4c222dd07a14ca7018184d23fdb70ae4bca916c0eb4712f2c",
+      "snapshot": ".local/provenance/2026-11-07/files/work/kt66/web/vhosts/090-siem.conf"
+    },
+    {
+      "source": "~/work/kt66/web/tests/test_siem_proxy.py",
+      "sha256": "7c00a53a9331e05c089fd91aa89debf6785547384c945c9f0e3e3f201466cbc0",
+      "snapshot": ".local/provenance/2026-11-07/files/work/kt66/web/tests/test_siem_proxy.py"
+    },
+    {
+      "source": "~/work/kt66/siem/Dockerfile",
+      "sha256": "810f7709657da0e7afcdb94ef2e95220d9d7e6a4d7c8f4990b9ba6b4cd5b40af",
+      "snapshot": ".local/provenance/2026-11-07/files/work/kt66/siem/Dockerfile"
+    },
+    {
+      "source": "~/work/kt66/siem/modsecurity-json-rules.xml",
+      "sha256": "2dde21166f12ad715d4fdd5d8f4cb5e761f2c4cab7f0d53bfff0e3a902610493",
+      "snapshot": ".local/provenance/2026-11-07/files/work/kt66/siem/modsecurity-json-rules.xml"
+    },
+    {
+      "source": "~/work/kt66/siem/tests/test_event_rules.py",
+      "sha256": "ce83aa00e454a308bbff9f3b044ebb4a60f8234245d5fb95c2bb0d159839d797",
+      "snapshot": ".local/provenance/2026-11-07/files/work/kt66/siem/tests/test_event_rules.py"
+    },
+    {
+      "source": "~/work/kt66/siem/tests/test_reclassify_events.py",
+      "sha256": "a633fa92b21f569ce63299758bbf3042f27faf98a5f1764bfb6bb846b0718713",
+      "snapshot": ".local/provenance/2026-11-07/files/work/kt66/siem/tests/test_reclassify_events.py"
+    },
+    {
+      "source": "~/work/kt66/siem/reclassify_events.py",
+      "sha256": "31e8ea9ee446af04f57d4a27837d0feac197d6b7c8ebf8ebc78be9378e50864c",
+      "snapshot": ".local/provenance/2026-11-07/files/work/kt66/siem/reclassify_events.py"
+    },
+    {
+      "source": "~/work/kt66/observability/schema.py",
+      "sha256": "ca5c226431f284a883698a786fe252dbbdf0ee691c8be343cd1090af41239962",
+      "snapshot": ".local/provenance/2026-11-07/files/work/kt66/observability/schema.py"
+    },
+    {
+      "source": "~/work/kt66/observability/collector.py",
+      "sha256": "2348af92ed3e00296f6e2d94064cf05f5effa284ed04c2304e4511bb17337498",
+      "snapshot": ".local/provenance/2026-11-07/files/work/kt66/observability/collector.py"
+    },
+    {
+      "source": "~/work/kt66/observability/Dockerfile",
+      "sha256": "a92d79dc9112f8f2d5c9379c3bbf410cea0002c68f98083af38394afeaa09f0b",
+      "snapshot": ".local/provenance/2026-11-07/files/work/kt66/observability/Dockerfile"
+    },
+    {
+      "source": "~/work/kt66/noc/app.py",
+      "sha256": "dc59697d7c20cd56e81f452f890e2c63e3b99ebffb7f922f3af93d68297508cb",
+      "snapshot": ".local/provenance/2026-11-07/files/work/kt66/noc/app.py"
+    },
+    {
+      "source": "~/work/kt66/portal/main.py",
+      "sha256": "3caaf4c9a809aad6a18abeff3e02013ab026a34a85d534a2c60a25036f6d5be0",
+      "snapshot": ".local/provenance/2026-11-07/files/work/kt66/portal/main.py"
+    },
+    {
+      "source": "~/work/kt66/bastion/Dockerfile",
+      "sha256": "773985fa5f19214e3852a9c880e10d992194dd30760a82aabc353658a9a591eb",
+      "snapshot": ".local/provenance/2026-11-07/files/work/kt66/bastion/Dockerfile"
+    },
+    {
+      "source": "~/pjt/nft_edu_gui/server.py",
+      "sha256": "153c34e7e56ff7c12abdeb2ad550764c8be93aa616d15ea1631a1046e709cdef",
+      "snapshot": ".local/provenance/2026-11-07/files/pjt/nft_edu_gui/server.py"
+    },
+    {
+      "source": "~/pjt/modsec_edu_gui/server.py",
+      "sha256": "b0bc402aa20893a30552288b6bc0baf3d524cce4d89278cea15bcb6f85a1478c",
+      "snapshot": ".local/provenance/2026-11-07/files/pjt/modsec_edu_gui/server.py"
+    },
+    {
+      "source": "~/pjt/suricata_edu_gui/server.py",
+      "sha256": "f6299bd5a988e8e5ed19232ca1f2efbbe61f7a087fb36144b03aff8777c41aae",
+      "snapshot": ".local/provenance/2026-11-07/files/pjt/suricata_edu_gui/server.py"
+    }
+  ],
+  "private_patch": {
+    "path": ".local/provenance/2026-11-07/kt66-selected-worktree.patch",
+    "sha256": "eb9637267aaf5beafa5f67a164de343cb53bb3fa7a9afa12c85e97d4a293c7ae",
+    "bytes": 6568
+  },
+  "validation": {
+    "source_hashes_match_previous_baseline": true,
+    "snapshot_bytes_match_source": true,
+    "selected_files": 19
+  },
+  "limits": [
+    "Untracked selected files are preserved in snapshots, not in git diff.",
+    "Other source files require an expanded reviewed baseline before import.",
+    "Private snapshots and patches are excluded from version control; they are not release assets."
+  ]
+}

@@ -1,0 +1,16 @@
+# Local source preservation and runtime state; never release these artifacts.
+/.local/
+/.venv/
+/.env
+/.env.*
+!/.env.example
+/secrets/
+/keys/
+/state/
+/backups/
+/build/
+/dist/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/

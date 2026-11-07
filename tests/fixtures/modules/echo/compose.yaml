@@ -1,0 +1,14 @@
+services:
+  fixture-echo:
+    image: busybox:1.37
+    command: ["echo", "xOC fixture only"]
+    user: "65532:65532"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    networks: [int]
+    depends_on: [platform]
+    restart: "no"
+networks:
+  int:
+    internal: true

@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "xocrange-core"
+version = "0.1.0"
+description = "xOC Range Core contract and installation planner"
+requires-python = ">=3.10"
+dependencies = ["PyYAML>=5.4.1,<7", "jsonschema>=3.2,<5"]
+
+[project.optional-dependencies]
+test = ["pytest>=7,<10"]
+
+[project.scripts]
+xoc = "xocrange.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+xocrange = ["contracts/*.json"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-ra"

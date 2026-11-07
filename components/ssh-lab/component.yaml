@@ -1,0 +1,18 @@
+schema_version: xoc.manifest/0.1.0
+id: ssh-lab
+kind: component
+title: SSH entry and manual practice tools
+version: 0.1.0
+core: ">=0.1.0 <0.2.0"
+status: planned
+commercial: false
+minimum_tier: community
+requires:
+  components: ["platform"]
+  capabilities: []
+provides: ["access.ssh"]
+conflicts: []
+networks: ["user","ext","int"]
+config_keys: []
+contracts: {}
+build_inputs: []

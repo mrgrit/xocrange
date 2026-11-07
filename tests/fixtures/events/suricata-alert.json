@@ -1,0 +1,8 @@
+{
+  "timestamp": "2026-11-07T12:34:56.123456+0900",
+  "event_type": "alert",
+  "src_ip": "192.0.2.10", "src_port": 51000,
+  "dest_ip": "198.51.100.20", "dest_port": 443,
+  "proto": "TCP",
+  "alert": {"action": "blocked", "signature_id": 1000001, "signature": "Synthetic fixture", "severity": 2}
+}

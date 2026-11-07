@@ -1,0 +1,73 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "C1 normalized security event",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "event_id", "tenant_id", "range_id", "source_id", "producer", "timestamp", "observed_at", "time_basis", "event", "evidence"],
+  "properties": {
+    "schema_version": {"const": "xoc.event/0.1.0"},
+    "event_id": {"$ref": "#/definitions/hash"},
+    "tenant_id": {"$ref": "#/definitions/id"},
+    "range_id": {"$ref": "#/definitions/id"},
+    "source_id": {"$ref": "#/definitions/id"},
+    "producer": {"enum": ["suricata", "modsecurity", "nftables"]},
+    "timestamp": {"$ref": "#/definitions/time"},
+    "observed_at": {"$ref": "#/definitions/time"},
+    "time_basis": {"enum": ["source", "observed"]},
+    "event": {
+      "type": "object", "additionalProperties": false,
+      "required": ["category", "type", "action", "outcome", "severity"],
+      "properties": {
+        "category": {"enum": ["network", "web"]},
+        "type": {"enum": ["alert", "access", "transaction"]},
+        "action": {"type": "string", "minLength": 1, "maxLength": 64},
+        "outcome": {"enum": ["blocked", "allowed", "observed", "unknown"]},
+        "severity": {"type": "integer", "minimum": 0, "maximum": 100}
+      }
+    },
+    "network": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "source": {"$ref": "#/definitions/endpoint"},
+        "destination": {"$ref": "#/definitions/endpoint"},
+        "protocol": {"type": "string", "pattern": "^[a-z0-9-]{1,20}$"}
+      }
+    },
+    "rule": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1, "maxLength": 128},
+        "original_severity": {"type": "string", "maxLength": 40}
+      }
+    },
+    "correlation": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "transaction_id": {"type": "string", "minLength": 1, "maxLength": 128},
+        "parent_event_id": {"$ref": "#/definitions/hash"},
+        "message_index": {"type": "integer", "minimum": 0}
+      }
+    },
+    "evidence": {
+      "type": "object", "additionalProperties": false,
+      "required": ["ref", "sha256"],
+      "properties": {
+        "ref": {"type": "string", "minLength": 1, "maxLength": 512, "pattern": "^[^\\r\\n]+$"},
+        "sha256": {"$ref": "#/definitions/hash"}
+      }
+    }
+  },
+  "definitions": {
+    "hash": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "id": {"type": "string", "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,63}$"},
+    "time": {"type": "string", "format": "date-time", "pattern": "Z$"},
+    "endpoint": {
+      "type": "object", "additionalProperties": false, "required": ["ip"],
+      "properties": {
+        "ip": {"type": "string", "anyOf": [{"format": "ipv4"}, {"format": "ipv6"}]},
+        "port": {"type": "integer", "minimum": 0, "maximum": 65535}
+      }
+    }
+  }
+}

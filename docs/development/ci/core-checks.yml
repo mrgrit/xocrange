@@ -1,0 +1,36 @@
+# Activation: copy to .github/workflows/core-checks.yml using workflow-authorized credentials.
+name: Core contracts and planner
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  contracts-and-planner:
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        python: ["3.10", "3.12"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install development dependencies
+        run: python -m pip install '.[test]'
+      - name: Contract and planner tests
+        run: python -m pytest -q
+      - name: Bootstrap and fixture Compose validation
+        run: |
+          xoc doctor
+          xoc plan --output ci-bootstrap
+          docker compose -f .local/plans/ci-bootstrap/compose.yaml config --quiet
+          xoc plan --include fixture-echo --allow-fixtures --output ci-fixture
+          docker compose -f .local/plans/ci-fixture/compose.yaml config --quiet
+      - name: Package CLI and schemas
+        run: python -m pip wheel --no-deps --wheel-dir dist .

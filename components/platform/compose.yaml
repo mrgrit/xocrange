@@ -1,0 +1,19 @@
+services:
+  platform:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    user: "65532:65532"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    networks: [int]
+    ports:
+      - target: 8080
+        published: 18080
+        host_ip: 127.0.0.1
+        protocol: tcp
+    restart: "no"
+networks:
+  int:
+    internal: true

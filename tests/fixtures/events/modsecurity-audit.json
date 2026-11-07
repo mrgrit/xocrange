@@ -1,0 +1,18 @@
+{
+  "transaction": {
+    "time_stamp": "07/Nov/2026:12:34:56 +0900",
+    "transaction_id": "synthetic-tx-001",
+    "remote_address": "192.0.2.10", "remote_port": 51000,
+    "local_address": "198.51.100.20", "local_port": 443
+  },
+  "request": {"headers": {"Authorization": "SYNTHETIC-DO-NOT-EXPORT"}},
+  "response": {"status": 403, "body": "Synthetic body"},
+  "audit_data": {
+    "producer": ["ModSecurity for Apache/2.9.7", "OWASP_CRS/4.0.0"],
+    "engine_mode": "ENABLED",
+    "messages": [
+      "Warning. Synthetic match [id \"941100\"] [severity \"CRITICAL\"]",
+      "Access denied with code 403 (phase 2). [id \"949110\"] [severity \"CRITICAL\"]"
+    ]
+  }
+}

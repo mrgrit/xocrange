@@ -1,0 +1,232 @@
+"""Offline, deterministic bootstrap planner. It never invokes Docker."""
+from __future__ import annotations
+
+import copy
+import hashlib
+import json
+import re
+import shutil
+from pathlib import Path
+
+import yaml
+
+from . import __version__
+from .documents import canonical, read_bytes, validate, within, yaml_document
+from .errors import XocError
+
+
+def compatible(requirement: str, version=__version__):
+    current = tuple(map(int, version.split(".")))
+    terms = requirement.split()
+    if not terms:
+        raise XocError("invalid_version_range", "An explicit Core version range is required.")
+    result = True
+    for term in terms:
+        match = re.fullmatch(r"(>=|<=|>|<|=)?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)", term)
+        if not match:
+            raise XocError("invalid_version_range", "Use space-separated numeric version comparisons.")
+        op = match[1] or "="
+        wanted = tuple(map(int, match.groups()[1:]))
+        result &= {"=": current == wanted, ">=": current >= wanted, "<=": current <= wanted,
+                   ">": current > wanted, "<": current < wanted}[op]
+    return result
+
+
+def catalog(root: Path, *, allow_fixtures=False):
+    root = root.resolve()
+    result = {}
+    locations = [("components/*/component.yaml", "component"), ("modules.d/*/module.yaml", "module")]
+    if allow_fixtures:
+        locations.append(("tests/fixtures/modules/*/module.yaml", "fixture"))
+    for pattern, kind in locations:
+        for path in sorted(root.glob(pattern)):
+            checked = within(root, str(path.relative_to(root)))
+            descriptor = validate(yaml_document(checked), "manifest")
+            if descriptor["kind"] != kind:
+                raise XocError("invalid_kind", "Descriptor kind must match its installation directory.")
+            identifier = descriptor["id"]
+            if identifier in result:
+                raise XocError("duplicate_component", f"Duplicate component ID: {identifier}")
+            result[identifier] = {"manifest": descriptor, "path": checked}
+    if "platform" not in result or result["platform"]["manifest"]["kind"] != "component":
+        raise XocError("missing_platform", "The mandatory platform descriptor is missing.")
+    return result
+
+
+def ordered(nodes, dependencies, *, code="dependency_cycle"):
+    visiting, done, result = set(), set(), []
+
+    def visit(node):
+        if node in visiting:
+            raise XocError(code, "A dependency cycle prevents planning.")
+        if node in done:
+            return
+        visiting.add(node)
+        for required in sorted(dependencies(node)):
+            visit(required)
+        visiting.remove(node)
+        done.add(node)
+        result.append(node)
+
+    for node in sorted(nodes):
+        visit(node)
+    return result
+
+
+def reject_interpolation(value):
+    if isinstance(value, str) and "$" in value:
+        raise XocError("environment_interpolation", "Bootstrap fragments must use explicit values, without dollar interpolation.")
+    if isinstance(value, dict):
+        for child in value.values():
+            reject_interpolation(child)
+    elif isinstance(value, list):
+        for child in value:
+            reject_interpolation(child)
+
+
+def plan(root: Path, *, preset="bootstrap", include=(), without=(), allow_fixtures=False):
+    root = root.resolve()
+    if not re.fullmatch(r"[a-z][a-z0-9-]{0,63}", preset):
+        raise XocError("invalid_preset", "Preset must be a simple identifier.")
+    preset_path = within(root, f"presets/{preset}.yaml")
+    selection = validate(yaml_document(preset_path), "preset")
+    entries = catalog(root, allow_fixtures=allow_fixtures)
+    requested = set(selection["components"]) | set(include) | {"platform"}
+    excluded = set(without)
+    if not (requested | excluded).issubset(entries):
+        raise XocError("unknown_component", "An included or excluded component is not in the catalog.")
+    if "platform" in excluded:
+        raise XocError("required_component", "The platform component cannot be excluded.")
+    if set(include) & excluded:
+        raise XocError("conflicting_selection", "A component cannot be both included and excluded.")
+    requested -= excluded
+
+    def dependencies(identifier):
+        if identifier not in entries:
+            raise XocError("missing_dependency", "A required component is missing from the catalog.")
+        if identifier in excluded:
+            raise XocError("required_component", f"An excluded component is required: {identifier}")
+        return entries[identifier]["manifest"]["requires"]["components"]
+
+    selected = ordered(requested, dependencies)
+    capabilities = set()
+    config_owners = {}
+    for identifier in selected:
+        manifest = entries[identifier]["manifest"]
+        if manifest["commercial"] or manifest["minimum_tier"] != "community" or re.fullmatch(r"M(?:[1-9]|1[0-9])", identifier):
+            raise XocError("commercial_unavailable", "Commercial modules require the future C7 entitlement implementation.")
+        if not compatible(manifest["core"]):
+            raise XocError("core_incompatible", f"Component is incompatible with this Core version: {identifier}")
+        if set(manifest["conflicts"]) & set(selected):
+            raise XocError("component_conflict", f"A selected component declares a conflict: {identifier}")
+        if manifest["status"] != "ready":
+            raise XocError("component_not_ready", f"Component has a plan but no runnable implementation yet: {identifier}")
+        capabilities.update(manifest["provides"])
+        for key in manifest["config_keys"]:
+            if key in config_owners:
+                raise XocError("config_conflict", "Multiple components declare the same configuration key.")
+            config_owners[key] = identifier
+    for identifier in selected:
+        if not set(entries[identifier]["manifest"]["requires"]["capabilities"]).issubset(capabilities):
+            raise XocError("missing_capability", f"A required capability has no selected provider: {identifier}")
+
+    compose = {"name": "xoc-core-bootstrap", "services": {}, "networks": {}}
+    inputs = {}
+
+    def record(path):
+        relative = str(path.relative_to(root))
+        inputs[relative] = hashlib.sha256(read_bytes(path)).hexdigest()
+
+    record(preset_path)
+    for identifier in selected:
+        entry = entries[identifier]
+        manifest, manifest_path = entry["manifest"], entry["path"]
+        package = manifest_path.parent
+        record(manifest_path)
+        allowed_build_files = {manifest_path}
+        for relative in manifest["build_inputs"]:
+            source = within(package, relative)
+            record(source)
+            allowed_build_files.add(source)
+        if "compose" not in manifest:
+            raise XocError("missing_compose", f"Ready component must provide a Compose fragment: {identifier}")
+        fragment_path = within(package, manifest["compose"])
+        record(fragment_path)
+        allowed_build_files.add(fragment_path)
+        fragment = validate(yaml_document(fragment_path), "compose-fragment")
+        reject_interpolation(fragment)
+        if set(fragment["networks"]) != set(manifest["networks"]):
+            raise XocError("undeclared_network", "Fragment networks must match the descriptor declaration.")
+        for name, network in fragment["networks"].items():
+            if name in compose["networks"] and compose["networks"][name] != network:
+                raise XocError("network_conflict", "Selected fragments disagree on network settings.")
+            compose["networks"][name] = network
+        for name, service in fragment["services"].items():
+            if name in compose["services"]:
+                raise XocError("service_conflict", f"Duplicate service name: {name}")
+            if not set(service["networks"]).issubset(manifest["networks"]):
+                raise XocError("undeclared_network", "A service uses an undeclared network.")
+            if not set(service.get("environment", {})).issubset(manifest["config_keys"]):
+                raise XocError("undeclared_config", "Environment keys must be declared by their component.")
+            service = copy.deepcopy(service)
+            if "build" in service:
+                context = within(package, service["build"]["context"], require_file=False)
+                if not context.is_dir():
+                    raise XocError("missing_context", "Build context must be an existing package directory.")
+                dockerfile = within(context, service["build"]["dockerfile"])
+                if dockerfile not in allowed_build_files:
+                    raise XocError("untracked_build_input", "Dockerfile must be a declared build input.")
+                # Every file sent to Docker must be accounted for, including .dockerignore.
+                for candidate in context.rglob("*"):
+                    if candidate.is_symlink():
+                        raise XocError("build_symlink", "Build contexts cannot contain symlinks in v0.1.")
+                    if candidate.is_file() and candidate not in allowed_build_files:
+                        raise XocError("untracked_build_input", "Build context contains an undeclared file.")
+                service["build"]["context"] = str(context)
+            compose["services"][name] = service
+
+    services = compose["services"]
+    bindings = []
+    for name, service in services.items():
+        if not set(service.get("depends_on", [])).issubset(services):
+            raise XocError("missing_service", "A service dependency is absent from the assembled plan.")
+        for port in service.get("ports", []):
+            for previous in bindings:
+                overlaps = port["host_ip"] == previous["host_ip"] or bool({port["host_ip"], previous["host_ip"]} & {"0.0.0.0", "::"})
+                if port["published"] == previous["published"] and port["protocol"] == previous["protocol"] and overlaps:
+                    raise XocError("port_conflict", "Selected services overlap on a published host port.")
+            bindings.append(port)
+    ordered(services, lambda name: services[name].get("depends_on", []), code="service_cycle")
+    # Hash a portable representation; emitted Compose uses absolute build paths for execution.
+    portable = copy.deepcopy(compose)
+    for service in portable["services"].values():
+        if "build" in service:
+            service["build"]["context"] = str(Path(service["build"]["context"]).relative_to(root))
+    lock = {"schema_version": "xoc.plan/0.1.0", "core_version": __version__, "preset": preset,
+            "selected": selected, "requested": sorted(requested), "excluded": sorted(excluded),
+            "fixtures_allowed": allow_fixtures, "input_sha256": dict(sorted(inputs.items())),
+            "compose_sha256": hashlib.sha256(canonical(portable)).hexdigest()}
+    lock["plan_id"] = hashlib.sha256(canonical(lock)).hexdigest()
+    return {"lock": lock, "compose": compose, "limitations": [
+        "Offline plan only; no images built, containers started, or host resources checked.",
+        "Image tags are not digest-locked; this is not a reproducible release lock.",
+        "Bootstrap is a health endpoint, not the completed Community platform.",
+    ]}
+
+
+def write_plan(root: Path, output: str, result):
+    """Write a new local output directory only after a complete valid plan exists."""
+    base = root.resolve() / ".local" / "plans"
+    if not base.resolve().is_relative_to(root.resolve()):
+        raise XocError("path_escape", "Plan output cannot follow a symlink outside the checkout.")
+    target = within(base, output, require_file=False)
+    if target == base.resolve() or target.exists():
+        raise XocError("output_exists", "Choose a new named directory beneath .local/plans.")
+    target.mkdir(parents=True, mode=0o700)
+    try:
+        (target / "compose.yaml").write_text(yaml.safe_dump(result["compose"], sort_keys=True), encoding="utf-8")
+        (target / "plan.lock.json").write_text(json.dumps(result["lock"], indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    except OSError:
+        shutil.rmtree(target)
+        raise
+    return target

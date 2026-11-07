@@ -1,0 +1,15 @@
+# Target composition; generation fails until every selected component is ready.
+schema_version: xoc.preset/0.1.0
+components:
+  - platform
+  - security-path
+  - siem
+  - console-fw
+  - console-ips
+  - console-waf
+  - ssh-lab
+  - target-juice
+  - target-dvwa
+  - portal
+  - noc
+  - academy-reader
