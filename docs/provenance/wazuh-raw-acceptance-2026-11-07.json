@@ -1,0 +1,304 @@
+{
+  "date": "2026-11-07",
+  "status": "passed",
+  "scope": "Eight local raw sources, reviewed kt66/Wazuh fixture comparison, complete SIEM deselection/reinstall/reselection and dedicated-VM lifecycle; not complete kt66 parity or a Community release",
+  "runtime_source_sha256": "9ee0b08d8c0d7e688c598831c651319419dc312af88b5dd4fbf0a606c929b923",
+  "roadmap_repository": "mrgrit/xocrange_plan",
+  "roadmap_commit": "f548caaa2b271565c38f953049d97675f0d4071a",
+  "environment": {
+    "os": "Ubuntu Server 26.04.1 amd64",
+    "vcpu": 8,
+    "ram_gib_rounded": 16,
+    "disk_gib_allocated": 300,
+    "wazuh_manager_indexer_dashboard": "4.14.10"
+  },
+  "unit_tests": {
+    "development_python": "3.10.12",
+    "development_passed": 240,
+    "vm_python": "3.14.4",
+    "vm_passed": 240
+  },
+  "engine_comparison": {
+    "legacy": {
+      "image": "wazuh/wazuh-manager@sha256:77fc060a380dd995b541fd525034f4f8f58c6efa7a625b15f4c9251f0353a69c",
+      "total": 25,
+      "passed": 25
+    },
+    "candidate": {
+      "image": "wazuh/wazuh-manager@sha256:dcda4869e2f792e92f03bce93f85b4bdf103756ea61cfca8ba9f3eabeb05365b",
+      "total": 25,
+      "passed": 25
+    }
+  },
+  "legacy_rule_sha256": "2dde21166f12ad715d4fdd5d8f4cb5e761f2c4cab7f0d53bfff0e3a902610493",
+  "live_checks": {
+    "security_path": 15,
+    "c1_sources": {
+      "nftables": true,
+      "suricata": true,
+      "modsecurity": true,
+      "osquery": true,
+      "sysmon": true,
+      "auditd": true,
+      "apache-access": true,
+      "apache-error": true
+    },
+    "raw_sources": {
+      "nftables": true,
+      "suricata": true,
+      "modsecurity": true,
+      "osquery": true,
+      "sysmon": true,
+      "auditd": true,
+      "apache-access": true,
+      "apache-error": true
+    },
+    "https_api": {
+      "status": "passed",
+      "checks": {
+        "http_redirect_preserves_path_query": true,
+        "anonymous_api_requires_login": true,
+        "rule_exception_preserves_authentication": true,
+        "wrong_password_rejected": true,
+        "login_through_waf": true,
+        "secure_httponly_session_cookie": true,
+        "authenticated_api": true,
+        "native_manager_version": true,
+        "native_manager_daemons": true,
+        "manager_anonymous_rejected": true,
+        "manager_default_password_rejected": true,
+        "manager_wrong_hostname_rejected": true,
+        "manager_wrong_ca_rejected": true,
+        "native_plugin_manager_connection": true,
+        "native_plugin_hides_service_password": true,
+        "native_plugin_session": true,
+        "native_plugin_manager_info": true,
+        "native_plugin_agents": true,
+        "native_plugin_xss_still_blocked": true,
+        "dashboard_html": true,
+        "static_javascript": true,
+        "discover_highlight_rule_exception": true,
+        "other_search_field_still_inspected": true,
+        "other_path_still_inspected": true,
+        "unrelated_put_still_blocked": true,
+        "xss_still_blocked": true,
+        "file_path_investigation_allowed": true,
+        "unrelated_field_keeps_lfi_detection": true,
+        "oversized_request_rejected": true,
+        "malformed_json_rejected": true,
+        "truncated_json_fails_closed_in_waf": true,
+        "waf_marker_blocks_siem": true,
+        "forwarded_client_header_cannot_be_spoofed": true,
+        "ips_inspects_decrypted_https": true,
+        "ui_recovers_after_block": true,
+        "create_index_pattern": true,
+        "field_definition_rule_exceptions": true,
+        "wrong_method_gets_no_field_exception": true,
+        "other_attribute_still_inspected": true,
+        "large_field_list_allowed": true,
+        "temporary_object_deleted": true,
+        "all_eight_fresh_sources_indexed": true,
+        "native_alerts_contain_all_eight_c1_links": true,
+        "raw_suricata_alert_indexed_with_evidence": true,
+        "raw_modsecurity_alert_indexed_with_evidence": true,
+        "raw_sysmon_alert_indexed_with_evidence": true,
+        "raw_apache-error_alert_indexed_with_evidence": true,
+        "stock_sshd_rule_indexes_original_alert": true,
+        "writer_cannot_read_events": true,
+        "writer_cannot_read_native_alerts": true,
+        "logout": true,
+        "logout_revokes_browser_session": true
+      }
+    }
+  },
+  "raw_replay": {
+    "status": "passed",
+    "checks": {
+      "suricata": true,
+      "modsecurity": true,
+      "osquery": true,
+      "sysmon": true,
+      "four_unique_index_documents": true
+    },
+    "raw_inputs_replayed": 4
+  },
+  "full_siem_selection": {
+    "excluded": [
+      {
+        "status": "passed",
+        "checks": {
+          "installation_succeeded": true,
+          "siem_unselected": true,
+          "siem_containers_absent": true,
+          "security_path_running": true,
+          "collection_services_stopped": true,
+          "collection_services_disabled": true,
+          "os_auditd_kept": true,
+          "owned_audit_rules_removed": true,
+          "owned_persistent_rules_removed": true,
+          "unrelated_audit_watch_kept": true,
+          "all_existing_volumes_kept": true,
+          "credentials_and_cas_kept": true,
+          "raw_and_c1_anchors_kept": true
+        },
+        "evidence_counts": {
+          "records": 734355,
+          "events": 735340,
+          "wazuh_alerts": 396935,
+          "native_inputs": 76325
+        }
+      },
+      {
+        "status": "passed",
+        "checks": {
+          "installation_succeeded": true,
+          "siem_unselected": true,
+          "siem_containers_absent": true,
+          "security_path_running": true,
+          "collection_services_stopped": true,
+          "collection_services_disabled": true,
+          "os_auditd_kept": true,
+          "owned_audit_rules_removed": true,
+          "owned_persistent_rules_removed": true,
+          "unrelated_audit_watch_kept": true,
+          "all_existing_volumes_kept": true,
+          "credentials_and_cas_kept": true,
+          "raw_and_c1_anchors_kept": true,
+          "excluded_reinstall_did_not_change_evidence_counts": true
+        },
+        "evidence_counts": {
+          "records": 734355,
+          "events": 735340,
+          "wazuh_alerts": 396935,
+          "native_inputs": 76325
+        }
+      }
+    ],
+    "restored": {
+      "status": "passed",
+      "after": "reinstall",
+      "release": "9ee0b08d8c0d7e688c598831c651319419dc312af88b5dd4fbf0a606c929b923",
+      "checks": {
+        "credentials_preserved": true,
+        "ca_preserved": true,
+        "saved_object_preserved": true,
+        "raw_evidence_preserved": true,
+        "c1_events_preserved": true,
+        "all_anchors_acknowledged": true,
+        "index_documents_preserved_without_duplicates": true,
+        "core_active": true,
+        "collector_active": true,
+        "native_alerts_preserved": true,
+        "native_index_documents_preserved": true,
+        "custom_manager_api_user_preserved": true,
+        "eight_raw_processing_receipts_preserved": true,
+        "manager_credentials_preserved": true,
+        "manager_ca_preserved": true,
+        "unrelated_audit_watch_kept": true,
+        "owned_audit_rules_restored": true,
+        "all_existing_volumes_kept": true
+      },
+      "evidence": {
+        "total": 24,
+        "raw_matches": 24,
+        "event_matches": 24,
+        "indexed": 24
+      },
+      "fresh_security_path_checks": 15,
+      "fresh_source_checks": 8,
+      "fresh_https_checks": 52
+    }
+  },
+  "indexer_outage": {
+    "status": "passed",
+    "wazuh_confirmation_continued": true,
+    "indexer_failure_reported": true,
+    "queued_events_checked": 100,
+    "recovered_unique_documents": 100,
+    "native_alerts_recovered_without_duplicates": 100,
+    "raw_source_alerts_recovered_without_duplicates": 100
+  },
+  "reboot": {
+    "status": "passed",
+    "after": "reboot",
+    "release": "9ee0b08d8c0d7e688c598831c651319419dc312af88b5dd4fbf0a606c929b923",
+    "checks": {
+      "credentials_preserved": true,
+      "ca_preserved": true,
+      "saved_object_preserved": true,
+      "raw_evidence_preserved": true,
+      "c1_events_preserved": true,
+      "all_anchors_acknowledged": true,
+      "index_documents_preserved_without_duplicates": true,
+      "core_active": true,
+      "collector_active": true,
+      "boot_id_changed": true,
+      "native_alerts_preserved": true,
+      "native_index_documents_preserved": true,
+      "custom_manager_api_user_preserved": true,
+      "eight_raw_processing_receipts_preserved": true,
+      "manager_credentials_preserved": true,
+      "manager_ca_preserved": true
+    },
+    "evidence": {
+      "total": 24,
+      "raw_matches": 24,
+      "event_matches": 24,
+      "indexed": 24
+    },
+    "fresh_security_path_checks": 15,
+    "fresh_source_checks": 8,
+    "fresh_https_checks": 52
+  },
+  "cleanup": {
+    "status": "cleaned",
+    "retained": [
+      "checkpoint",
+      "reports",
+      "all_evidence",
+      "all_volumes"
+    ],
+    "temporary_audit_watch_removed": true
+  },
+  "collector": {
+    "quarantined": 0,
+    "pending": 275,
+    "oldest_pending_seconds": 1,
+    "sysmon_source_lag_seconds": 0,
+    "status": "ready",
+    "native_input_pending": 275,
+    "native_input_errors": 0,
+    "oldest_native_input_pending_seconds": 1,
+    "index_pending": 0,
+    "oldest_index_pending_seconds": 0,
+    "native_alerts_pending": 0
+  },
+  "limitations": [
+    "Reviewed synthetic rule corpus and real local-source probes, not all production kt66 rules/logs",
+    "External agent enrollment and live Windows acquisition remain pending",
+    "Advanced WAF configuration/editing workflows and common platform RBAC remain pending",
+    "Long-term load, source/archive retention and disk-exhaustion recovery remain pending",
+    "GitHub CI remains an inactive template"
+  ],
+  "browser_after_reboot": {
+    "status": "passed",
+    "checks": {
+      "login_form": true,
+      "four_dashboard_panels": true,
+      "secure_httponly_cookie": true,
+      "custom_logo_loaded": true,
+      "session_survives_reload": true,
+      "source_filter": true,
+      "file_path_search": true,
+      "all_events": true,
+      "discover_deep_link_reload": true,
+      "no_authenticated_http_errors": true,
+      "no_search_error_notice": true,
+      "native_wazuh_home": true,
+      "native_server_status": true,
+      "native_threat_hunting": true,
+      "native_requests_without_http_errors": true
+    },
+    "http_errors": []
+  }
+}

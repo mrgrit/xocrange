@@ -134,9 +134,11 @@ def initialize(client, root, timeout=240):
     native=json.loads((root/'components/siem-ui/wazuh-template.json').read_text())
     native['settings']['index.number_of_shards']='1'
     native['settings']['index.auto_expand_replicas']='false'
-    native['mappings']['properties']['xoc']={'properties':{name:{'type':'keyword'} for name in ('event_id','evidence_ref','native_alert_id')}}
+    native['mappings']['properties']['xoc']={'properties':{name:{'type':'keyword'} for name in ('event_id','evidence_ref','native_alert_id','input_id','producer','analysis_route')}}
     status,_=client.request('PUT','/_template/xoc-wazuh',native)
     if status!=200:raise XocError('native_template','Cannot install native Wazuh mappings.')
+    status,_=client.request('PUT','/wazuh-alerts-*/_mapping?allow_no_indices=true',{'properties':{'xoc':native['mappings']['properties']['xoc']}})
+    if status not in (200,404):raise XocError('native_mapping','Cannot reconcile native link fields.')
     status,_=client.request('PUT','/_index_template/xoc-events',template)
     if status!=200: raise XocError('indexer_template','Cannot install the C1 search mapping.')
     # Additive mappings cover prior local releases too. Re-export through the

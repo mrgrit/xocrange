@@ -217,7 +217,7 @@ def auditd(raw, ctx):
     return [event]
 
 
-ACCESS = re.compile(r'^(\S+) \S+ \S+ \[([^\]]+)\] "([A-Z]+) [^"\r\n]* HTTP/[0-9.]+" (\d{3}) (\d+|-)(?: "[^"\r\n]*" "[^"\r\n]*")?$')
+ACCESS = re.compile(r'^(\S+) \S+ \S+ \[([^\]]+)\] "((?:[^"\\\r\n]|\\.)*)" (\d{3}) (\d+|-)(?: "(?:[^"\\\r\n]|\\.)*" "(?:[^"\\\r\n]|\\.)*")?(?: xoc_id=([A-Za-z0-9_@.-]+))?$')
 
 
 def apache_access(raw, ctx):
@@ -234,8 +234,10 @@ def apache_access(raw, ctx):
             match = ACCESS.fullmatch(value)
             if not match:
                 fail()
-            address, timestamp, method, status, count = match.groups()
-            timestamp, status, request_id = modsec_time(timestamp), int(status), None
+            address, timestamp, request, status, count, request_id = match.groups()
+            method = request.split(' ',1)[0] if request != '-' else None
+            if method is not None and not re.fullmatch('[A-Z]+',method):fail()
+            timestamp, status = modsec_time(timestamp), int(status)
         if status < 100:
             fail()
         event = make_event(raw, ctx, "apache-access", discriminator="request", timestamp=timestamp,

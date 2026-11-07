@@ -1,0 +1,24 @@
+<!-- Native nftables/NFLOG layout; preserve the original packet log, not C1. -->
+<!-- Wazuh 4.14 predecoding of fractional RFC3339 timestamps can expose
+     "ernel" as program_name. Require the reviewed firewall prefix as well. -->
+<decoder name="xoc-nftables">
+  <program_name type="pcre2">^(?:kernel|ernel)$</program_name>
+  <type>firewall</type>
+  <prematch type="pcre2">^(?:\[\s*\d+\.\d+\] )?\[(?:xoc|kt66)-(?:fw|ips)\] (?:[a-z]+->[a-z]+ )?(?:ACCEPT|DROP|REJECT) IN=</prematch>
+</decoder>
+<decoder name="xoc-nftables">
+  <type>firewall</type>
+  <prematch type="pcre2">^(?:\d{4}-\d{2}-\d{2}T\S+ \S+ kernel: )?(?:\[[^\]\r\n]{1,64}\] ){0,2}(?:[a-z]+->[a-z]+ )?(?:ACCEPT|DROP|REJECT) IN=</prematch>
+</decoder>
+<decoder name="xoc-nftables-fields">
+  <parent>xoc-nftables</parent>
+  <type>firewall</type>
+  <regex type="pcre2">\b(ACCEPT|DROP|REJECT) IN=\S* OUT=\S* .*?SRC=(\S+) DST=(\S+).*?PROTO=(\S+)(?:\s|$)</regex>
+  <order>action,srcip,dstip,protocol</order>
+</decoder>
+<decoder name="xoc-nftables-fields">
+  <parent>xoc-nftables</parent>
+  <type>firewall</type>
+  <regex type="pcre2">\bSPT=(\d+) DPT=(\d+)(?:\s|$)</regex>
+  <order>srcport,dstport</order>
+</decoder>

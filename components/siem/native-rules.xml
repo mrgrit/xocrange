@@ -1,0 +1,67 @@
+<!-- Preserve kt66's WAF IDs/levels, with stricter intervention evidence.
+     Application HTTP 403 alone must never be classified as a WAF block. -->
+<group name="xoc_native,web,modsecurity,">
+  <rule id="119670" level="3">
+    <decoded_as>json</decoded_as>
+    <location type="pcre2">^xoc-native/[a-f0-9]{64}/modsecurity$</location>
+    <field name="transaction.transaction_id" type="pcre2">\S+</field>
+    <field name="audit_data.producer" type="pcre2">ModSecurity</field>
+    <description>ModSecurity JSON audit event</description>
+  </rule>
+  <rule id="119671" level="5">
+    <if_sid>119670</if_sid>
+    <field name="audit_data.messages" type="pcre2">^(?!\[\s*\]$)\S+</field>
+    <description>ModSecurity JSON rule warning</description>
+  </rule>
+  <rule id="119672" level="7">
+    <if_sid>119671</if_sid>
+    <field name="xoc_modsecurity.intervention">^true$</field>
+    <description>ModSecurity JSON request blocked by WAF</description>
+    <group>access_denied,</group>
+  </rule>
+</group>
+<group name="xoc_native,sysmon_linux,">
+  <rule id="111200" level="0">
+    <decoded_as>json</decoded_as>
+    <location type="pcre2">^xoc-native/[a-f0-9]{64}/sysmon$</location>
+    <field name="sysmon_linux.provider">^Linux-Sysmon$</field>
+    <description>Linux Sysmon native observation</description>
+  </rule>
+  <rule id="111201" level="3">
+    <if_sid>111200</if_sid>
+    <field name="sysmon_linux.event_id">^1$</field>
+    <description>Linux Sysmon process creation: $(sysmon_linux.eventdata.Image)</description>
+    <group>sysmon_event1,</group>
+  </rule>
+  <rule id="111203" level="3">
+    <if_sid>111200</if_sid>
+    <field name="sysmon_linux.event_id">^3$</field>
+    <description>Linux Sysmon network connection: $(sysmon_linux.eventdata.Image)</description>
+    <group>sysmon_event3,</group>
+  </rule>
+  <rule id="111211" level="3">
+    <if_sid>111200</if_sid>
+    <field name="sysmon_linux.event_id">^11$</field>
+    <description>Linux Sysmon file creation: $(sysmon_linux.eventdata.TargetFilename)</description>
+    <group>sysmon_event11,</group>
+  </rule>
+</group>
+<group name="xoc_native,web,accesslog,">
+  <rule id="111300" level="0">
+    <decoded_as>json</decoded_as>
+    <location type="pcre2">^xoc-native/[a-f0-9]{64}/apache-access$</location>
+    <field name="request_id" type="pcre2">\S+</field>
+    <field name="client_ip" type="pcre2">\S+</field>
+    <description>Legacy xOC JSON access record</description>
+  </rule>
+  <rule id="111301" level="5">
+    <if_sid>111300</if_sid>
+    <status>^4\d\d$</status>
+    <description>Legacy xOC web server client error</description>
+  </rule>
+  <rule id="111302" level="5">
+    <if_sid>111300</if_sid>
+    <status>^5\d\d$</status>
+    <description>Legacy xOC web server server error</description>
+  </rule>
+</group>

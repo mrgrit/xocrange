@@ -1,0 +1,30 @@
+{
+  "reviewed_at": "2026-11-07",
+  "source_repository": "https://github.com/mrgrit/kt66",
+  "source_commit": "b179231073b25fb797b9c6443da393d02cc12340",
+  "worktree_note": "Read-only review of the existing working tree; 27 pre-existing modified/untracked paths. Host services and source files were not changed.",
+  "files": [
+    {
+      "path": "siem/modsecurity-json-rules.xml",
+      "sha256": "2dde21166f12ad715d4fdd5d8f4cb5e761f2c4cab7f0d53bfff0e3a902610493"
+    },
+    {
+      "path": "siem/tests/test_event_rules.py",
+      "sha256": "ce83aa00e454a308bbff9f3b044ebb4a60f8234245d5fb95c2bb0d159839d797"
+    },
+    {
+      "path": "web/entrypoint.sh",
+      "sha256": "11d28fddb2e9c158e56ce5ea5388e83486b2421b51fcd95a4b252d50e39c0fda"
+    }
+  ],
+  "reuse": "WAF IDs 119670/119671/119672 and levels 3/5/7 retain reviewed kt66 classification. Core rules and test harness authored here; the legacy rule file is an external read-only comparison input. Stricter intervention/source checks intentionally fix AHZ and quoted-message/detection-only differences.",
+  "engines": {
+    "legacy": "wazuh/wazuh-manager@sha256:77fc060a380dd995b541fd525034f4f8f58c6efa7a625b15f4c9251f0353a69c",
+    "candidate": "wazuh/wazuh-manager@sha256:dcda4869e2f792e92f03bce93f85b4bdf103756ea61cfca8ba9f3eabeb05365b"
+  },
+  "upstream_docs": [
+    "https://documentation.wazuh.com/current/user-manual/ruleset/testing.html",
+    "https://documentation.wazuh.com/current/user-manual/ruleset/decoders/json-decoder.html",
+    "https://documentation.wazuh.com/current/user-manual/manager/event-logging.html"
+  ]
+}

@@ -13,7 +13,7 @@
 | 기능 | 현재 구현 |
 |---|---|
 | C1 이벤트 계약 | v0.2 JSON Schema, nftables·Suricata·ModSecurity·osquery·Sysmon·auditd·Apache access/error 정규화 |
-| SIEM 백엔드 | 실제 로그 수집, 원본 SHA-256, 오류 격리·재처리, Wazuh Manager/API·기본 규칙, 원본 경보와 C1 연결 |
+| SIEM 백엔드 | 8종 원본 직접 분석과 C1 독립 전송, 원본 SHA-256, 처리 확인·재전송, Wazuh Manager/API·기본/보완 규칙, 원본 경보·증거 연결 |
 | SIEM 웹 관제 | Wazuh Indexer + 전용 Dashboard, 8종 통합 검색·차트·필터, HTTPS 인증, 범위를 제한한 WAF Rule 예외 |
 | 설치 계획 | manifest 검증, 의존성·충돌·포트 검사, Compose·입력 해시 생성 |
 | 구성 진단 | `xoc doctor`: 로컬 구성과 Docker CLI 존재 확인 |

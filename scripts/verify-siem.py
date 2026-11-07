@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Installation acceptance: actual source files -> C1 -> Wazuh -> durable search."""
+"""Installation acceptance: independent C1 and raw-source analysis routes."""
 import json
 from pathlib import Path
 import subprocess
@@ -23,11 +23,17 @@ while True:
     report = store.status()
     available = {row[0] for row in store.db.execute("SELECT DISTINCT producer FROM events WHERE observed>=? AND confirmed IS NOT NULL AND julianday(json_extract(event, '$.timestamp'))>=julianday(?) AND (producer!='sysmon' OR json_extract(event, '$.event.type')='observation') AND (producer!='auditd' OR json_extract(event, '$.audit.key')='xoc_probe')", (cutoff,cutoff))}
     sources_ready = {row['source']: row['status'] for row in report['sources']}
-    passed = expected <= available and sources_ready.get('wazuh') == 'ready'
+    native = {row[0] for row in store.db.execute("""SELECT DISTINCT n.source FROM native_inputs n
+        JOIN events e ON e.id=n.event_id WHERE n.observed>=? AND n.confirmed IS NOT NULL
+        AND n.error IS NULL AND n.decoder!='sensor-diagnostic'
+        AND julianday(json_extract(e.event,'$.timestamp'))>=julianday(?)
+        AND (n.source!='auditd' OR json_extract(e.event,'$.audit.key')='xoc_probe')""", (cutoff,cutoff))}
+    passed = expected <= available and expected <= native and all(sources_ready.get(name) == 'ready' for name in ('wazuh','wazuh-native'))
     if passed or time.monotonic() >= deadline:
         result = {'status': 'passed' if passed else 'failed',
                   'checks': {source: source in available for source in SOURCES},
-                  'store': report, 'since': cutoff, 'scope': 'Live local source records decoded by Wazuh; no dashboard/indexer acceptance.'}
+                  'native_checks': {source: source in native for source in SOURCES},
+                  'store': report, 'since': cutoff, 'scope': 'Fresh local records: C1 alerts and independently decoded raw inputs with Manager archive receipts; dashboard/indexer acceptance is separate.'}
         Path('/var/lib/xocrange/siem-acceptance.json').write_text(json.dumps(result, indent=2)+'\n')
         print(json.dumps(result, indent=2))
         raise SystemExit(0 if passed else 2)

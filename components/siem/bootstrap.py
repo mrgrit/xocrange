@@ -18,7 +18,7 @@ for relative in ('etc','api/configuration','queue','var'):
         marker.touch()
     for path in [target,*target.rglob('*')]:
         if not path.is_symlink():os.chown(path,999,999)
-for source,destination in [('ossec.conf','etc/ossec.conf'),('c1-decoder.xml','etc/xoc-decoders/xoc-c1.xml'),('c1-rules.xml','etc/xoc-rules/xoc-c1.xml')]:
+for source,destination in [('ossec.conf','etc/ossec.conf'),('c1-decoder.xml','etc/xoc-decoders/xoc-c1.xml'),('c1-rules.xml','etc/xoc-rules/xoc-c1.xml'),('native-decoders.xml','etc/xoc-decoders/xoc-native.xml'),('native-rules.xml','etc/xoc-rules/xoc-native.xml')]:
     path=root/destination;path.parent.mkdir(parents=True,exist_ok=True)
     shutil.copyfile('/opt/xoc-config/'+source,path)
     os.chown(path,0,999);path.chmod(0o640)

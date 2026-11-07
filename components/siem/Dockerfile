@@ -3,9 +3,10 @@ RUN cp -a /var/ossec/data_tmp/permanent/var/ossec/. /var/ossec/ && \
     cp -a /var/ossec/data_tmp/exclusion/var/ossec/. /var/ossec/ && \
     ln -sf ../../var/ar.conf /var/ossec/etc/shared/ar.conf && \
     rmdir /var/ossec/stats && ln -s var/stats /var/ossec/stats
-COPY ossec.conf c1-decoder.xml c1-rules.xml /opt/xoc-config/
+COPY ossec.conf c1-decoder.xml c1-rules.xml native-decoders.xml native-rules.xml /opt/xoc-config/
 COPY start.sh /usr/local/bin/xoc-siem-start
 COPY queue.py /usr/local/lib/xoc-queue.py
+COPY native-queue.py /usr/local/lib/xoc-native-queue.py
 COPY bootstrap.py /usr/local/lib/xoc-manager-bootstrap.py
 RUN mkdir -p /opt/xoc-manager-seed/api && \
     cp -a /var/ossec/etc /var/ossec/queue /var/ossec/var /opt/xoc-manager-seed/ && \

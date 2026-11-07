@@ -170,6 +170,21 @@ r.on('error',e=>process.exit(['ERR_TLS_CERT_ALTNAME_INVALID','UNABLE_TO_VERIFY_L
         if set(SOURCES)<=found or time.monotonic()>=deadline:break
         time.sleep(3)
     checks['native_alerts_contain_all_eight_c1_links']=code==200 and set(SOURCES)<=found
+    # Normal audit/firewall/access records can legitimately produce no alert.
+    # Native processing for all eight sources is proven by archive receipts;
+    # the following actual detections must also reach the searchable index.
+    expected_raw={'suricata':'86601','modsecurity':'119672','sysmon':'111201','apache-error':'30411'}
+    deadline=time.monotonic()+180
+    while True:
+        code,data=client.request('POST','/wazuh-alerts-4.x-*/_search',{'size':100,
+            'query':{'bool':{'filter':[{'term':{'xoc.analysis_route':'raw'}},{'range':{'timestamp':{'gte':since}}},
+                {'terms':{'rule.id':list(expected_raw.values())}}]}}})
+        raw_found={hit['_source'].get('xoc',{}).get('producer') for hit in data.get('hits',{}).get('hits',[])
+            if hit['_source'].get('xoc',{}).get('input_id') and hit['_source'].get('xoc',{}).get('evidence_ref')
+            and hit['_source'].get('rule',{}).get('id')==expected_raw.get(hit['_source'].get('xoc',{}).get('producer'))}
+        if set(expected_raw)<=raw_found or time.monotonic()>=deadline:break
+        time.sleep(3)
+    for source in expected_raw:checks['raw_'+source+'_alert_indexed_with_evidence']=code==200 and source in raw_found
     # Exercise a stock decoder/rule independently of C1. This is an explicitly
     # synthetic syslog probe, not an SSH attempt or a modification of host users.
     marker='xocprobe'+uuid.uuid4().hex[:12]

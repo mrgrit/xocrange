@@ -11,18 +11,31 @@ def accept(store,raw):
     alert=json.loads(raw)
     if not all(isinstance(v,str) and v for v in (alert.get('id'),alert.get('timestamp'),alert.get('manager',{}).get('name'))):
         raise XocError('native_alert_format','A Wazuh alert is missing its native identity.')
-    identity=hashlib.sha256(canonical([alert['manager']['name'],alert['id'],alert['timestamp']])).hexdigest()
+    from .native_input import delivery
+    source_input=delivery(store,alert)
+    if source_input:
+        # A retry of the same source input can produce a new Wazuh ID/time.
+        # Deduplicate equivalent analysis, retaining the first original bytes.
+        # Changed rule/data/context still creates a distinct original analysis.
+        stable={k:v for k,v in alert.items() if k not in ('id','timestamp')}
+        stable['rule']={k:v for k,v in alert.get('rule',{}).items() if k!='firedtimes'}
+        identity=hashlib.sha256(canonical(['native-alert/1',source_input['id'],stable])).hexdigest()
+    else:
+        identity=hashlib.sha256(canonical([alert['manager']['name'],alert['id'],alert['timestamp']])).hexdigest()
     digest=hashlib.sha256(raw).hexdigest()
     existing=store.db.execute('SELECT sha256 FROM wazuh_alerts WHERE id=?',(identity,)).fetchone()
     if existing:
-        if existing[0]!=digest:raise XocError('native_alert_conflict','An existing Wazuh alert has different bytes.')
+        if existing[0]!=digest and not source_input:raise XocError('native_alert_conflict','An existing Wazuh alert has different bytes.')
         return identity
-    event_id=alert.get('data',{}).get('event_id')
-    row=store.db.execute('SELECT ref FROM events WHERE id=? AND confirmed IS NOT NULL',(event_id,)).fetchone() if isinstance(event_id,str) else None
+    event_id=source_input['event_id'] if source_input else alert.get('data',{}).get('event_id')
+    query='SELECT ref FROM events WHERE id=?' + ('' if source_input else ' AND confirmed IS NOT NULL')
+    row=store.db.execute(query,(event_id,)).fetchone() if isinstance(event_id,str) else None
     link={'event_id':event_id,'evidence_ref':row['ref']} if row else {}
     document=dict(alert)
     document['@timestamp']=alert['timestamp']
     document['xoc']={'native_alert_id':identity,**link}
+    if source_input:
+        document['xoc'].update(input_id=source_input['id'],producer=source_input['source'],analysis_route='raw',evidence_ref=source_input['ref'])
     store.db.execute('INSERT INTO wazuh_alerts(id,observed,raw,sha256,document,event_id) VALUES (?,?,?,?,?,?)',
                      (identity,now(),raw,digest,canonical(document).decode(),event_id if row else None))
     return identity

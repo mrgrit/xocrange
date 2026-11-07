@@ -178,11 +178,19 @@ class Installed:
             for row in rows:
                 if hashlib.sha256(row['raw']).hexdigest()!=row['sha256']:raise XocError('evidence_corrupt','Native evidence is corrupt.')
                 anchors.append({'id':row['id'],'observed':row['observed'],'sha256':row['sha256'],'document_sha256':hashlib.sha256(canonical(json.loads(row['document']))).hexdigest()})
+        inputs=[]
+        if self.store.cursor('native-input-enabled'):
+            for source in SOURCES:
+                row=self.store.db.execute('''SELECT id,ref,source,frame_sha256,confirmed,decoder FROM native_inputs
+                    WHERE source=? AND confirmed IS NOT NULL AND error IS NULL AND decoder!='sensor-diagnostic'
+                    ORDER BY observed DESC LIMIT 1''',(source,)).fetchone()
+                if row is None:raise XocError('native_input_missing','Every raw source needs a processing receipt.')
+                inputs.append(dict(row))
         client,token=self.manager();username='xoc-lifecycle-'+uuid.uuid4().hex[:12]
         code,data=client.request('POST','/security/users',{'username':username,'password':'Xoc1!'+secrets.token_urlsafe(24)},token=token)
         items=data.get('data',{}).get('affected_items',[])
         if code not in (200,201) or len(items)!=1:raise XocError('native_checkpoint_user','Cannot create the private RBAC persistence probe.')
-        return {'anchors':anchors,'user':items[0]}
+        return {'anchors':anchors,'user':items[0],'raw_inputs':inputs}
 
     def remove_native_user(self,native):
         user=native['user']
@@ -209,7 +217,14 @@ class Installed:
         code,data=self.client.request('POST','/wazuh-alerts-4.x-*/_search',{'size':0,'track_total_hits':True,'query':{'ids':{'values':[a['id'] for a in anchors]}}})
         unique=code==200 and data.get('hits',{}).get('total',{}).get('value')==len(anchors)
         client,token=self.manager();code,data=client.request('GET','/security/users?user_ids='+str(native['user']['id']),token=token)
-        return {'native_alerts_preserved':matches==len(anchors)==24,'native_index_documents_preserved':indexed and unique,'custom_manager_api_user_preserved':code==200 and data.get('data',{}).get('affected_items')==[native['user']]}
+        checks={'native_alerts_preserved':matches==len(anchors)==24,'native_index_documents_preserved':indexed and unique,'custom_manager_api_user_preserved':code==200 and data.get('data',{}).get('affected_items')==[native['user']]}
+        if native.get('raw_inputs'):
+            receipts=[]
+            for anchor in native['raw_inputs']:
+                row=self.store.db.execute('SELECT id,ref,source,frame_sha256,confirmed,decoder FROM native_inputs WHERE id=?',(anchor['id'],)).fetchone()
+                receipts.append(row is not None and dict(row)==anchor)
+            checks['eight_raw_processing_receipts_preserved']=len(receipts)==8 and all(receipts)
+        return checks
 
     def checkpoint(self,path):
         if path.exists() or path.is_symlink():
@@ -272,8 +287,9 @@ class Installed:
         code,health=self.client.request('GET','/_cluster/health')
         if code!=200 or health.get('status') not in ('green','yellow'):
             raise XocError('indexer_not_ready','Start outage verification from a healthy Indexer.')
-        cutoff=now();queued=[];native_queued=[]
+        cutoff=now();queued=[];native_queued=[];raw_queued=[]
         native=(self.root/'components/siem/bootstrap.py').is_file()
+        raw=bool(self.store.cursor('native-input-enabled'))
         def probe():
             self.engine.run(['exec','-T','lab-client','python','-B','/app/probe.py'],compose=True)
             subprocess.run(['/usr/bin/true'],check=True)
@@ -282,7 +298,9 @@ class Installed:
                 health=self.store.db.execute("SELECT status FROM health WHERE source='indexer'").fetchone()
                 if native:
                     native_queued[:]=self.store.db.execute('SELECT id FROM wazuh_alerts WHERE observed>=? AND indexed IS NULL ORDER BY observed LIMIT 100',(cutoff,)).fetchall()
-                return len(queued)==100 and health is not None and health[0]!='ready' and (not native or len(native_queued)==100)
+                if raw:
+                    raw_queued[:]=self.store.db.execute("SELECT id FROM wazuh_alerts WHERE observed>=? AND indexed IS NULL AND json_extract(document,'$.xoc.analysis_route')='raw' ORDER BY observed LIMIT 100",(cutoff,)).fetchall()
+                return len(queued)==100 and health is not None and health[0]!='ready' and (not native or len(native_queued)==100) and (not raw or len(raw_queued)==100)
             wait_for(observed,min(timeout,90),'Did not observe 100 Wazuh-confirmed queued events and an Indexer failure.')
         stopped_indexer_probe(self.engine,probe)
         ids=[r['id'] for r in queued]
@@ -300,6 +318,14 @@ class Installed:
                 return code==200 and data.get('hits',{}).get('total',{}).get('value')==len(native_ids)
             wait_for(native_searchable,30,'Native alert recovery is missing or duplicated.')
             result['native_alerts_recovered_without_duplicates']=len(native_ids)
+        if raw:
+            raw_ids=[r['id'] for r in raw_queued]
+            wait_for(lambda:all(self.store.db.execute('SELECT indexed FROM wazuh_alerts WHERE id=?',(i,)).fetchone()[0] for i in raw_ids),timeout,'Raw-source alert queue did not recover.')
+            def raw_searchable():
+                code,data=self.client.request('POST','/wazuh-alerts-4.x-*/_search',{'size':0,'track_total_hits':True,'query':{'ids':{'values':raw_ids}}})
+                return code==200 and data.get('hits',{}).get('total',{}).get('value')==100
+            wait_for(raw_searchable,30,'Raw-source alert recovery is missing or duplicated.')
+            result['raw_source_alerts_recovered_without_duplicates']=100
         return result
 
     def cleanup(self,path):

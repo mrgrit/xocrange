@@ -20,7 +20,7 @@ FILES = (
     ("nftables", "fw-nftables", "fw", "0:0", "/var/log/nftables/events.log"),
     ("suricata", "ips-suricata", "ips", "0:0", "/var/log/suricata/eve.json"),
     ("modsecurity", "web-modsecurity", "web", "33:33", "/var/log/apache2/modsec_audit.json"),
-    ("apache-access", "web-access", "web", "33:33", "/var/log/apache2/access.json"),
+    ("apache-access", "web-access", "web", "33:33", "/var/log/apache2/access.log"),
     ("apache-error", "web-error", "web", "33:33", "/var/log/apache2/error.log"),
     ("osquery", "host-osquery-results", None, None, "/var/log/xocrange/osquery/osqueryd.results.log"),
     ("osquery", "host-osquery-snapshots", None, None, "/var/log/xocrange/osquery/osqueryd.snapshots.log"),
@@ -127,6 +127,11 @@ class Collector:
             self.indexer = Client(self.engine,result['compose']['name'])
         with self.store.transaction():
             self.store.set_cursor('indexer-enabled', bool(self.indexer))
+            self.store.set_cursor('native-input-enabled', True)
+            revision=hashlib.sha256(b''.join((root/'components/siem'/name).read_bytes() for name in ('Dockerfile','native-decoders.xml','native-rules.xml'))).hexdigest()
+            if self.store.cursor('native-rules-revision') != revision:
+                self.store.db.execute("UPDATE native_inputs SET error=NULL,sent=NULL WHERE error='native_decoder_missing'")
+                self.store.set_cursor('native-rules-revision',revision)
             if not self.indexer:
                 self.store.db.execute("DELETE FROM health WHERE source IN ('indexer','native-indexer')")
         self.lock = open(self.store.directory / 'collector.lock', 'a')
@@ -192,6 +197,9 @@ class Collector:
                 self.store.confirm(json.loads(raw))
                 from .native_alerts import accept
                 accept(self.store,raw)
+            elif source == 'wazuh-archive':
+                from .native_input import confirm
+                confirm(self.store, json.loads(raw))
             elif raw.strip():
                 store.ingest(source, source_id, position, raw)
             consumed = end
@@ -266,6 +274,25 @@ class Collector:
         # A successful send is NOT a decode acknowledgment. Read actual analysisd alerts.
         self.store.health('wazuh', 'ready')
 
+    def forward_native(self):
+        from .native_input import pending
+        # Archives acknowledge processing, including legitimate level-zero and
+        # no_log rules. A socket send alone never marks an input as decoded.
+        chunks = self.read_files('wazuh-archives', 'siem', '999:999', '/var/ossec/logs/archives/archives.json')
+        with self.store.transaction():
+            for chunk in chunks:
+                self.accept_chunk('wazuh-archive', 'wazuh-archives', chunk)
+        values = pending(self.store)
+        if values:
+            command = self.engine.compose + ['exec', '-T', '--user', '999:999', 'siem',
+                       '/var/ossec/framework/python/bin/python3', '-B', '/usr/local/lib/xoc-native-queue.py']
+            ack = self.execute(command, b''.join(canonical(value)+b'\n' for value in values)).decode().splitlines()
+            if ack != [row['id'] for row in values]:
+                raise XocError('native_transport', 'Raw-source transport acknowledgment differs from its outbox.')
+            with self.store.db:
+                self.store.db.executemany('UPDATE native_inputs SET sent=? WHERE id=?', [(now(), value) for value in ack])
+        return 'ready'
+
     def once(self):
         if time.monotonic() - getattr(self, '_last_health', -60) >= 30:
             self._last_health = time.monotonic()
@@ -294,7 +321,7 @@ class Collector:
                 if time.time() - group['touched'] >= 2:
                     self.store.ingest('auditd', group['source_id'], group['position'], base64.b64decode(group['raw']))
                     self.store.db.execute('DELETE FROM cursors WHERE name=?', (key,))
-        for name, method in [('host-sysmon', self.sysmon), ('wazuh', self.forward)]:
+        for name, method in [('host-sysmon', self.sysmon), ('wazuh', self.forward), ('wazuh-native', self.forward_native)]:
             try:
                 status = method()
                 self.store.health(name, status or 'ready')

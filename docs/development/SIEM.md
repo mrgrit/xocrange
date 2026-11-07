@@ -1,6 +1,6 @@
 # Core SIEM 수집·디코딩 백엔드
 
-현재 구성은 `원본 로그 → C1 v0.2 → Wazuh 분석 → 로컬 증거 저장소 → Indexer → 웹 관제`다. Wazuh Manager/API 4.14.10의 기본 규칙과 C1 규칙을 함께 사용한다. 선택형 `siem-ui`가 같은 버전의 Wazuh Indexer와 전용 Dashboard를 연결하며 원본 경보도 별도로 보존·색인한다. [웹 관제·WAF 예외](SIEM-WEB.md)와 [정식 연동 범위](WAZUH-NATIVE.md)를 함께 참고한다. 원격 에이전트 관리·전체 K06/Community 완료를 뜻하지 않는다.
+원본을 보관한 뒤 `C1 정규화 → Wazuh C1 규칙`과 `원본 형식 변환 → Wazuh native 규칙` 두 경로를 독립적으로 실행한다. Wazuh Manager/API 4.14.10의 기본 규칙과 C1 규칙을 함께 사용한다. 선택형 `siem-ui`가 같은 버전의 Wazuh Indexer와 전용 Dashboard를 연결하며 원본 경보도 별도로 보존·색인한다. [웹 관제·WAF 예외](SIEM-WEB.md)와 [정식 연동 범위](WAZUH-NATIVE.md)를 함께 참고한다. 원격 에이전트 관리·전체 K06/Community 완료를 뜻하지 않는다.
 
 ## 소스와 매핑
 
@@ -12,10 +12,10 @@
 | osquery | host `/var/log/xocrange/osquery/osqueryd.{results,snapshots}.log` | event/batch differential·snapshot, query·row 순서·PID/UID·허용된 columns |
 | Sysmon | host `journalctl -t sysmon` | XML EventID·PID/PPID·Image·GUID·IP/port·file; 시작 배너는 diagnostic |
 | auditd | host `/var/log/audit/audit.log` | node+발생시각+serial로 여러 record를 결합; SYSCALL·프로세스·UID·key·완결 여부 |
-| Apache access | web `/var/log/apache2/access.json` | 시각·client IP·HTTP method/status/bytes·ModSecurity와 동일 request ID |
+| Apache access | web `/var/log/apache2/access.log` | 시각·client IP·HTTP method/status/bytes·ModSecurity와 동일 request ID |
 | Apache error | web `/var/log/apache2/error.log` | module·level·PID·client·AH code; 시간대 없는 기본 형식은 관측 시각 사용 |
 
-오프라인 Apache common/combined access와 Windows Sysmon의 내보낸 XML도 지원한다. Windows VM/에이전트 실통신, EVTX 바이너리, Wazuh Windows JSON envelope는 이번 검증에 포함하지 않는다. EVE stats 등 다른 event_type과 ModSecurity native/v3 형식은 현재 지원하지 않으며 파싱 실패를 정상 탐지로 바꾸지 않는다.
+Apache combined access와 Windows Sysmon의 내보낸 XML의 오프라인 C1 정규화도 지원한다. Windows VM/에이전트 실통신, EVTX 바이너리, Wazuh Windows JSON envelope는 이번 검증에 포함하지 않는다. EVE stats 등 다른 event_type과 ModSecurity native/v3 형식은 현재 지원하지 않으며 파싱 실패를 정상 탐지로 바꾸지 않는다.
 
 osquery는 processes 메타데이터를 60초, 센서 상태 snapshot을 30초마다 조회한다. audit subsystem은 auditd가 담당하며 osquery audit/event subscriber는 비활성화한다. auditd 기본 규칙은 `/etc/xocrange` 변경, sudo 실행, 수용 검사 `/usr/bin/true` 실행이다. Sysmon은 프로세스 생성·네트워크 연결을 관측한다. 전체 프로덕션 탐지 규칙이나 모든 행위 감사가 완성된 상태는 아니다.
 
@@ -42,11 +42,13 @@ Docker·Python·Microsoft Ubuntu 26.04 저장소·osquery 저장소·auditd를 �
 
 파일은 활성본과 `.1/.2` 회전본을 inode로 추적한다. 부분 JSON/줄은 다음 읽기까지 보류하고, audit 이벤트는 EOE 또는 2초 idle 경계까지 모은다. EOE 없는 경우 `audit.complete=false`다. copy-truncate는 파일 크기/anchor 변화로 새 세대를 부여한다. 파일 교체·정지·대량 회전 중 읽기 전에 소스에서 사라진 데이터까지 복구한다고 보장하지 않는다. rename 회전을 권장한다.
 
-오류 레코드는 원본을 남기고 격리한다. 디코더를 수정한 뒤 `siem retry`로 같은 증거·최초 관측 시각을 유지하며 재처리한다. 원본에 명령행·사용자 입력 등 민감한 값이 있을 수 있다. 정규화 출력에는 본문·인증 헤더·URL query·명령행·임의 osquery 컬럼을 복사하지 않는다.
+오류 레코드는 원본을 남기고 격리한다. 디코더를 수정한 뒤 `siem retry`로 같은 증거·최초 관측 시각을 유지하며 재처리한다. 원본에 명령행·사용자 입력 등 민감한 값이 있을 수 있다. 정규화 출력에는 본문·인증 헤더·URL query·명령행·임의 osquery 컬럼을 복사하지 않는다. Native 경보에는 분석에 사용한 원본 필드와 `full_log`가 포함될 수 있으므로 관리자용 검색 데이터로 다룬다. Apache common access의 요청 URI는 원본/native 분석에 남고 C1에서는 제거한다. ModSecurity는 AHZ 부분만 기록하여 요청/응답 헤더와 본문을 새로 수집하지 않는다.
 
-원본과 정규화의 기본 보존 기간은 7일이다. 미분석 outbox는 기간만으로 삭제하지 않는다. 저장소의 사용 페이지가 4 GiB를 넘으면 신규 수집을 중지하고 오류 상태를 남긴다. Wazuh 로그는 1시간/10 MiB 기준으로 회전한다. 원천 볼륨과 OS journal의 전체 수명주기·보존 용량 자동 관리, 장기 부하 및 디스크 고갈 복구는 RC 전 후속 검증 항목이다. 입력·처리량이 작은 전용 개발 VM을 대상으로 검증한다.
+원본과 정규화의 기본 보존 기간은 7일이다. 미분석 outbox는 기간만으로 삭제하지 않는다. 저장소의 사용 페이지가 8 GiB를 넘으면 신규 수집을 중지하고 오류 상태를 남긴다. 이 값은 신규 수집 중단 기준이며 이미 진행 중인 분석/경보 쓰기와 다른 볼륨을 포함한 전체 디스크 상한은 아니다. Wazuh alerts/archives 로그는 1시간/10 MiB 기준으로 회전한다. 원천 볼륨과 OS journal의 전체 수명주기·보존 용량 자동 관리, 장기 부하 및 디스크 고갈 복구는 RC 전 후속 검증 항목이다. 입력·처리량이 작은 전용 개발 VM을 대상으로 검증한다.
 
 Wazuh queue에 넣었다고 바로 성공 처리하지 않는다. 실제 `alerts.json`에 같은 event ID·producer·원본 hash가 나타나야 `--confirmed` 조회 대상이 된다. 전송 중 재시작 시 재전송할 수 있지만 검색 저장소는 event ID로 중복 제거한다. `status`는 파싱 격리 건수, 소스 상태, 미분석 건수와 가장 오래 대기한 시간, Sysmon journal의 실제 발생 시각 대비 지연을 표시한다. 누적 journal은 한 회차 최대 5초/4096건씩 처리하며 120초 이상 뒤처지면 `lagging`으로 표시한다.
+
+Native 입력은 별도 ID·frame hash·전송/처리 상태를 갖는다. `archives.json`에서 같은 입력 ID·source·frame hash와 해당 소스의 decoder를 확인해야 분석 완료로 처리한다. 경보가 없는 정상/level 0/no_log 결과도 이 경로로 확인한다. Native 경보는 `xoc.input_id`·`xoc.event_id`·`xoc.evidence_ref`로 연결한다. 재전송으로 새 Wazuh ID가 생겨도 같은 입력의 동일 분석 결과는 첫 원본 한 건을 유지한다. 규칙·분석 결과가 달라진 경우는 별도 경보로 보관한다. [형식·검증 범위](WAZUH-RAW-SOURCES.md)
 
 ## 검증
 

@@ -1,0 +1,1275 @@
+{
+  "legacy": {
+    "image": "wazuh/wazuh-manager@sha256:77fc060a380dd995b541fd525034f4f8f58c6efa7a625b15f4c9251f0353a69c",
+    "cases": [
+      {
+        "name": "nft-core-iso",
+        "passed": true,
+        "expected_rule": "",
+        "rule": "",
+        "level": null,
+        "decoder": "",
+        "fields": {},
+        "static_fields": {}
+      },
+      {
+        "name": "nft-core-nflog",
+        "passed": true,
+        "expected_rule": "",
+        "rule": "",
+        "level": null,
+        "decoder": "",
+        "fields": {},
+        "static_fields": {}
+      },
+      {
+        "name": "nft-fractional-drop",
+        "passed": true,
+        "expected_rule": "",
+        "rule": "",
+        "level": null,
+        "decoder": "",
+        "fields": {},
+        "static_fields": {}
+      },
+      {
+        "name": "nft-fractional-accept",
+        "passed": true,
+        "expected_rule": "",
+        "rule": "",
+        "level": null,
+        "decoder": "",
+        "fields": {},
+        "static_fields": {}
+      },
+      {
+        "name": "suricata-alert",
+        "passed": true,
+        "expected_rule": "86601",
+        "rule": "86601",
+        "level": 3,
+        "decoder": "json",
+        "fields": {
+          "timestamp": "2026-11-07T12:34:56.123456+0900",
+          "event_type": "alert",
+          "src_ip": "192.0.2.10",
+          "src_port": "51000",
+          "dest_ip": "198.51.100.20",
+          "dest_port": "443",
+          "proto": "TCP",
+          "alert": {
+            "action": "blocked",
+            "signature_id": "1000001",
+            "signature": "Synthetic fixture",
+            "severity": "2"
+          }
+        },
+        "static_fields": {}
+      },
+      {
+        "name": "osquery-query",
+        "passed": true,
+        "expected_rule": "24010",
+        "rule": "24010",
+        "level": 3,
+        "decoder": "json",
+        "fields": {
+          "osquery": {
+            "name": "core_processes",
+            "hostIdentifier": "xoc-fixture",
+            "unixTime": "1794056400",
+            "action": "added",
+            "columns": {
+              "pid": "42",
+              "parent": "1",
+              "uid": "0",
+              "name": "true",
+              "path": "/usr/bin/true",
+              "cmdline": "DO-NOT-EXPORT"
+            }
+          }
+        },
+        "static_fields": {}
+      },
+      {
+        "name": "sysmon-linux-process",
+        "passed": true,
+        "expected_rule": "",
+        "rule": "",
+        "level": null,
+        "decoder": "",
+        "fields": {},
+        "static_fields": {}
+      },
+      {
+        "name": "sysmon-linux-3",
+        "passed": true,
+        "expected_rule": "",
+        "rule": "",
+        "level": null,
+        "decoder": "",
+        "fields": {},
+        "static_fields": {}
+      },
+      {
+        "name": "sysmon-linux-11",
+        "passed": true,
+        "expected_rule": "",
+        "rule": "",
+        "level": null,
+        "decoder": "",
+        "fields": {},
+        "static_fields": {}
+      },
+      {
+        "name": "audit-group",
+        "passed": true,
+        "expected_rule": "80700",
+        "rule": "80700",
+        "level": 0,
+        "decoder": "auditd",
+        "fields": {
+          "audit": {
+            "type": "SYSCALL",
+            "id": "42",
+            "command": "true",
+            "exe": "/usr/bin/true",
+            "key": "xoc_probe",
+            "execve": {
+              "a0": "true",
+              "a1": "DO-NOT-EXPORT"
+            }
+          }
+        },
+        "static_fields": {}
+      },
+      {
+        "name": "audit-abort",
+        "passed": true,
+        "expected_rule": "80704",
+        "rule": "80704",
+        "level": 10,
+        "decoder": "auditd",
+        "fields": {
+          "audit": {
+            "type": "DAEMON_ABORT",
+            "id": "100",
+            "pid": "42",
+            "auid": "1000",
+            "res": "failed"
+          }
+        },
+        "static_fields": {}
+      },
+      {
+        "name": "apache-200",
+        "passed": true,
+        "expected_rule": "31108",
+        "rule": "31108",
+        "level": 0,
+        "decoder": "web-accesslog",
+        "fields": {
+          "protocol": "GET",
+          "srcip": "192.0.2.10",
+          "id": "200",
+          "url": "/"
+        },
+        "static_fields": {}
+      },
+      {
+        "name": "apache-403",
+        "passed": true,
+        "expected_rule": "31101",
+        "rule": "31101",
+        "level": 5,
+        "decoder": "web-accesslog",
+        "fields": {
+          "protocol": "GET",
+          "srcip": "192.0.2.10",
+          "id": "403",
+          "url": "/"
+        },
+        "static_fields": {}
+      },
+      {
+        "name": "apache-500",
+        "passed": true,
+        "expected_rule": "31122",
+        "rule": "31122",
+        "level": 5,
+        "decoder": "web-accesslog",
+        "fields": {
+          "protocol": "GET",
+          "srcip": "192.0.2.10",
+          "id": "500",
+          "url": "/"
+        },
+        "static_fields": {}
+      },
+      {
+        "name": "apache-sqli",
+        "passed": true,
+        "expected_rule": "31103",
+        "rule": "31103",
+        "level": 7,
+        "decoder": "web-accesslog",
+        "fields": {
+          "protocol": "GET",
+          "srcip": "192.0.2.10",
+          "id": "403",
+          "url": "/?q=select%20password%20from%20users"
+        },
+        "static_fields": {}
+      },
+      {
+        "name": "apache-error",
+        "passed": true,
+        "expected_rule": "30315",
+        "rule": "30315",
+        "level": 5,
+        "decoder": "apache-errorlog",
+        "fields": {
+          "srcip": "192.0.2.10",
+          "srcport": "1234",
+          "id": "AH00126"
+        },
+        "static_fields": {}
+      },
+      {
+        "name": "waf-normal",
+        "passed": true,
+        "expected_rule": "119670",
+        "rule": "119670",
+        "level": 3,
+        "decoder": "json",
+        "fields": {
+          "transaction": {
+            "time_stamp": "07/Nov/2026:12:34:56 +0900",
+            "transaction_id": "synthetic-tx-001",
+            "remote_address": "192.0.2.10",
+            "remote_port": "51000",
+            "local_address": "198.51.100.20",
+            "local_port": "443"
+          },
+          "request": {
+            "headers": {
+              "Authorization": "SYNTHETIC-DO-NOT-EXPORT"
+            }
+          },
+          "response": {
+            "body": "Access denied with code 403 (phase 2).",
+            "status": "200"
+          },
+          "audit_data": {
+            "producer": [
+              "ModSecurity for Apache/2.9.7",
+              "OWASP_CRS/4.0.0"
+            ],
+            "engine_mode": "ENABLED",
+            "messages": []
+          },
+          "xoc_modsecurity": {
+            "intervention": "true"
+          }
+        },
+        "static_fields": {}
+      },
+      {
+        "name": "waf-warning",
+        "passed": true,
+        "expected_rule": "119671",
+        "rule": "119671",
+        "level": 5,
+        "decoder": "json",
+        "fields": {
+          "transaction": {
+            "time_stamp": "07/Nov/2026:12:34:56 +0900",
+            "transaction_id": "synthetic-tx-001",
+            "remote_address": "192.0.2.10",
+            "remote_port": "51000",
+            "local_address": "198.51.100.20",
+            "local_port": "443"
+          },
+          "request": {
+            "headers": {
+              "Authorization": "SYNTHETIC-DO-NOT-EXPORT"
+            }
+          },
+          "response": {
+            "body": "Access denied with code 403 (phase 2).",
+            "status": "200"
+          },
+          "audit_data": {
+            "producer": [
+              "ModSecurity for Apache/2.9.7",
+              "OWASP_CRS/4.0.0"
+            ],
+            "engine_mode": "ENABLED",
+            "messages": [
+              "Warning. [id \"920350\"]"
+            ]
+          },
+          "xoc_modsecurity": {
+            "intervention": "true"
+          }
+        },
+        "static_fields": {}
+      },
+      {
+        "name": "waf-block",
+        "passed": true,
+        "expected_rule": "119672",
+        "rule": "119672",
+        "level": 7,
+        "decoder": "json",
+        "fields": {
+          "transaction": {
+            "time_stamp": "07/Nov/2026:12:34:56 +0900",
+            "transaction_id": "synthetic-tx-001",
+            "remote_address": "192.0.2.10",
+            "remote_port": "51000",
+            "local_address": "198.51.100.20",
+            "local_port": "443"
+          },
+          "request": {
+            "headers": {
+              "Authorization": "SYNTHETIC-DO-NOT-EXPORT"
+            }
+          },
+          "response": {
+            "body": "Access denied with code 403 (phase 2).",
+            "status": "403"
+          },
+          "audit_data": {
+            "producer": [
+              "ModSecurity for Apache/2.9.7",
+              "OWASP_CRS/4.0.0"
+            ],
+            "engine_mode": "ENABLED",
+            "messages": [
+              "Access denied with code 403 (phase 2). [id \"949110\"]"
+            ]
+          },
+          "xoc_modsecurity": {
+            "intervention": "true"
+          }
+        },
+        "static_fields": {}
+      },
+      {
+        "name": "waf-ahz-block",
+        "passed": true,
+        "expected_rule": "119671",
+        "rule": "119671",
+        "level": 5,
+        "decoder": "json",
+        "fields": {
+          "transaction": {
+            "time_stamp": "07/Nov/2026:12:34:56 +0900",
+            "transaction_id": "synthetic-tx-001",
+            "remote_address": "192.0.2.10",
+            "remote_port": "51000",
+            "local_address": "198.51.100.20",
+            "local_port": "443"
+          },
+          "request": {
+            "headers": {
+              "Authorization": "SYNTHETIC-DO-NOT-EXPORT"
+            }
+          },
+          "response": {
+            "body": "Access denied with code 403 (phase 2)."
+          },
+          "audit_data": {
+            "producer": [
+              "ModSecurity for Apache/2.9.7",
+              "OWASP_CRS/4.0.0"
+            ],
+            "engine_mode": "ENABLED",
+            "messages": [
+              "Warning.",
+              "Access denied with code 403 (phase 2). [id \"949110\"]"
+            ]
+          },
+          "xoc_modsecurity": {
+            "intervention": "true"
+          }
+        },
+        "static_fields": {}
+      },
+      {
+        "name": "waf-application-403",
+        "passed": true,
+        "expected_rule": "119671",
+        "rule": "119671",
+        "level": 5,
+        "decoder": "json",
+        "fields": {
+          "transaction": {
+            "time_stamp": "07/Nov/2026:12:34:56 +0900",
+            "transaction_id": "synthetic-tx-001",
+            "remote_address": "192.0.2.10",
+            "remote_port": "51000",
+            "local_address": "198.51.100.20",
+            "local_port": "443"
+          },
+          "request": {
+            "headers": {
+              "Authorization": "SYNTHETIC-DO-NOT-EXPORT"
+            }
+          },
+          "response": {
+            "body": "Access denied with code 403 (phase 2).",
+            "status": "403"
+          },
+          "audit_data": {
+            "producer": [
+              "ModSecurity for Apache/2.9.7",
+              "OWASP_CRS/4.0.0"
+            ],
+            "engine_mode": "ENABLED",
+            "messages": [
+              "Warning. [id \"920350\"]"
+            ]
+          },
+          "xoc_modsecurity": {
+            "intervention": "true"
+          }
+        },
+        "static_fields": {}
+      },
+      {
+        "name": "waf-embedded-denial",
+        "passed": true,
+        "expected_rule": "119672",
+        "rule": "119672",
+        "level": 7,
+        "decoder": "json",
+        "fields": {
+          "transaction": {
+            "time_stamp": "07/Nov/2026:12:34:56 +0900",
+            "transaction_id": "synthetic-tx-001",
+            "remote_address": "192.0.2.10",
+            "remote_port": "51000",
+            "local_address": "198.51.100.20",
+            "local_port": "443"
+          },
+          "request": {
+            "headers": {
+              "Authorization": "SYNTHETIC-DO-NOT-EXPORT"
+            }
+          },
+          "response": {
+            "body": "Access denied with code 403 (phase 2).",
+            "status": "403"
+          },
+          "audit_data": {
+            "producer": [
+              "ModSecurity for Apache/2.9.7",
+              "OWASP_CRS/4.0.0"
+            ],
+            "engine_mode": "ENABLED",
+            "messages": [
+              "Warning. [data \"Access denied with code 403 (phase 2).\"]"
+            ]
+          },
+          "xoc_modsecurity": {
+            "intervention": "true"
+          }
+        },
+        "static_fields": {}
+      },
+      {
+        "name": "waf-detection-only",
+        "passed": true,
+        "expected_rule": "119672",
+        "rule": "119672",
+        "level": 7,
+        "decoder": "json",
+        "fields": {
+          "transaction": {
+            "time_stamp": "07/Nov/2026:12:34:56 +0900",
+            "transaction_id": "synthetic-tx-001",
+            "remote_address": "192.0.2.10",
+            "remote_port": "51000",
+            "local_address": "198.51.100.20",
+            "local_port": "443"
+          },
+          "request": {
+            "headers": {
+              "Authorization": "SYNTHETIC-DO-NOT-EXPORT"
+            }
+          },
+          "response": {
+            "body": "Access denied with code 403 (phase 2).",
+            "status": "403"
+          },
+          "audit_data": {
+            "producer": [
+              "ModSecurity for Apache/2.9.7",
+              "OWASP_CRS/4.0.0"
+            ],
+            "engine_mode": "DETECTION_ONLY",
+            "messages": [
+              "Access denied with code 403 (phase 2). [id \"949110\"]"
+            ]
+          },
+          "xoc_modsecurity": {
+            "intervention": "true"
+          }
+        },
+        "static_fields": {}
+      },
+      {
+        "name": "waf-body-only",
+        "passed": true,
+        "expected_rule": "119670",
+        "rule": "119670",
+        "level": 3,
+        "decoder": "json",
+        "fields": {
+          "transaction": {
+            "time_stamp": "07/Nov/2026:12:34:56 +0900",
+            "transaction_id": "synthetic-tx-001",
+            "remote_address": "192.0.2.10",
+            "remote_port": "51000",
+            "local_address": "198.51.100.20",
+            "local_port": "443"
+          },
+          "request": {
+            "headers": {
+              "Authorization": "SYNTHETIC-DO-NOT-EXPORT"
+            }
+          },
+          "response": {
+            "body": "Access denied with code 403 (phase 2).",
+            "status": "403"
+          },
+          "audit_data": {
+            "producer": [
+              "ModSecurity for Apache/2.9.7",
+              "OWASP_CRS/4.0.0"
+            ],
+            "engine_mode": "ENABLED",
+            "messages": []
+          },
+          "xoc_modsecurity": {
+            "intervention": "true"
+          }
+        },
+        "static_fields": {}
+      },
+      {
+        "name": "waf-wrong-source",
+        "passed": true,
+        "expected_rule": "!119670,119671,119672",
+        "rule": "1002",
+        "level": 2,
+        "decoder": "json",
+        "fields": {
+          "transaction": {
+            "time_stamp": "07/Nov/2026:12:34:56 +0900",
+            "transaction_id": "synthetic-tx-001",
+            "remote_address": "192.0.2.10",
+            "remote_port": "51000",
+            "local_address": "198.51.100.20",
+            "local_port": "443"
+          },
+          "request": {
+            "headers": {
+              "Authorization": "SYNTHETIC-DO-NOT-EXPORT"
+            }
+          },
+          "response": {
+            "status": "403",
+            "body": "Synthetic body"
+          },
+          "audit_data": {
+            "producer": [
+              "ModSecurity for Apache/2.9.7",
+              "OWASP_CRS/4.0.0"
+            ],
+            "engine_mode": "ENABLED",
+            "messages": [
+              "Warning. Synthetic match [id \"941100\"] [severity \"CRITICAL\"]",
+              "Access denied with code 403 (phase 2). [id \"949110\"] [severity \"CRITICAL\"]"
+            ]
+          }
+        },
+        "static_fields": {}
+      }
+    ]
+  },
+  "candidate": {
+    "image": "wazuh/wazuh-manager@sha256:dcda4869e2f792e92f03bce93f85b4bdf103756ea61cfca8ba9f3eabeb05365b",
+    "cases": [
+      {
+        "name": "nft-core-iso",
+        "passed": true,
+        "expected_rule": "4101",
+        "rule": "4101",
+        "level": 5,
+        "decoder": "xoc-nftables",
+        "fields": {
+          "protocol": "TCP",
+          "action": "DROP",
+          "srcip": "192.0.2.10",
+          "srcport": "51000",
+          "dstip": "198.51.100.20",
+          "dstport": "443"
+        },
+        "static_fields": {}
+      },
+      {
+        "name": "nft-core-nflog",
+        "passed": true,
+        "expected_rule": "4101",
+        "rule": "4101",
+        "level": 5,
+        "decoder": "xoc-nftables",
+        "fields": {
+          "protocol": "TCP",
+          "action": "DROP",
+          "srcip": "192.0.2.10",
+          "srcport": "51000",
+          "dstip": "198.51.100.20",
+          "dstport": "443"
+        },
+        "static_fields": {}
+      },
+      {
+        "name": "nft-fractional-drop",
+        "passed": true,
+        "expected_rule": "4101",
+        "rule": "4101",
+        "level": 5,
+        "decoder": "xoc-nftables",
+        "fields": {
+          "protocol": "TCP",
+          "action": "DROP",
+          "srcip": "192.0.2.10",
+          "srcport": "51000",
+          "dstip": "198.51.100.20",
+          "dstport": "443"
+        },
+        "static_fields": {}
+      },
+      {
+        "name": "nft-fractional-accept",
+        "passed": true,
+        "expected_rule": "4100",
+        "rule": "4100",
+        "level": 0,
+        "decoder": "xoc-nftables",
+        "fields": {
+          "protocol": "TCP",
+          "action": "ACCEPT",
+          "srcip": "192.0.2.10",
+          "srcport": "51000",
+          "dstip": "198.51.100.20",
+          "dstport": "443"
+        },
+        "static_fields": {}
+      },
+      {
+        "name": "suricata-alert",
+        "passed": true,
+        "expected_rule": "86601",
+        "rule": "86601",
+        "level": 3,
+        "decoder": "json",
+        "fields": {
+          "alert": {
+            "action": "blocked",
+            "severity": "2",
+            "signature": "Synthetic fixture",
+            "signature_id": "1000001"
+          },
+          "dest_ip": "198.51.100.20",
+          "dest_port": "443",
+          "event_type": "alert",
+          "proto": "TCP",
+          "src_ip": "192.0.2.10",
+          "src_port": "51000",
+          "timestamp": "2026-11-07T12:34:56.123456+0900"
+        },
+        "static_fields": {}
+      },
+      {
+        "name": "osquery-query",
+        "passed": true,
+        "expected_rule": "24010",
+        "rule": "24010",
+        "level": 3,
+        "decoder": "json",
+        "fields": {
+          "osquery": {
+            "action": "added",
+            "columns": {
+              "cmdline": "DO-NOT-EXPORT",
+              "name": "true",
+              "parent": "1",
+              "path": "/usr/bin/true",
+              "pid": "42",
+              "uid": "0"
+            },
+            "hostIdentifier": "xoc-fixture",
+            "name": "core_processes",
+            "unixTime": "1794056400"
+          }
+        },
+        "static_fields": {}
+      },
+      {
+        "name": "sysmon-linux-process",
+        "passed": true,
+        "expected_rule": "111201",
+        "rule": "111201",
+        "level": 3,
+        "decoder": "json",
+        "fields": {
+          "sysmon_linux": {
+            "computer": "xoc-fixture",
+            "event_id": "1",
+            "eventdata": {
+              "CommandLine": "DO-NOT-EXPORT",
+              "Image": "/usr/bin/true",
+              "ParentProcessId": "1",
+              "ProcessId": "42"
+            },
+            "provider": "Linux-Sysmon",
+            "system_time": "2026-11-07T13:00:00.000000Z"
+          }
+        },
+        "static_fields": {}
+      },
+      {
+        "name": "sysmon-linux-3",
+        "passed": true,
+        "expected_rule": "111203",
+        "rule": "111203",
+        "level": 3,
+        "decoder": "json",
+        "fields": {
+          "sysmon_linux": {
+            "computer": "xoc-fixture",
+            "event_id": "3",
+            "eventdata": {
+              "CommandLine": "DO-NOT-EXPORT",
+              "Image": "/usr/bin/true",
+              "ParentProcessId": "1",
+              "ProcessId": "42"
+            },
+            "provider": "Linux-Sysmon",
+            "system_time": "2026-11-07T13:00:00.000000Z"
+          }
+        },
+        "static_fields": {}
+      },
+      {
+        "name": "sysmon-linux-11",
+        "passed": true,
+        "expected_rule": "111211",
+        "rule": "111211",
+        "level": 3,
+        "decoder": "json",
+        "fields": {
+          "sysmon_linux": {
+            "computer": "xoc-fixture",
+            "event_id": "11",
+            "eventdata": {
+              "CommandLine": "DO-NOT-EXPORT",
+              "Image": "/usr/bin/true",
+              "ParentProcessId": "1",
+              "ProcessId": "42"
+            },
+            "provider": "Linux-Sysmon",
+            "system_time": "2026-11-07T13:00:00.000000Z"
+          }
+        },
+        "static_fields": {}
+      },
+      {
+        "name": "audit-group",
+        "passed": true,
+        "expected_rule": "80700",
+        "rule": "80700",
+        "level": 0,
+        "decoder": "auditd",
+        "fields": {
+          "audit": {
+            "type": "SYSCALL",
+            "id": "42",
+            "command": "true",
+            "exe": "/usr/bin/true",
+            "key": "xoc_probe",
+            "execve": {
+              "argc": "2",
+              "a0": "true",
+              "a1": "DO-NOT-EXPORT"
+            }
+          }
+        },
+        "static_fields": {}
+      },
+      {
+        "name": "audit-abort",
+        "passed": true,
+        "expected_rule": "80704",
+        "rule": "80704",
+        "level": 10,
+        "decoder": "auditd",
+        "fields": {
+          "audit": {
+            "type": "DAEMON_ABORT",
+            "id": "100",
+            "pid": "42",
+            "auid": "1000",
+            "res": "failed"
+          }
+        },
+        "static_fields": {}
+      },
+      {
+        "name": "apache-200",
+        "passed": true,
+        "expected_rule": "31108",
+        "rule": "31108",
+        "level": 0,
+        "decoder": "web-accesslog",
+        "fields": {
+          "protocol": "GET",
+          "srcip": "192.0.2.10",
+          "id": "200",
+          "url": "/"
+        },
+        "static_fields": {}
+      },
+      {
+        "name": "apache-403",
+        "passed": true,
+        "expected_rule": "31101",
+        "rule": "31101",
+        "level": 5,
+        "decoder": "web-accesslog",
+        "fields": {
+          "protocol": "GET",
+          "srcip": "192.0.2.10",
+          "id": "403",
+          "url": "/"
+        },
+        "static_fields": {}
+      },
+      {
+        "name": "apache-500",
+        "passed": true,
+        "expected_rule": "31122",
+        "rule": "31122",
+        "level": 5,
+        "decoder": "web-accesslog",
+        "fields": {
+          "protocol": "GET",
+          "srcip": "192.0.2.10",
+          "id": "500",
+          "url": "/"
+        },
+        "static_fields": {}
+      },
+      {
+        "name": "apache-sqli",
+        "passed": true,
+        "expected_rule": "31103",
+        "rule": "31103",
+        "level": 7,
+        "decoder": "web-accesslog",
+        "fields": {
+          "protocol": "GET",
+          "srcip": "192.0.2.10",
+          "id": "403",
+          "url": "/?q=select%20password%20from%20users"
+        },
+        "static_fields": {}
+      },
+      {
+        "name": "apache-error",
+        "passed": true,
+        "expected_rule": "30315",
+        "rule": "30315",
+        "level": 5,
+        "decoder": "apache-errorlog",
+        "fields": {
+          "srcip": "192.0.2.10",
+          "srcport": "1234",
+          "id": "AH00126"
+        },
+        "static_fields": {}
+      },
+      {
+        "name": "waf-normal",
+        "passed": true,
+        "expected_rule": "119670",
+        "rule": "119670",
+        "level": 3,
+        "decoder": "json",
+        "fields": {
+          "audit_data": {
+            "engine_mode": "ENABLED",
+            "messages": [],
+            "producer": [
+              "ModSecurity for Apache/2.9.7",
+              "OWASP_CRS/4.0.0"
+            ]
+          },
+          "request": {
+            "headers": {
+              "Authorization": "SYNTHETIC-DO-NOT-EXPORT"
+            }
+          },
+          "response": {
+            "body": "Access denied with code 403 (phase 2).",
+            "status": "200"
+          },
+          "transaction": {
+            "local_address": "198.51.100.20",
+            "local_port": "443",
+            "remote_address": "192.0.2.10",
+            "remote_port": "51000",
+            "time_stamp": "07/Nov/2026:12:34:56 +0900",
+            "transaction_id": "synthetic-tx-001"
+          },
+          "xoc_modsecurity": {
+            "intervention": "false"
+          }
+        },
+        "static_fields": {}
+      },
+      {
+        "name": "waf-warning",
+        "passed": true,
+        "expected_rule": "119671",
+        "rule": "119671",
+        "level": 5,
+        "decoder": "json",
+        "fields": {
+          "audit_data": {
+            "engine_mode": "ENABLED",
+            "messages": [
+              "Warning. [id \"920350\"]"
+            ],
+            "producer": [
+              "ModSecurity for Apache/2.9.7",
+              "OWASP_CRS/4.0.0"
+            ]
+          },
+          "request": {
+            "headers": {
+              "Authorization": "SYNTHETIC-DO-NOT-EXPORT"
+            }
+          },
+          "response": {
+            "body": "Access denied with code 403 (phase 2).",
+            "status": "200"
+          },
+          "transaction": {
+            "local_address": "198.51.100.20",
+            "local_port": "443",
+            "remote_address": "192.0.2.10",
+            "remote_port": "51000",
+            "time_stamp": "07/Nov/2026:12:34:56 +0900",
+            "transaction_id": "synthetic-tx-001"
+          },
+          "xoc_modsecurity": {
+            "intervention": "false"
+          }
+        },
+        "static_fields": {}
+      },
+      {
+        "name": "waf-block",
+        "passed": true,
+        "expected_rule": "119672",
+        "rule": "119672",
+        "level": 7,
+        "decoder": "json",
+        "fields": {
+          "audit_data": {
+            "engine_mode": "ENABLED",
+            "messages": [
+              "Access denied with code 403 (phase 2). [id \"949110\"]"
+            ],
+            "producer": [
+              "ModSecurity for Apache/2.9.7",
+              "OWASP_CRS/4.0.0"
+            ]
+          },
+          "request": {
+            "headers": {
+              "Authorization": "SYNTHETIC-DO-NOT-EXPORT"
+            }
+          },
+          "response": {
+            "body": "Access denied with code 403 (phase 2).",
+            "status": "403"
+          },
+          "transaction": {
+            "local_address": "198.51.100.20",
+            "local_port": "443",
+            "remote_address": "192.0.2.10",
+            "remote_port": "51000",
+            "time_stamp": "07/Nov/2026:12:34:56 +0900",
+            "transaction_id": "synthetic-tx-001"
+          },
+          "xoc_modsecurity": {
+            "intervention": "true"
+          }
+        },
+        "static_fields": {}
+      },
+      {
+        "name": "waf-ahz-block",
+        "passed": true,
+        "expected_rule": "119672",
+        "rule": "119672",
+        "level": 7,
+        "decoder": "json",
+        "fields": {
+          "audit_data": {
+            "engine_mode": "ENABLED",
+            "messages": [
+              "Warning.",
+              "Access denied with code 403 (phase 2). [id \"949110\"]"
+            ],
+            "producer": [
+              "ModSecurity for Apache/2.9.7",
+              "OWASP_CRS/4.0.0"
+            ]
+          },
+          "request": {
+            "headers": {
+              "Authorization": "SYNTHETIC-DO-NOT-EXPORT"
+            }
+          },
+          "response": {
+            "body": "Access denied with code 403 (phase 2)."
+          },
+          "transaction": {
+            "local_address": "198.51.100.20",
+            "local_port": "443",
+            "remote_address": "192.0.2.10",
+            "remote_port": "51000",
+            "time_stamp": "07/Nov/2026:12:34:56 +0900",
+            "transaction_id": "synthetic-tx-001"
+          },
+          "xoc_modsecurity": {
+            "intervention": "true"
+          }
+        },
+        "static_fields": {}
+      },
+      {
+        "name": "waf-application-403",
+        "passed": true,
+        "expected_rule": "119671",
+        "rule": "119671",
+        "level": 5,
+        "decoder": "json",
+        "fields": {
+          "audit_data": {
+            "engine_mode": "ENABLED",
+            "messages": [
+              "Warning. [id \"920350\"]"
+            ],
+            "producer": [
+              "ModSecurity for Apache/2.9.7",
+              "OWASP_CRS/4.0.0"
+            ]
+          },
+          "request": {
+            "headers": {
+              "Authorization": "SYNTHETIC-DO-NOT-EXPORT"
+            }
+          },
+          "response": {
+            "body": "Access denied with code 403 (phase 2).",
+            "status": "403"
+          },
+          "transaction": {
+            "local_address": "198.51.100.20",
+            "local_port": "443",
+            "remote_address": "192.0.2.10",
+            "remote_port": "51000",
+            "time_stamp": "07/Nov/2026:12:34:56 +0900",
+            "transaction_id": "synthetic-tx-001"
+          },
+          "xoc_modsecurity": {
+            "intervention": "false"
+          }
+        },
+        "static_fields": {}
+      },
+      {
+        "name": "waf-embedded-denial",
+        "passed": true,
+        "expected_rule": "119671",
+        "rule": "119671",
+        "level": 5,
+        "decoder": "json",
+        "fields": {
+          "audit_data": {
+            "engine_mode": "ENABLED",
+            "messages": [
+              "Warning. [data \"Access denied with code 403 (phase 2).\"]"
+            ],
+            "producer": [
+              "ModSecurity for Apache/2.9.7",
+              "OWASP_CRS/4.0.0"
+            ]
+          },
+          "request": {
+            "headers": {
+              "Authorization": "SYNTHETIC-DO-NOT-EXPORT"
+            }
+          },
+          "response": {
+            "body": "Access denied with code 403 (phase 2).",
+            "status": "403"
+          },
+          "transaction": {
+            "local_address": "198.51.100.20",
+            "local_port": "443",
+            "remote_address": "192.0.2.10",
+            "remote_port": "51000",
+            "time_stamp": "07/Nov/2026:12:34:56 +0900",
+            "transaction_id": "synthetic-tx-001"
+          },
+          "xoc_modsecurity": {
+            "intervention": "false"
+          }
+        },
+        "static_fields": {}
+      },
+      {
+        "name": "waf-detection-only",
+        "passed": true,
+        "expected_rule": "119671",
+        "rule": "119671",
+        "level": 5,
+        "decoder": "json",
+        "fields": {
+          "audit_data": {
+            "engine_mode": "DETECTION_ONLY",
+            "messages": [
+              "Access denied with code 403 (phase 2). [id \"949110\"]"
+            ],
+            "producer": [
+              "ModSecurity for Apache/2.9.7",
+              "OWASP_CRS/4.0.0"
+            ]
+          },
+          "request": {
+            "headers": {
+              "Authorization": "SYNTHETIC-DO-NOT-EXPORT"
+            }
+          },
+          "response": {
+            "body": "Access denied with code 403 (phase 2).",
+            "status": "403"
+          },
+          "transaction": {
+            "local_address": "198.51.100.20",
+            "local_port": "443",
+            "remote_address": "192.0.2.10",
+            "remote_port": "51000",
+            "time_stamp": "07/Nov/2026:12:34:56 +0900",
+            "transaction_id": "synthetic-tx-001"
+          },
+          "xoc_modsecurity": {
+            "intervention": "false"
+          }
+        },
+        "static_fields": {}
+      },
+      {
+        "name": "waf-body-only",
+        "passed": true,
+        "expected_rule": "119670",
+        "rule": "119670",
+        "level": 3,
+        "decoder": "json",
+        "fields": {
+          "audit_data": {
+            "engine_mode": "ENABLED",
+            "messages": [],
+            "producer": [
+              "ModSecurity for Apache/2.9.7",
+              "OWASP_CRS/4.0.0"
+            ]
+          },
+          "request": {
+            "headers": {
+              "Authorization": "SYNTHETIC-DO-NOT-EXPORT"
+            }
+          },
+          "response": {
+            "body": "Access denied with code 403 (phase 2).",
+            "status": "403"
+          },
+          "transaction": {
+            "local_address": "198.51.100.20",
+            "local_port": "443",
+            "remote_address": "192.0.2.10",
+            "remote_port": "51000",
+            "time_stamp": "07/Nov/2026:12:34:56 +0900",
+            "transaction_id": "synthetic-tx-001"
+          },
+          "xoc_modsecurity": {
+            "intervention": "false"
+          }
+        },
+        "static_fields": {}
+      },
+      {
+        "name": "waf-wrong-source",
+        "passed": true,
+        "expected_rule": "!119670,119671,119672",
+        "rule": "1002",
+        "level": 2,
+        "decoder": "json",
+        "fields": {
+          "audit_data": {
+            "engine_mode": "ENABLED",
+            "messages": [
+              "Warning. Synthetic match [id \"941100\"] [severity \"CRITICAL\"]",
+              "Access denied with code 403 (phase 2). [id \"949110\"] [severity \"CRITICAL\"]"
+            ],
+            "producer": [
+              "ModSecurity for Apache/2.9.7",
+              "OWASP_CRS/4.0.0"
+            ]
+          },
+          "request": {
+            "headers": {
+              "Authorization": "SYNTHETIC-DO-NOT-EXPORT"
+            }
+          },
+          "response": {
+            "body": "Synthetic body",
+            "status": "403"
+          },
+          "transaction": {
+            "local_address": "198.51.100.20",
+            "local_port": "443",
+            "remote_address": "192.0.2.10",
+            "remote_port": "51000",
+            "time_stamp": "07/Nov/2026:12:34:56 +0900",
+            "transaction_id": "synthetic-tx-001"
+          },
+          "xoc_modsecurity": {
+            "intervention": "true"
+          }
+        },
+        "static_fields": {}
+      }
+    ]
+  }
+}

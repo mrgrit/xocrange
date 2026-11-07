@@ -49,6 +49,13 @@ class Store:
           id TEXT PRIMARY KEY, observed TEXT NOT NULL, raw BLOB NOT NULL, sha256 TEXT NOT NULL,
           document TEXT NOT NULL, event_id TEXT, indexed TEXT);
         CREATE INDEX IF NOT EXISTS native_alerts_pending ON wazuh_alerts(indexed,observed);
+        CREATE TABLE IF NOT EXISTS native_inputs (
+          id TEXT PRIMARY KEY, ref TEXT NOT NULL REFERENCES records(ref) ON DELETE CASCADE,
+          source TEXT NOT NULL, ordinal INTEGER NOT NULL, observed TEXT NOT NULL,
+          event_id TEXT, frame_sha256 TEXT, sent TEXT, confirmed TEXT, decoder TEXT, error TEXT);
+        CREATE INDEX IF NOT EXISTS native_inputs_pending ON native_inputs(confirmed,sent,observed);
+        CREATE INDEX IF NOT EXISTS native_inputs_ref ON native_inputs(ref);
+        CREATE INDEX IF NOT EXISTS native_alerts_event ON wazuh_alerts(event_id,indexed);
         ''')
         if 'source_id' not in {r[1] for r in self.db.execute('PRAGMA table_info(records)')}:
             self.db.execute('ALTER TABLE records ADD COLUMN source_id TEXT')
@@ -74,8 +81,8 @@ class Store:
             return ref
         pages = self.db.execute("PRAGMA page_count").fetchone()[0] - self.db.execute("PRAGMA freelist_count").fetchone()[0]
         size = pages * self.db.execute("PRAGMA page_size").fetchone()[0]
-        if size > 4 * 1024**3:
-            raise XocError("store_full", "Evidence storage reached its 4 GiB budget; ingestion is paused.")
+        if size > 8 * 1024**3:
+            raise XocError("store_full", "Evidence storage reached its 8 GiB ingestion budget; ingestion is paused.")
         error, events = None, []
         try:
             events = normalize(source, raw, Context("community", "local", source_id, ref, observed))
@@ -87,6 +94,9 @@ class Store:
         for event in events:
             self.db.execute("INSERT INTO events(id,ref,producer,observed,event) VALUES (?,?,?,?,?)",
                             (event["event_id"], ref, source, observed, canonical(event).decode()))
+        if error is None and self.cursor('native-input-enabled'):
+            from .native_input import register
+            register(self, ref, source, raw, events, observed)
         return ref
 
     def cursor(self, name):
@@ -115,6 +125,10 @@ class Store:
         return result
 
     def confirm(self, alert):
+        # Raw-source alerts may themselves contain user-supplied event_id keys.
+        # They cannot acknowledge or invalidate the separate C1 outbox.
+        if not str(alert.get('rule', {}).get('id', '')).startswith('110'):
+            return
         data = alert.get("data", {})
         if not isinstance(data, dict) or not isinstance(data.get("event_id"), str):
             return
@@ -125,10 +139,6 @@ class Store:
         expected = json.loads(row[0])
         if data.get("producer") != expected["producer"] or data.get("evidence", {}).get("sha256") != expected["evidence"]["sha256"]:
             raise XocError("siem_mismatch", "Wazuh decoded fields differ from the stored C1 event.")
-        if not rule.startswith("110"):
-            # Native rules can also match JSON carrying an event_id. Preserve
-            # that alert separately, but never acknowledge C1 with a native rule.
-            return
         self.db.execute("UPDATE events SET confirmed=COALESCE(confirmed,?), rule_id=? WHERE id=?", (now(), rule, data["event_id"]))
 
     def query(self, producer=None, limit=20, confirmed=False):
@@ -154,6 +164,9 @@ class Store:
                 for event in events:
                     self.db.execute('INSERT OR IGNORE INTO events(id,ref,producer,observed,event) VALUES (?,?,?,?,?)',
                                     (event['event_id'], row['ref'], row['source'], row['observed'], canonical(event).decode()))
+                if self.cursor('native-input-enabled') and not self.db.execute('SELECT 1 FROM native_inputs WHERE ref=?',(row['ref'],)).fetchone():
+                    from .native_input import register
+                    register(self,row['ref'],row['source'],row['raw'],events,row['observed'])
                 self.db.execute('UPDATE records SET error=NULL WHERE ref=?', (row['ref'],))
             recovered += 1
         return {'examined': len(rows), 'recovered': recovered}
@@ -171,6 +184,12 @@ class Store:
         healthy = result['sources'] and all(r['status'] in ('ready', 'awaiting-file') and
             (current - datetime.fromisoformat(r['checked'].replace('Z', '+00:00'))).total_seconds() < 60 for r in result['sources'])
         result['status'] = 'ready' if healthy and not result['quarantined'] and result['oldest_pending_seconds'] < 120 else 'degraded'
+        if self.cursor('native-input-enabled'):
+            row=self.db.execute('SELECT COUNT(*),MIN(observed),SUM(error IS NOT NULL) FROM native_inputs WHERE confirmed IS NULL').fetchone()
+            result['native_input_pending']=row[0]
+            result['native_input_errors']=row[2] or 0
+            result['oldest_native_input_pending_seconds']=max(0,int((current-datetime.fromisoformat(row[1].replace('Z','+00:00'))).total_seconds())) if row[1] else 0
+            if result['native_input_errors'] or result['oldest_native_input_pending_seconds']>=120:result['status']='degraded'
         if self.cursor('indexer-enabled'):
             row=self.db.execute('SELECT COUNT(*),MIN(observed) FROM events WHERE confirmed IS NOT NULL AND indexed IS NULL').fetchone()
             result['index_pending']=row[0]
@@ -184,7 +203,8 @@ class Store:
     def prune(self, days=7):
         cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat().replace("+00:00", "Z")
         with self.db:
-            self.db.execute("DELETE FROM events WHERE observed<? AND confirmed IS NOT NULL AND (?=0 OR indexed IS NOT NULL)", (cutoff,int(bool(self.cursor('indexer-enabled')))))
-            self.db.execute("DELETE FROM records WHERE observed<? AND ref NOT IN (SELECT ref FROM events)", (cutoff,))
+            enabled=int(bool(self.cursor('indexer-enabled')))
+            self.db.execute("DELETE FROM events WHERE observed<? AND confirmed IS NOT NULL AND (?=0 OR indexed IS NOT NULL) AND NOT EXISTS (SELECT 1 FROM native_inputs n WHERE n.ref=events.ref AND n.confirmed IS NULL) AND (?=0 OR NOT EXISTS (SELECT 1 FROM wazuh_alerts a WHERE a.event_id=events.id AND a.indexed IS NULL))", (cutoff,enabled,enabled))
+            self.db.execute("DELETE FROM records WHERE observed<? AND ref NOT IN (SELECT ref FROM events) AND NOT EXISTS (SELECT 1 FROM native_inputs n WHERE n.ref=records.ref AND n.confirmed IS NULL)", (cutoff,))
             self.db.execute('DELETE FROM wazuh_alerts WHERE observed<? AND (?=0 OR indexed IS NOT NULL)',(cutoff,int(bool(self.cursor('indexer-enabled')))))
         self.db.execute("PRAGMA wal_checkpoint(TRUNCATE)")
