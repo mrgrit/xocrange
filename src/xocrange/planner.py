@@ -13,6 +13,7 @@ import yaml
 from . import __version__
 from .documents import canonical, read_bytes, validate, within, yaml_document
 from .errors import XocError
+from .network_policy import attach_http_targets, check_addresses, security_role_policy
 
 
 def compatible(requirement: str, version=__version__):
@@ -84,7 +85,7 @@ def reject_interpolation(value):
             reject_interpolation(child)
 
 
-def plan(root: Path, *, preset="bootstrap", include=(), without=(), allow_fixtures=False):
+def plan(root: Path, *, preset="bootstrap", include=(), without=(), allow_fixtures=False, allow_experimental=False):
     root = root.resolve()
     if not re.fullmatch(r"[a-z][a-z0-9-]{0,63}", preset):
         raise XocError("invalid_preset", "Preset must be a simple identifier.")
@@ -119,7 +120,9 @@ def plan(root: Path, *, preset="bootstrap", include=(), without=(), allow_fixtur
             raise XocError("core_incompatible", f"Component is incompatible with this Core version: {identifier}")
         if set(manifest["conflicts"]) & set(selected):
             raise XocError("component_conflict", f"A selected component declares a conflict: {identifier}")
-        if manifest["status"] != "ready":
+        if manifest["status"] == "experimental" and not allow_experimental:
+            raise XocError("experimental_component", f"Explicit --allow-experimental is required: {identifier}")
+        if manifest["status"] == "planned":
             raise XocError("component_not_ready", f"Component has a plan but no runnable implementation yet: {identifier}")
         capabilities.update(manifest["provides"])
         for key in manifest["config_keys"]:
@@ -130,8 +133,9 @@ def plan(root: Path, *, preset="bootstrap", include=(), without=(), allow_fixtur
         if not set(entries[identifier]["manifest"]["requires"]["capabilities"]).issubset(capabilities):
             raise XocError("missing_capability", f"A required capability has no selected provider: {identifier}")
 
-    compose = {"name": "xoc-core-bootstrap", "services": {}, "networks": {}}
+    compose = {"name": f"xoc-core-{preset}", "services": {}, "networks": {}}
     inputs = {}
+    owners = {}
 
     def record(path):
         relative = str(path.relative_to(root))
@@ -153,7 +157,12 @@ def plan(root: Path, *, preset="bootstrap", include=(), without=(), allow_fixtur
         fragment_path = within(package, manifest["compose"])
         record(fragment_path)
         allowed_build_files.add(fragment_path)
-        fragment = validate(yaml_document(fragment_path), "compose-fragment")
+        security_path = identifier == "security-path" and manifest["kind"] == "component"
+        if security_path and (manifest["status"] != "experimental" or not allow_experimental):
+            raise XocError("experimental_component", "The security-path runtime requires explicit experimental selection.")
+        fragment = validate(yaml_document(fragment_path), "security-compose-fragment" if security_path else "compose-fragment")
+        if security_path:
+            security_role_policy(fragment)
         reject_interpolation(fragment)
         if set(fragment["networks"]) != set(manifest["networks"]):
             raise XocError("undeclared_network", "Fragment networks must match the descriptor declaration.")
@@ -184,7 +193,10 @@ def plan(root: Path, *, preset="bootstrap", include=(), without=(), allow_fixtur
                         raise XocError("untracked_build_input", "Build context contains an undeclared file.")
                 service["build"]["context"] = str(context)
             compose["services"][name] = service
+            owners[name] = identifier
 
+    check_addresses(compose)
+    attach_http_targets(compose, [entries[key]["manifest"] for key in selected], owners)
     services = compose["services"]
     bindings = []
     for name, service in services.items():
@@ -204,13 +216,15 @@ def plan(root: Path, *, preset="bootstrap", include=(), without=(), allow_fixtur
             service["build"]["context"] = str(Path(service["build"]["context"]).relative_to(root))
     lock = {"schema_version": "xoc.plan/0.1.0", "core_version": __version__, "preset": preset,
             "selected": selected, "requested": sorted(requested), "excluded": sorted(excluded),
-            "fixtures_allowed": allow_fixtures, "input_sha256": dict(sorted(inputs.items())),
+            "fixtures_allowed": allow_fixtures, "experimental_allowed": allow_experimental,
+            "input_sha256": dict(sorted(inputs.items())),
             "compose_sha256": hashlib.sha256(canonical(portable)).hexdigest()}
     lock["plan_id"] = hashlib.sha256(canonical(lock)).hexdigest()
     return {"lock": lock, "compose": compose, "limitations": [
         "Offline plan only; no images built, containers started, or host resources checked.",
         "Image tags are not digest-locked; this is not a reproducible release lock.",
         "Bootstrap is a health endpoint, not the completed Community platform.",
+        *(["Security-path is experimental; Ubuntu 26.04 isolated-VM packet-path validation is pending."] if "security-path" in selected else []),
     ]}
 
 

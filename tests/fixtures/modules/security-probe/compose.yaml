@@ -1,0 +1,32 @@
+services:
+  lab-client:
+    build: {context: ., dockerfile: Dockerfile}
+    command: ["sleep", "infinity"]
+    user: "65532:65532"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    networks:
+      ext:
+        ipv4_address: 172.29.10.10
+    restart: "no"
+  lab-target:
+    build: {context: ., dockerfile: Dockerfile}
+    user: "65532:65532"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    networks: [int]
+    restart: "no"
+networks:
+  ext:
+    internal: true
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.enable_ip_masquerade: "false"
+    ipam:
+      config:
+        - subnet: 172.29.10.0/24
+          gateway: 172.29.10.254
+  int:
+    internal: true

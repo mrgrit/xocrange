@@ -1,0 +1,303 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Experimental security-path services only; additional role policy is mandatory",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "services",
+    "networks"
+  ],
+  "properties": {
+    "services": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fw",
+        "ips",
+        "web"
+      ],
+      "properties": {
+        "fw": {
+          "$ref": "#/definitions/service"
+        },
+        "ips": {
+          "$ref": "#/definitions/service"
+        },
+        "web": {
+          "$ref": "#/definitions/service"
+        }
+      }
+    },
+    "networks": {
+      "type": "object",
+      "additionalProperties": false,
+      "patternProperties": {
+        "^(user|ext|pipe|dmz|int|app|ot)$": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "internal"
+          ],
+          "properties": {
+            "internal": {
+              "type": "boolean"
+            },
+            "driver": {
+              "const": "bridge"
+            },
+            "driver_opts": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "com.docker.network.bridge.enable_ip_masquerade": {
+                  "const": "false"
+                }
+              }
+            },
+            "ipam": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "config"
+              ],
+              "properties": {
+                "config": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 1,
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "subnet",
+                      "gateway"
+                    ],
+                    "properties": {
+                      "subnet": {
+                        "type": "string"
+                      },
+                      "gateway": {
+                        "type": "string",
+                        "format": "ipv4"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "strings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "service": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "networks",
+        "read_only",
+        "user",
+        "cap_drop",
+        "security_opt",
+        "cap_add"
+      ],
+      "anyOf": [
+        {
+          "required": [
+            "image"
+          ]
+        },
+        {
+          "required": [
+            "build"
+          ]
+        }
+      ],
+      "properties": {
+        "image": {
+          "type": "string",
+          "minLength": 1
+        },
+        "build": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "context",
+            "dockerfile"
+          ],
+          "properties": {
+            "context": {
+              "type": "string"
+            },
+            "dockerfile": {
+              "type": "string"
+            }
+          }
+        },
+        "command": {
+          "$ref": "#/definitions/strings"
+        },
+        "entrypoint": {
+          "$ref": "#/definitions/strings"
+        },
+        "environment": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "depends_on": {
+          "$ref": "#/definitions/strings"
+        },
+        "networks": {
+          "oneOf": [
+            {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "type": "string"
+              }
+            },
+            {
+              "type": "object",
+              "minProperties": 1,
+              "propertyNames": {
+                "enum": [
+                  "user",
+                  "ext",
+                  "pipe",
+                  "dmz",
+                  "int",
+                  "app",
+                  "ot"
+                ]
+              },
+              "additionalProperties": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "ipv4_address": {
+                    "type": "string",
+                    "format": "ipv4"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "read_only": {
+          "const": true
+        },
+        "user": {
+          "const": "0:0"
+        },
+        "cap_drop": {
+          "const": [
+            "ALL"
+          ]
+        },
+        "security_opt": {
+          "const": [
+            "no-new-privileges:true"
+          ]
+        },
+        "restart": {
+          "enum": [
+            "no",
+            "unless-stopped",
+            "on-failure"
+          ]
+        },
+        "ports": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "target",
+              "published",
+              "host_ip",
+              "protocol"
+            ],
+            "properties": {
+              "target": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 65535
+              },
+              "published": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 65535
+              },
+              "host_ip": {
+                "type": "string",
+                "anyOf": [
+                  {
+                    "format": "ipv4"
+                  },
+                  {
+                    "format": "ipv6"
+                  }
+                ]
+              },
+              "protocol": {
+                "enum": [
+                  "tcp",
+                  "udp"
+                ]
+              }
+            }
+          }
+        },
+        "cap_add": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "NET_ADMIN",
+              "NET_RAW",
+              "SETUID",
+              "SETGID"
+            ]
+          }
+        },
+        "sysctls": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "net.ipv4.ip_forward": {
+              "enum": [
+                "0",
+                "1"
+              ]
+            }
+          }
+        },
+        "tmpfs": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "/run:size=8m,mode=0755",
+              "/tmp:size=16m,mode=1777",
+              "/var/log/suricata:size=32m,mode=0755",
+              "/run/apache2:size=8m,mode=0755,uid=33,gid=33",
+              "/var/log/apache2:size=32m,mode=0755,uid=33,gid=33",
+              "/var/lib/modsecurity:size=8m,mode=0755,uid=33,gid=33"
+            ]
+          }
+        }
+      }
+    }
+  }
+}

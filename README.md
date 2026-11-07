@@ -6,7 +6,7 @@
 
 선택한 기능으로 구성하는 보안 운영 실습 환경. Core의 공통 계약 위에 Live Fire·Joint Force 모듈을 연결한다.
 
-**개발 초기 단계:** C1 이벤트 정규화와 설치 계획 CLI가 동작한다. 실제 fw·ips·web, SIEM, 콘솔, 포털 이식은 진행 전이다. `bootstrap`은 설치 기반 확인용 health 서비스이며, 훈련 가능한 Community 배포본은 아직 아니다.
+**개발 초기 단계:** C1 이벤트 정규화와 설치 계획 CLI가 동작한다. fw·IPS·WAF의 실험용 구성과 VM 검증 명령을 추가했으며 실제 통신 검증은 대기 중이다. SIEM·콘솔·포털 이식은 후속 범위다. `bootstrap`은 설치 기반 확인용 health 서비스이며, 훈련 가능한 Community 배포본은 아직 아니다.
 
 ## 지금 실행할 수 있는 것
 
@@ -17,6 +17,7 @@
 | 구성 진단 | `xoc doctor`: 로컬 구성과 Docker CLI 존재 확인 |
 | 구성요소 목록 | 필수 platform + 선택 기능 11개; 준비된 기능과 계획 단계 구분 |
 | 확장 경계 | 명시적으로 선택한 테스트 fixture 조합; C7 구현 전 상용 모듈 거부 |
+| 보안 경로 실험 | fw DNAT·Suricata NFQUEUE·WAF, 선택 타깃 등록, 전용 VM 검사·기동·검증 명령 |
 
 ## 시작하기
 
@@ -47,6 +48,18 @@ xoc plan --allow-fixtures --include fixture-echo
 
 `xoc plan --preset community-security`는 현재 `component_not_ready`로 종료한다. 해당 프리셋의 실제 구성요소 이식이 끝나면 사용한다. `doctor`의 성공은 호스트 자원·Docker daemon·실제 통신 경로 검증을 뜻하지 않는다.
 
+## 보안 경로 실험 구성
+
+새 검증 호스트는 **Ubuntu Server 26.04 LTS x86_64 전용 VM**을 기준으로 한다. 아래 계획 생성은 Docker를 실행하지 않는다. `--allow-experimental`은 미검증 실험 구성을 선택한다는 명시적 표시다.
+
+```bash
+xoc plan --preset security-path --allow-experimental \
+  --allow-fixtures --include fixture-security-probe --output security-lab
+xoc lab check --plan security-lab
+```
+
+실제 `lab up/verify/down`은 [전용 VM 실행 절차](docs/development/SECURITY-PATH-LAB.md)를 따른다. fw·ips·web에는 호스트 포트를 게시하지 않고 내부 테스트 클라이언트로 경로를 검증한다. 설치된 타깃만 WAF에 등록한다. 현재 IPS 룰은 동작 검증용 표식 룰이며 일반 공격 탐지 룰셋 구축은 후속 작업이다.
+
 ## C1 로그 정규화 예제
 
 ```bash
@@ -65,6 +78,8 @@ xoc events validate --input /tmp/xoc-events.json
 ## 개발 문서
 
 - [첫 구현 결과와 다음 작업](docs/development/IMPLEMENTATION-01.md)
+- [보안 경로 분리 결과와 검증 대기 항목](docs/development/IMPLEMENTATION-02.md)
+- [Ubuntu 26.04 VM 구성·실행 절차](docs/development/SECURITY-PATH-LAB.md)
 - [C1 v0.1 계약과 소스별 매핑](docs/contracts/C1-EVENT.md)
 - [설치 manifest·CLI 사용법](docs/development/PLANNER.md)
 - [CI 템플릿과 활성화 상태](docs/development/ci/README.md)

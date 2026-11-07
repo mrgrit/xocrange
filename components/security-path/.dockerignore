@@ -1,0 +1,17 @@
+**
+!fw/
+!fw/Dockerfile
+!fw/rules.nft
+!ips/
+!ips/Dockerfile
+!ips/rules.nft
+!ips/probe.rules
+!ips/configure.py
+!web/
+!web/Dockerfile
+!web/start.py
+!web/apache.conf
+!web/modsecurity.conf
+!web/envvars
+!runtime/
+!runtime/entrypoint.sh

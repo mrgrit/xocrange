@@ -1,0 +1,27 @@
+# Own tables only. Never flush a host or another component's ruleset.
+add table inet xoc_fw
+flush table inet xoc_fw
+table inet xoc_fw {
+    counter blocked_input {}
+    counter forwarded_web {}
+    chain input {
+        type filter hook input priority filter; policy drop;
+        iifname "lo" accept
+        ct state established,related accept
+        counter name blocked_input drop
+    }
+    chain forward {
+        type filter hook forward priority filter; policy drop;
+        ct state invalid drop
+        ip saddr 172.29.10.0/24 ip daddr 172.29.12.80 tcp dport 8080 counter name forwarded_web accept
+        ip saddr 172.29.12.80 ip daddr 172.29.10.0/24 tcp sport 8080 ct state established,related accept
+    }
+}
+add table ip xoc_dnat
+flush table ip xoc_dnat
+table ip xoc_dnat {
+    chain prerouting {
+        type nat hook prerouting priority dstnat; policy accept;
+        ip daddr 172.29.10.1 tcp dport 8080 dnat to 172.29.12.80:8080
+    }
+}

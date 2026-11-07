@@ -1,0 +1,23 @@
+schema_version: xoc.manifest/0.1.0
+id: fixture-security-probe
+kind: fixture
+title: Disposable client and backend for packet-path verification
+version: 0.1.0
+core: ">=0.1.0 <0.2.0"
+status: experimental
+commercial: false
+minimum_tier: community
+requires:
+  components: [security-path]
+  capabilities: [security.http-proxy]
+provides: [fixture.security-probe]
+conflicts: []
+networks: [ext, int]
+config_keys: []
+contracts: {}
+http_targets:
+  - id: sample
+    service: lab-target
+    port: 8080
+compose: compose.yaml
+build_inputs: [Dockerfile, .dockerignore, probe.py, target.py]

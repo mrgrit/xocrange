@@ -1,36 +1,188 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Component/module descriptor v0.1",
-  "type": "object", "additionalProperties": false,
-  "required": ["schema_version", "id", "kind", "title", "version", "core", "status", "commercial", "minimum_tier", "requires", "provides", "conflicts", "networks", "config_keys", "contracts", "build_inputs"],
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "id",
+    "kind",
+    "title",
+    "version",
+    "core",
+    "status",
+    "commercial",
+    "minimum_tier",
+    "requires",
+    "provides",
+    "conflicts",
+    "networks",
+    "config_keys",
+    "contracts",
+    "build_inputs"
+  ],
   "properties": {
-    "schema_version": {"const": "xoc.manifest/0.1.0"},
-    "id": {"$ref": "#/definitions/id"},
-    "kind": {"enum": ["component", "module", "fixture"]},
-    "title": {"type": "string", "minLength": 1, "maxLength": 120},
-    "version": {"type": "string", "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"},
-    "core": {"type": "string", "minLength": 1, "maxLength": 120},
-    "status": {"enum": ["ready", "planned"]},
-    "commercial": {"type": "boolean"},
-    "minimum_tier": {"enum": ["community", "live-fire", "joint-force"]},
+    "schema_version": {
+      "const": "xoc.manifest/0.1.0"
+    },
+    "id": {
+      "$ref": "#/definitions/id"
+    },
+    "kind": {
+      "enum": [
+        "component",
+        "module",
+        "fixture"
+      ]
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+    },
+    "core": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120
+    },
+    "status": {
+      "enum": [
+        "ready",
+        "planned",
+        "experimental"
+      ]
+    },
+    "commercial": {
+      "type": "boolean"
+    },
+    "minimum_tier": {
+      "enum": [
+        "community",
+        "live-fire",
+        "joint-force"
+      ]
+    },
     "requires": {
-      "type": "object", "additionalProperties": false, "required": ["components", "capabilities"],
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "components",
+        "capabilities"
+      ],
       "properties": {
-        "components": {"$ref": "#/definitions/ids"},
-        "capabilities": {"$ref": "#/definitions/strings"}
+        "components": {
+          "$ref": "#/definitions/ids"
+        },
+        "capabilities": {
+          "$ref": "#/definitions/strings"
+        }
       }
     },
-    "provides": {"$ref": "#/definitions/strings"},
-    "conflicts": {"$ref": "#/definitions/ids"},
-    "networks": {"type": "array", "uniqueItems": true, "items": {"enum": ["user", "ext", "pipe", "dmz", "int", "app", "ot"]}},
-    "config_keys": {"type": "array", "uniqueItems": true, "items": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]*$"}},
-    "contracts": {"type": "object", "additionalProperties": false, "properties": {"C1": {"const": "0.1.0"}}},
-    "compose": {"type": "string", "minLength": 1, "maxLength": 240},
-    "build_inputs": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 240}}
+    "provides": {
+      "$ref": "#/definitions/strings"
+    },
+    "conflicts": {
+      "$ref": "#/definitions/ids"
+    },
+    "networks": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "user",
+          "ext",
+          "pipe",
+          "dmz",
+          "int",
+          "app",
+          "ot"
+        ]
+      }
+    },
+    "config_keys": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Z][A-Z0-9_]*$"
+      }
+    },
+    "contracts": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "C1": {
+          "const": "0.1.0"
+        }
+      }
+    },
+    "compose": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 240
+    },
+    "build_inputs": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 240
+      }
+    },
+    "http_targets": {
+      "type": "array",
+      "maxItems": 32,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "service",
+          "port"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{0,40}$"
+          },
+          "service": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{0,62}$"
+          },
+          "port": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 65535
+          }
+        }
+      }
+    }
   },
   "definitions": {
-    "id": {"type": "string", "pattern": "^(?:[a-z][a-z0-9-]{0,63}|M(?:[1-9]|1[0-9]))$"},
-    "ids": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/definitions/id"}},
-    "strings": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1, "maxLength": 128}}
+    "id": {
+      "type": "string",
+      "pattern": "^(?:[a-z][a-z0-9-]{0,63}|M(?:[1-9]|1[0-9]))$"
+    },
+    "ids": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/definitions/id"
+      }
+    },
+    "strings": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 128
+      }
+    }
   }
 }

@@ -1,0 +1,12 @@
+add table inet xoc_ips
+flush table inet xoc_ips
+table inet xoc_ips {
+    counter inspected {}
+    chain forward {
+        type filter hook forward priority filter; policy drop;
+        ct state invalid drop
+        # Both directions are queued so Suricata sees the complete TCP session.
+        ip saddr 172.29.10.0/24 ip daddr 172.29.12.80 tcp dport 8080 counter name inspected queue num 0
+        ip saddr 172.29.12.80 ip daddr 172.29.10.0/24 tcp sport 8080 counter name inspected queue num 0
+    }
+}

@@ -12,6 +12,7 @@ from .documents import json_document, read_bytes, validate
 from .errors import XocError
 from .events import Context, normalize
 from .planner import catalog, plan, write_plan
+from .lab import run_lab
 
 
 def parser():
@@ -27,6 +28,7 @@ def parser():
         sub.add_argument("--include", action="append", default=[])
         sub.add_argument("--without", action="append", default=[])
         sub.add_argument("--allow-fixtures", action="store_true")
+        sub.add_argument("--allow-experimental", action="store_true")
         if name == "plan":
             sub.add_argument("--output", help="new directory name beneath .local/plans; omitted means stdout only")
     events = commands.add_parser("events", help="validate or normalize a single bounded source record")
@@ -38,15 +40,22 @@ def parser():
     converting.add_argument("--source", required=True, choices=("suricata", "modsecurity", "nftables"))
     for name in ("tenant-id", "range-id", "source-id", "evidence-ref", "observed-at"):
         converting.add_argument(f"--{name}", required=True)
+    lab = commands.add_parser("lab", help="run packet-path checks on a dedicated Ubuntu 26.04 VM")
+    lab.add_argument("action", choices=("check", "up", "verify", "down"))
+    lab.add_argument("--plan", required=True, help="plan directory name beneath .local/plans")
+    lab.add_argument("--isolated-vm", action="store_true", help="confirm this is the dedicated lab VM")
     return cli
 
 
 def run(args):
+    if args.command == "lab":
+        return run_lab(args.root, args.plan, args.action, args.isolated_vm)
     if args.command == "catalog":
         return {"components": [entry["manifest"] for entry in catalog(args.root, allow_fixtures=args.allow_fixtures).values()]}
     if args.command in ("plan", "doctor"):
         result = plan(args.root, preset=args.preset, include=args.include,
-                      without=args.without, allow_fixtures=args.allow_fixtures)
+                      without=args.without, allow_fixtures=args.allow_fixtures,
+                      allow_experimental=args.allow_experimental)
         if args.command == "doctor":
             return {"status": "configuration-valid", "selected": result["lock"]["selected"],
                     "checks": {"manifests_and_dependencies": "passed", "compose_fragment_policy": "passed",
@@ -74,6 +83,8 @@ def main(argv=None):
     try:
         result = run(args)
         print(json.dumps(result, indent=2, ensure_ascii=False, allow_nan=False))
+        if args.command == "lab" and result["status"] in ("blocked", "failed"):
+            return 2
         return 0
     except XocError as exc:
         print(json.dumps({"error": {"code": exc.code, "message": str(exc)}}), file=sys.stderr)

@@ -1,0 +1,2064 @@
+{
+  "observed_on": "2026-11-07",
+  "source": "~/work/kt66",
+  "head": "b179231073b25fb797b9c6443da393d02cc12340",
+  "compose_sha256": "0d28e508105d3ba8b8605b0d5b5bb12b6c461dc9b2e716a141fccf1613470cd6",
+  "scope": "Read-only dependency inventory; environment values excluded; selected source bytes preserved privately, not imported into Core.",
+  "services": {
+    "netglue": {
+      "depends_on": [],
+      "networks": [],
+      "image": "kt66-fw",
+      "build": {
+        "context": ".",
+        "dockerfile": "fw/Dockerfile"
+      },
+      "environment_keys": [],
+      "mounts": [
+        "./kt66-net.sh:/kt66-net.sh:ro"
+      ],
+      "network_mode": "host",
+      "privileged": true,
+      "cap_add": [],
+      "published_port_count": 0,
+      "dockerfile_sha256": "822df463e415a656e01258f2496de4f98c7d2b3b54a0de37241677886043f33d",
+      "copy_instructions": [
+        "COPY fw/nftables.conf /etc/nftables.conf",
+        "COPY secuops-easy-deploy/gui/nft_edu_gui/ /opt/nft_edu_gui/",
+        "COPY fw/entrypoint.sh /entrypoint.sh"
+      ],
+      "base_images": [
+        "ubuntu:22.04"
+      ]
+    },
+    "bastion": {
+      "depends_on": [],
+      "networks": [
+        "ext"
+      ],
+      "image": null,
+      "build": {
+        "context": ".",
+        "dockerfile": "bastion/Dockerfile"
+      },
+      "environment_keys": [
+        "API_KEY",
+        "DEFAULT_GW",
+        "LLM_BASE_URL",
+        "LLM_MANAGER_MODEL",
+        "LLM_SUBAGENT_MODEL",
+        "SSH_PASS",
+        "SSH_USER"
+      ],
+      "mounts": [
+        "bastion-data:/var/lib/bastion",
+        "bastion-ssh-host:/var/lib/bastion/ssh-host-keys",
+        "/var/run/docker.sock:/var/run/docker.sock:ro",
+        "./keys:/keys:ro"
+      ],
+      "network_mode": null,
+      "privileged": false,
+      "cap_add": [
+        "NET_ADMIN"
+      ],
+      "published_port_count": 1,
+      "dockerfile_sha256": "773985fa5f19214e3852a9c880e10d992194dd30760a82aabc353658a9a591eb",
+      "copy_instructions": [
+        "COPY bastion/api.py /opt/bastion-api/api.py",
+        "COPY bastion/src /opt/ccc-src",
+        "COPY bastion/entrypoint.sh /entrypoint.sh"
+      ],
+      "base_images": [
+        "ubuntu:22.04"
+      ]
+    },
+    "attacker": {
+      "depends_on": [],
+      "networks": [
+        "ext"
+      ],
+      "image": null,
+      "build": {
+        "context": ".",
+        "dockerfile": "attacker/Dockerfile"
+      },
+      "environment_keys": [
+        "DEFAULT_GW",
+        "SSH_PASS",
+        "SSH_USER"
+      ],
+      "mounts": [
+        "attacker-home:/home/ccc",
+        "attacker-ssh-host:/var/lib/ssh-host-keys",
+        "./keys:/keys:ro"
+      ],
+      "network_mode": null,
+      "privileged": false,
+      "cap_add": [
+        "NET_ADMIN"
+      ],
+      "published_port_count": 1,
+      "dockerfile_sha256": "a3616e0f01ae925a96b03f322e530315caf847a8ee0a0df2784b2ca6e3f60d97",
+      "copy_instructions": [
+        "COPY attacker/entrypoint.sh /entrypoint.sh",
+        "COPY attacker/motd /etc/motd",
+        "COPY agent/subagent.py /opt/subagent.py"
+      ],
+      "base_images": [
+        "ubuntu:22.04"
+      ]
+    },
+    "fw": {
+      "depends_on": [],
+      "networks": [
+        "ext",
+        "pipe"
+      ],
+      "image": null,
+      "build": {
+        "context": ".",
+        "dockerfile": "fw/Dockerfile"
+      },
+      "environment_keys": [
+        "BASTION_API_IP",
+        "IPS_PIPE_IP",
+        "SSH_PASS",
+        "SSH_USER",
+        "WAZUH_MANAGER",
+        "WEB_DMZ_IP"
+      ],
+      "mounts": [
+        "./keys:/keys:ro",
+        "./endpoints/user-network.sh:/opt/kt66-user-network.sh:ro",
+        "./fw/entrypoint.sh:/entrypoint.sh:ro"
+      ],
+      "network_mode": null,
+      "privileged": false,
+      "cap_add": [
+        "NET_ADMIN",
+        "NET_RAW"
+      ],
+      "published_port_count": 15,
+      "dockerfile_sha256": "822df463e415a656e01258f2496de4f98c7d2b3b54a0de37241677886043f33d",
+      "copy_instructions": [
+        "COPY fw/nftables.conf /etc/nftables.conf",
+        "COPY secuops-easy-deploy/gui/nft_edu_gui/ /opt/nft_edu_gui/",
+        "COPY fw/entrypoint.sh /entrypoint.sh"
+      ],
+      "base_images": [
+        "ubuntu:22.04"
+      ]
+    },
+    "ips": {
+      "depends_on": [
+        "fw"
+      ],
+      "networks": [
+        "pipe",
+        "dmz",
+        "app",
+        "ot",
+        "user"
+      ],
+      "image": null,
+      "build": {
+        "context": ".",
+        "dockerfile": "ips/Dockerfile"
+      },
+      "environment_keys": [
+        "FW_PIPE_IP",
+        "PRESERVE_SRC_IP",
+        "SSH_PASS",
+        "SSH_USER",
+        "WAZUH_MANAGER"
+      ],
+      "mounts": [
+        "ips-suricata-logs:/var/log/suricata",
+        "./keys:/keys:ro",
+        "./endpoints/user-network.sh:/opt/kt66-user-network.sh:ro",
+        "./ips/entrypoint.sh:/entrypoint.sh:ro"
+      ],
+      "network_mode": null,
+      "privileged": false,
+      "cap_add": [
+        "NET_ADMIN",
+        "NET_RAW"
+      ],
+      "published_port_count": 1,
+      "dockerfile_sha256": "211b9473ed8314a90307b23a443c570bd901b1980f1659929bf09df6a9ccbf06",
+      "copy_instructions": [
+        "COPY ips/suricata-local.rules /etc/suricata/rules/local.rules",
+        "COPY secuops-easy-deploy/gui/suricata_edu_gui/ /opt/suricata_edu_gui/",
+        "COPY ips/entrypoint.sh /entrypoint.sh"
+      ],
+      "base_images": [
+        "ubuntu:22.04"
+      ]
+    },
+    "windows-user": {
+      "depends_on": [],
+      "networks": [
+        "user"
+      ],
+      "image": "${WINDOWS_IMAGE:-dockurr/windows:latest}",
+      "build": {},
+      "environment_keys": [
+        "CPU_CORES",
+        "DISK_SIZE",
+        "HOST",
+        "LANGUAGE",
+        "LOG",
+        "PASSWORD",
+        "PROTECT",
+        "RAM_SIZE",
+        "SAMBA",
+        "TZ",
+        "USERNAME",
+        "VERSION"
+      ],
+      "mounts": [
+        "windows-user-data:/storage",
+        "./endpoints/windows/media/windows-eval.iso:/custom.iso:ro",
+        "./endpoints/windows/entrypoint.sh:/opt/kt66-windows-entrypoint.sh:ro",
+        "./endpoints/windows/oem:/oem:ro"
+      ],
+      "network_mode": null,
+      "privileged": false,
+      "cap_add": [
+        "NET_ADMIN"
+      ],
+      "published_port_count": 0
+    },
+    "windows-console": {
+      "depends_on": [],
+      "networks": [],
+      "image": "${WINDOWS_CONSOLE_IMAGE:-nginx:alpine}",
+      "build": {},
+      "environment_keys": [
+        "CONSOLE_BIND",
+        "CONSOLE_PORT"
+      ],
+      "mounts": [
+        "./endpoints/windows/console-entrypoint.sh:/opt/console-entrypoint.sh:ro",
+        "./endpoints/windows/console.conf.template:/opt/console.conf.template:ro"
+      ],
+      "network_mode": "host",
+      "privileged": false,
+      "cap_add": [],
+      "published_port_count": 0
+    },
+    "web": {
+      "depends_on": [
+        "ips",
+        "juiceshop",
+        "dvwa",
+        "neobank",
+        "govportal",
+        "mediforum",
+        "adminconsole",
+        "aicompanion"
+      ],
+      "networks": [
+        "dmz",
+        "int"
+      ],
+      "image": null,
+      "build": {
+        "context": ".",
+        "dockerfile": "web/Dockerfile"
+      },
+      "environment_keys": [
+        "DEFAULT_GW",
+        "LAB_DOMAIN",
+        "SSH_PASS",
+        "SSH_USER",
+        "WAZUH_MANAGER"
+      ],
+      "mounts": [
+        "web-apache-logs:/var/log/apache2",
+        "./keys:/keys:ro",
+        "./web/entrypoint.sh:/entrypoint.sh:ro",
+        "./web/configure-domain.py:/opt/kt66-configure-domain.py:ro",
+        "./ui:/opt/kt66-ui:ro",
+        "./web/landing:/var/www/landing:ro",
+        "./web/vhosts:/etc/apache2/sites-available:ro",
+        "./web/request-rules:/etc/modsecurity/kt66-requests:ro",
+        "./web/request-rules.conf:/etc/modsecurity/kt66-requests.conf:ro"
+      ],
+      "network_mode": null,
+      "privileged": false,
+      "cap_add": [
+        "NET_ADMIN"
+      ],
+      "published_port_count": 1,
+      "dockerfile_sha256": "e3947a442d1ae88d56c480f9738d577d35159c06dca9cb3b86214c9f50641988",
+      "copy_instructions": [
+        "COPY web/landing/ /var/www/landing/",
+        "COPY web/vhosts/ /etc/apache2/sites-available/",
+        "COPY web/wazuh-agent.conf.append /tmp/wazuh-agent.conf.append",
+        "COPY secuops-easy-deploy/gui/modsec_edu_gui/ /opt/modsec_edu_gui/",
+        "COPY ui/ /opt/kt66-ui/",
+        "COPY web/configure-domain.py /opt/kt66-configure-domain.py",
+        "COPY web/entrypoint.sh /entrypoint.sh"
+      ],
+      "base_images": [
+        "ubuntu:22.04"
+      ]
+    },
+    "mail": {
+      "depends_on": [
+        "lab-dns"
+      ],
+      "networks": [
+        "dmz"
+      ],
+      "image": null,
+      "build": {
+        "context": ".",
+        "dockerfile": "mail/Dockerfile"
+      },
+      "environment_keys": [
+        "LAB_DOMAIN",
+        "TZ"
+      ],
+      "mounts": [
+        "./mail/accounts.json:/config/accounts.json:ro",
+        "mail-data:/var/mail/vhosts",
+        "mail-queue:/var/spool/postfix",
+        "mail-tls:/var/lib/kt66-mail"
+      ],
+      "network_mode": null,
+      "privileged": false,
+      "cap_add": [
+        "NET_ADMIN"
+      ],
+      "published_port_count": 0,
+      "dockerfile_sha256": "9fb91eecd99cf5f15dd37c7ad2163fcd2d1fd2cc8e98f3ff61daee6347b28c23",
+      "copy_instructions": [
+        "COPY mail/ /opt/kt66-mail/",
+        "COPY deployment/configure.py /opt/kt66-mail/domain.py"
+      ],
+      "base_images": [
+        "debian:bookworm-slim"
+      ]
+    },
+    "webmail": {
+      "depends_on": [
+        "mail"
+      ],
+      "networks": [
+        "dmz"
+      ],
+      "image": "${ROUNDCUBE_IMAGE:-roundcube/roundcubemail:latest-apache}",
+      "build": {},
+      "environment_keys": [
+        "LAB_DOMAIN",
+        "ROUNDCUBEMAIL_DB_TYPE",
+        "ROUNDCUBEMAIL_DEFAULT_HOST",
+        "ROUNDCUBEMAIL_DEFAULT_PORT",
+        "ROUNDCUBEMAIL_PLUGINS",
+        "ROUNDCUBEMAIL_SMTP_PORT",
+        "ROUNDCUBEMAIL_SMTP_SERVER",
+        "ROUNDCUBEMAIL_UPLOAD_MAX_FILESIZE",
+        "ROUNDCUBEMAIL_USERNAME_DOMAIN"
+      ],
+      "mounts": [
+        "./mail/webmail-entrypoint.sh:/opt/kt66-webmail-entrypoint.sh:ro",
+        "./mail/roundcube:/var/roundcube/config:ro",
+        "webmail-db:/var/roundcube/db",
+        "mail-tls:/mail-tls:ro"
+      ],
+      "network_mode": null,
+      "privileged": false,
+      "cap_add": [],
+      "published_port_count": 0
+    },
+    "lab-dns": {
+      "depends_on": [],
+      "networks": [
+        "dmz"
+      ],
+      "image": null,
+      "build": {
+        "context": ".",
+        "dockerfile": "dns/Dockerfile"
+      },
+      "environment_keys": [],
+      "mounts": [
+        "./deployment/runtime:/config:ro"
+      ],
+      "network_mode": null,
+      "privileged": false,
+      "cap_add": [
+        "NET_ADMIN"
+      ],
+      "published_port_count": 2,
+      "dockerfile_sha256": "dc94b79abb7727861023c877afa2fdd7c9e328e34f6d74350e106d7481b9ecbf",
+      "copy_instructions": [
+        "COPY dns/start.sh /start.sh"
+      ],
+      "base_images": [
+        "debian:bookworm-slim"
+      ]
+    },
+    "wazuh-indexer": {
+      "depends_on": [],
+      "networks": [
+        "dmz"
+      ],
+      "image": "wazuh/wazuh-indexer:4.10.0",
+      "build": {},
+      "environment_keys": [
+        "OPENSEARCH_JAVA_OPTS",
+        "TZ"
+      ],
+      "mounts": [
+        "/usr/share/zoneinfo/Asia/Seoul:/etc/localtime:ro",
+        "wazuh-indexer-data:/var/lib/wazuh-indexer",
+        "./wazuh-config/certs/root-ca.pem:/usr/share/wazuh-indexer/certs/root-ca.pem",
+        "./wazuh-config/certs/wazuh.indexer-key.pem:/usr/share/wazuh-indexer/certs/wazuh.indexer.key",
+        "./wazuh-config/certs/wazuh.indexer.pem:/usr/share/wazuh-indexer/certs/wazuh.indexer.pem",
+        "./wazuh-config/certs/admin.pem:/usr/share/wazuh-indexer/certs/admin.pem",
+        "./wazuh-config/certs/admin-key.pem:/usr/share/wazuh-indexer/certs/admin-key.pem",
+        "./wazuh-config/wazuh_indexer.yml:/usr/share/wazuh-indexer/opensearch.yml",
+        "./wazuh-config/internal_users.yml:/usr/share/wazuh-indexer/opensearch-security/internal_users.yml"
+      ],
+      "network_mode": null,
+      "privileged": false,
+      "cap_add": [],
+      "published_port_count": 0
+    },
+    "siem": {
+      "depends_on": [
+        "wazuh-indexer"
+      ],
+      "networks": [
+        "dmz"
+      ],
+      "image": "kt66-siem:custom",
+      "build": {
+        "context": ".",
+        "dockerfile": "siem/Dockerfile"
+      },
+      "environment_keys": [
+        "API_PASSWORD",
+        "API_USERNAME",
+        "FILEBEAT_SSL_VERIFICATION_MODE",
+        "INDEXER_PASSWORD",
+        "INDEXER_URL",
+        "INDEXER_USERNAME",
+        "SSL_CERTIFICATE",
+        "SSL_CERTIFICATE_AUTHORITIES",
+        "SSL_KEY",
+        "TZ"
+      ],
+      "mounts": [
+        "wazuh-manager-etc:/var/ossec/etc",
+        "wazuh-manager-logs:/var/ossec/logs",
+        "wazuh-manager-queue:/var/ossec/queue",
+        "wazuh-manager-var:/var/ossec/var",
+        "hollaex-events:/var/log/kt66-hollaex:ro",
+        "./siem/hollaex-honeypot-rules.xml:/opt/hollaex-honeypot-rules.xml:ro",
+        "./siem/hollaex-honeypot-decoder.xml:/opt/hollaex-honeypot-decoder.xml:ro",
+        "./siem/91-hollaex-honeypot.sh:/etc/cont-init.d/1-hollaex-honeypot:ro",
+        "./wazuh-config/certs/root-ca-manager.pem:/etc/ssl/root-ca.pem",
+        "./wazuh-config/certs/wazuh.manager.pem:/etc/ssl/filebeat.pem",
+        "./wazuh-config/certs/wazuh.manager-key.pem:/etc/ssl/filebeat.key",
+        "./keys:/keys:ro"
+      ],
+      "network_mode": null,
+      "privileged": false,
+      "cap_add": [],
+      "published_port_count": 0,
+      "dockerfile_sha256": "810f7709657da0e7afcdb94ef2e95220d9d7e6a4d7c8f4990b9ba6b4cd5b40af",
+      "copy_instructions": [
+        "COPY agent/subagent.py /opt/subagent.py",
+        "COPY siem/97-deploy-ssh-key.sh /etc/cont-init.d/97-deploy-ssh-key",
+        "COPY siem/98-start-subagent.sh /etc/cont-init.d/98-start-subagent",
+        "COPY siem/99-start-sshd.sh /etc/cont-init.d/99-start-sshd",
+        "COPY siem/bastion-audit-decoder.xml /opt/bastion-audit-decoder.xml",
+        "COPY siem/bastion-audit-rules.xml /opt/bastion-audit-rules.xml",
+        "COPY siem/96-bastion-audit-rules.sh /etc/cont-init.d/96-bastion-audit-rules",
+        "COPY siem/cmdlog-decoder.xml /opt/cmdlog-decoder.xml",
+        "COPY siem/cmdlog-rules.xml /opt/cmdlog-rules.xml",
+        "COPY siem/94-cmdlog-rules.sh /etc/cont-init.d/94-cmdlog-rules",
+        "COPY siem/95-api-rate-limit.sh /etc/cont-init.d/95-api-rate-limit",
+        "COPY siem/93-auth-force.sh /etc/cont-init.d/93-auth-force",
+        "COPY siem/kt66-events-decoder.xml /opt/kt66-events-decoder.xml",
+        "COPY siem/kt66-events-rules.xml /opt/kt66-events-rules.xml",
+        "COPY siem/modsecurity-json-rules.xml /opt/modsecurity-json-rules.xml",
+        "COPY siem/reclassify_events.py /opt/kt66-reclassify-events.py",
+        "COPY siem/92-kt66-events-rules.sh /etc/cont-init.d/92-kt66-events-rules"
+      ],
+      "base_images": [
+        "wazuh/wazuh-manager:4.10.0"
+      ]
+    },
+    "wazuh-dashboard": {
+      "depends_on": [
+        "wazuh-indexer",
+        "siem"
+      ],
+      "networks": [
+        "dmz"
+      ],
+      "image": "wazuh/wazuh-dashboard:4.10.0",
+      "build": {},
+      "environment_keys": [
+        "API_PASSWORD",
+        "API_USERNAME",
+        "DASHBOARD_PASSWORD",
+        "DASHBOARD_USERNAME",
+        "INDEXER_PASSWORD",
+        "INDEXER_USERNAME",
+        "TZ",
+        "WAZUH_API_URL"
+      ],
+      "mounts": [
+        "/usr/share/zoneinfo/Asia/Seoul:/etc/localtime:ro",
+        "./wazuh-config/certs/wazuh.dashboard.pem:/usr/share/wazuh-dashboard/certs/wazuh-dashboard.pem",
+        "./wazuh-config/certs/wazuh.dashboard-key.pem:/usr/share/wazuh-dashboard/certs/wazuh-dashboard-key.pem",
+        "./wazuh-config/certs/root-ca.pem:/usr/share/wazuh-dashboard/certs/root-ca.pem",
+        "./wazuh-config/opensearch_dashboards.yml:/usr/share/wazuh-dashboard/config/opensearch_dashboards.yml",
+        "./wazuh-config/wazuh.yml:/usr/share/wazuh-dashboard/data/wazuh/config/wazuh.yml"
+      ],
+      "network_mode": null,
+      "privileged": false,
+      "cap_add": [],
+      "published_port_count": 1
+    },
+    "portal": {
+      "depends_on": [
+        "siem",
+        "web"
+      ],
+      "networks": [
+        "dmz"
+      ],
+      "image": null,
+      "build": {
+        "context": ".",
+        "dockerfile": "portal/Dockerfile"
+      },
+      "environment_keys": [
+        "BASTION_API_KEY",
+        "BASTION_API_URL"
+      ],
+      "mounts": [
+        "./envsim/assets.yaml:/app/assets.yaml:ro",
+        "./ui:/app/ui:ro",
+        "/var/run/docker.sock:/var/run/docker.sock:ro",
+        "ips-suricata-logs:/data/suricata-logs:ro",
+        "web-apache-logs:/data/apache-logs:ro",
+        "bastion-data:/data/bastion-data:ro",
+        "wazuh-manager-logs:/data/wazuh:ro"
+      ],
+      "network_mode": null,
+      "privileged": false,
+      "cap_add": [],
+      "published_port_count": 1,
+      "dockerfile_sha256": "31c6b913dfaeffe10f6578dec5ab16e69b6f85da95129445375ef9634cf3056b",
+      "copy_instructions": [
+        "COPY portal/requirements.txt /app/requirements.txt",
+        "COPY portal/main.py /app/main.py",
+        "COPY portal/templates/ /app/templates/",
+        "COPY ui/ /app/ui/"
+      ],
+      "base_images": [
+        "python:3.12-slim"
+      ]
+    },
+    "assessor": {
+      "depends_on": [
+        "siem",
+        "web",
+        "ips"
+      ],
+      "networks": [
+        "dmz"
+      ],
+      "image": null,
+      "build": {
+        "context": ".",
+        "dockerfile": "assessor/Dockerfile"
+      },
+      "environment_keys": [
+        "API_KEY",
+        "INDEXER_PASS",
+        "INDEXER_URL",
+        "INDEXER_USER",
+        "USE_INDEXER"
+      ],
+      "mounts": [
+        "/var/run/docker.sock:/var/run/docker.sock:ro",
+        "wazuh-manager-logs:/data/wazuh:ro",
+        "ips-suricata-logs:/data/suricata-logs:ro",
+        "web-apache-logs:/data/apache-logs:ro"
+      ],
+      "network_mode": null,
+      "privileged": false,
+      "cap_add": [],
+      "published_port_count": 1,
+      "dockerfile_sha256": "0b538e0bd079018772585cf1df66dc50a00615ba9350b66bd5cc069f2491667b",
+      "copy_instructions": [
+        "COPY assessor/requirements.txt /app/requirements.txt",
+        "COPY assessor/ /app/assessor/"
+      ],
+      "base_images": [
+        "python:3.12-slim"
+      ]
+    },
+    "provisioner": {
+      "depends_on": [
+        "siem"
+      ],
+      "networks": [
+        "dmz"
+      ],
+      "image": null,
+      "build": {
+        "context": ".",
+        "dockerfile": "assessor/Dockerfile"
+      },
+      "environment_keys": [
+        "API_KEY"
+      ],
+      "mounts": [
+        "/var/run/docker.sock:/var/run/docker.sock"
+      ],
+      "network_mode": null,
+      "privileged": false,
+      "cap_add": [],
+      "published_port_count": 0,
+      "dockerfile_sha256": "0b538e0bd079018772585cf1df66dc50a00615ba9350b66bd5cc069f2491667b",
+      "copy_instructions": [
+        "COPY assessor/requirements.txt /app/requirements.txt",
+        "COPY assessor/ /app/assessor/"
+      ],
+      "base_images": [
+        "python:3.12-slim"
+      ]
+    },
+    "gpu-gw": {
+      "depends_on": [
+        "ips"
+      ],
+      "networks": [
+        "app"
+      ],
+      "image": null,
+      "build": {
+        "context": "./gpu-gw"
+      },
+      "environment_keys": [
+        "IPS_APP_IP",
+        "LAB_CIDR"
+      ],
+      "mounts": [
+        "./gpu-gw/wg/wg0.conf:/etc/wireguard/wg0.conf:ro"
+      ],
+      "network_mode": null,
+      "privileged": false,
+      "cap_add": [
+        "NET_ADMIN",
+        "SYS_MODULE"
+      ],
+      "published_port_count": 0,
+      "dockerfile_sha256": "e345c79ebb80993b09c0f5784966147297eafecd8118da96f862d11ce807c9a5",
+      "copy_instructions": [
+        "COPY entrypoint.sh /entrypoint.sh"
+      ],
+      "base_images": [
+        "alpine:3.20"
+      ]
+    },
+    "envsim": {
+      "depends_on": [
+        "siem"
+      ],
+      "networks": [
+        "ot",
+        "dmz"
+      ],
+      "image": null,
+      "build": {
+        "context": "./envsim"
+      },
+      "environment_keys": [
+        "API_KEY",
+        "SYSLOG_HOST",
+        "SYSLOG_PORT",
+        "TICK_SEC",
+        "TZ"
+      ],
+      "mounts": [
+        "/var/run/docker.sock:/var/run/docker.sock:ro",
+        "./envsim/assets.yaml:/app/assets.yaml:ro",
+        "./envsim/facility-guide.yaml:/app/facility-guide.yaml:ro"
+      ],
+      "network_mode": null,
+      "privileged": false,
+      "cap_add": [
+        "NET_ADMIN"
+      ],
+      "published_port_count": 1,
+      "dockerfile_sha256": "8467b30afa92264550d5042f4868a19d1a10ddd93af72e8a467d7624216bc347",
+      "copy_instructions": [
+        "COPY requirements.txt .",
+        "COPY model.py app.py assets.yaml facility-guide.yaml entrypoint.sh ./",
+        "COPY service_inventory.py ./"
+      ],
+      "base_images": [
+        "python:3.12-slim"
+      ]
+    },
+    "agentops": {
+      "depends_on": [],
+      "networks": [
+        "dmz"
+      ],
+      "image": null,
+      "build": {
+        "context": ".",
+        "dockerfile": "agentops/Dockerfile"
+      },
+      "environment_keys": [
+        "AGENTS_DIR",
+        "API_KEY",
+        "OBS_CA",
+        "OBS_COLLECTOR_STATUS",
+        "OBS_INDEXER_URL",
+        "OBS_READER_CREDENTIALS",
+        "TZ"
+      ],
+      "mounts": [
+        "./ui:/app/ui:ro",
+        "./agents:/agents",
+        "agent-observer-reader:/siem-reader:ro",
+        "agent-observer-state:/siem-state:ro",
+        "./wazuh-config/certs/root-ca.pem:/certs/root-ca.pem:ro"
+      ],
+      "network_mode": null,
+      "privileged": false,
+      "cap_add": [],
+      "published_port_count": 1,
+      "dockerfile_sha256": "1d6c03d238dce2170843ac35b9f7cedab2220f2f5bf7a165200a021630555002",
+      "copy_instructions": [
+        "COPY agentops/requirements.txt .",
+        "COPY agentops/ /app/",
+        "COPY observability/client.py /app/observability/client.py",
+        "COPY ui/ /app/ui/"
+      ],
+      "base_images": [
+        "python:3.12-slim"
+      ]
+    },
+    "agent-observer-setup": {
+      "depends_on": [
+        "wazuh-indexer"
+      ],
+      "networks": [
+        "dmz"
+      ],
+      "image": null,
+      "build": {
+        "context": ".",
+        "dockerfile": "observability/Dockerfile"
+      },
+      "environment_keys": [
+        "OBS_GID",
+        "OBS_UID"
+      ],
+      "mounts": [
+        "./wazuh-config/certs/root-ca.pem:/certs/root-ca.pem:ro",
+        "./wazuh-config/certs/admin.pem:/certs/admin.pem:ro",
+        "./wazuh-config/certs/admin-key.pem:/certs/admin-key.pem:ro",
+        "agent-observer-writer:/writer",
+        "agent-observer-reader:/reader",
+        "agent-observer-state:/state"
+      ],
+      "network_mode": null,
+      "privileged": false,
+      "cap_add": [],
+      "published_port_count": 0,
+      "dockerfile_sha256": "a92d79dc9112f8f2d5c9379c3bbf410cea0002c68f98083af38394afeaa09f0b",
+      "copy_instructions": [
+        "COPY observability/ /app/",
+        "COPY agents/activity_audit.py /app/"
+      ],
+      "base_images": [
+        "python:3.12-slim"
+      ]
+    },
+    "agent-observer": {
+      "depends_on": [
+        "agent-observer-setup"
+      ],
+      "networks": [
+        "dmz"
+      ],
+      "image": null,
+      "build": {
+        "context": ".",
+        "dockerfile": "observability/Dockerfile"
+      },
+      "environment_keys": [
+        "AGENTS_DIR",
+        "OBS_WRITER_CREDENTIALS"
+      ],
+      "mounts": [
+        "./agents:/agents:ro",
+        "./wazuh-config/certs/root-ca.pem:/certs/root-ca.pem:ro",
+        "agent-observer-writer:/siem-writer:ro",
+        "agent-observer-state:/state"
+      ],
+      "network_mode": null,
+      "privileged": false,
+      "cap_add": [],
+      "published_port_count": 0,
+      "dockerfile_sha256": "a92d79dc9112f8f2d5c9379c3bbf410cea0002c68f98083af38394afeaa09f0b",
+      "copy_instructions": [
+        "COPY observability/ /app/",
+        "COPY agents/activity_audit.py /app/"
+      ],
+      "base_images": [
+        "python:3.12-slim"
+      ]
+    },
+    "modelops": {
+      "depends_on": [],
+      "networks": [
+        "app"
+      ],
+      "image": null,
+      "build": {
+        "context": ".",
+        "dockerfile": "modelops/Dockerfile"
+      },
+      "environment_keys": [
+        "API_KEY",
+        "DB_PATH",
+        "DEMAND_SEC",
+        "MODELS_DIR",
+        "OLLAMA_URL",
+        "TZ"
+      ],
+      "mounts": [
+        "./ui:/app/ui:ro",
+        "./modelops/models:/models",
+        "./modelops/data:/data",
+        "/usr/share/zoneinfo/Asia/Seoul:/etc/localtime:ro"
+      ],
+      "network_mode": null,
+      "privileged": false,
+      "cap_add": [],
+      "published_port_count": 1,
+      "dockerfile_sha256": "95dc3deb7391caa4c269acd80a063243ca3a328b6a7118acd50f82e3f534bb96",
+      "copy_instructions": [
+        "COPY modelops/requirements.txt .",
+        "COPY modelops/ /app/",
+        "COPY ui/ /app/ui/"
+      ],
+      "base_images": [
+        "python:3.12-slim"
+      ]
+    },
+    "infraops": {
+      "depends_on": [],
+      "networks": [
+        "dmz"
+      ],
+      "image": null,
+      "build": {
+        "context": ".",
+        "dockerfile": "infraops/Dockerfile"
+      },
+      "environment_keys": [
+        "ENVSIM_URL",
+        "REPO_DIR",
+        "TZ"
+      ],
+      "mounts": [
+        "./ui:/app/ui:ro",
+        "./infraops/requirements:/app/requirements:ro",
+        ".:/repo:ro",
+        "/var/run/docker.sock:/var/run/docker.sock:ro",
+        "/usr/share/zoneinfo/Asia/Seoul:/etc/localtime:ro"
+      ],
+      "network_mode": null,
+      "privileged": false,
+      "cap_add": [],
+      "published_port_count": 1,
+      "dockerfile_sha256": "7bddcad45640a0d327f49d16b5e28b6c42c01797655d8be20ffde02b1c65ae90",
+      "copy_instructions": [
+        "COPY infraops/requirements.txt .",
+        "COPY infraops/ /app/",
+        "COPY ui/ /app/ui/"
+      ],
+      "base_images": [
+        "python:3.12-slim"
+      ]
+    },
+    "noc": {
+      "depends_on": [
+        "envsim",
+        "injector"
+      ],
+      "networks": [
+        "dmz"
+      ],
+      "image": null,
+      "build": {
+        "context": ".",
+        "dockerfile": "noc/Dockerfile"
+      },
+      "environment_keys": [
+        "API_KEY",
+        "ENVSIM_URL",
+        "INJECTOR_URL",
+        "INT_HOST",
+        "LAB_DOMAIN",
+        "TZ",
+        "WEB_HOST"
+      ],
+      "mounts": [
+        "./ui:/app/ui:ro",
+        "./agents:/agents:ro",
+        "./noc/static:/app/static:ro",
+        "/var/run/docker.sock:/var/run/docker.sock:ro"
+      ],
+      "network_mode": null,
+      "privileged": false,
+      "cap_add": [],
+      "published_port_count": 1,
+      "dockerfile_sha256": "a4192fe8634840e0e010c61f2bae0256898c7661e0382e4c2316ce148df43e2c",
+      "copy_instructions": [
+        "COPY noc/requirements.txt .",
+        "COPY noc/app.py ./",
+        "COPY noc/agent_control.py ./",
+        "COPY noc/risk_map.py ./",
+        "COPY noc/remote_hosts.py ./",
+        "COPY envsim/service_inventory.py ./envsim/service_inventory.py",
+        "COPY agents/activity_audit.py ./",
+        "COPY agents/execution_evidence.py ./",
+        "COPY noc/static ./static",
+        "COPY ui/ /app/ui/"
+      ],
+      "base_images": [
+        "python:3.12-slim"
+      ]
+    },
+    "injector": {
+      "depends_on": [
+        "siem"
+      ],
+      "networks": [
+        "dmz"
+      ],
+      "image": null,
+      "build": {
+        "context": "./injector"
+      },
+      "environment_keys": [
+        "API_KEY",
+        "SYSLOG_HOST",
+        "SYSLOG_PORT",
+        "TZ"
+      ],
+      "mounts": [
+        "./injector/state:/state",
+        "/var/run/docker.sock:/var/run/docker.sock"
+      ],
+      "network_mode": null,
+      "privileged": false,
+      "cap_add": [],
+      "published_port_count": 1,
+      "dockerfile_sha256": "72c050ab3e6ee5636b4fb24f611be23e25ca642c20e78fbd916c475f47cb448c",
+      "copy_instructions": [
+        "COPY requirements.txt .",
+        "COPY dk.py catalog.py app.py ./"
+      ],
+      "base_images": [
+        "python:3.12-slim"
+      ]
+    },
+    "juiceshop": {
+      "depends_on": [],
+      "networks": [
+        "int"
+      ],
+      "image": "bkimminich/juice-shop:latest",
+      "build": {},
+      "environment_keys": [
+        "TZ"
+      ],
+      "mounts": [
+        "/usr/share/zoneinfo/Asia/Seoul:/etc/localtime:ro"
+      ],
+      "network_mode": null,
+      "privileged": false,
+      "cap_add": [],
+      "published_port_count": 0
+    },
+    "dvwa": {
+      "depends_on": [],
+      "networks": [
+        "int"
+      ],
+      "image": "vulnerables/web-dvwa:latest",
+      "build": {},
+      "environment_keys": [
+        "TZ"
+      ],
+      "mounts": [
+        "/usr/share/zoneinfo/Asia/Seoul:/etc/localtime:ro"
+      ],
+      "network_mode": null,
+      "privileged": false,
+      "cap_add": [],
+      "published_port_count": 0
+    },
+    "neobank": {
+      "depends_on": [],
+      "networks": [
+        "int"
+      ],
+      "image": null,
+      "build": {
+        "context": "./vuln-sites/neobank"
+      },
+      "environment_keys": [
+        "PORT"
+      ],
+      "mounts": [],
+      "network_mode": null,
+      "privileged": false,
+      "cap_add": [],
+      "published_port_count": 0,
+      "dockerfile_sha256": "9aaf79c072602a897fa8a396469ff3dc36f4b644c8f01a40d32b3625caf8cba5",
+      "copy_instructions": [
+        "COPY requirements.txt .",
+        "COPY . ."
+      ],
+      "base_images": [
+        "python:3.11-slim"
+      ]
+    },
+    "govportal": {
+      "depends_on": [],
+      "networks": [
+        "int"
+      ],
+      "image": null,
+      "build": {
+        "context": "./vuln-sites/govportal"
+      },
+      "environment_keys": [
+        "PORT"
+      ],
+      "mounts": [],
+      "network_mode": null,
+      "privileged": false,
+      "cap_add": [],
+      "published_port_count": 0,
+      "dockerfile_sha256": "8377d5c78f7992f1bddea3879504e1494d88a6520200a6ad1055346b3b2c0f52",
+      "copy_instructions": [
+        "COPY requirements.txt .",
+        "COPY . ."
+      ],
+      "base_images": [
+        "python:3.11-slim"
+      ]
+    },
+    "mediforum": {
+      "depends_on": [],
+      "networks": [
+        "int"
+      ],
+      "image": null,
+      "build": {
+        "context": "./vuln-sites/mediforum"
+      },
+      "environment_keys": [
+        "PORT"
+      ],
+      "mounts": [],
+      "network_mode": null,
+      "privileged": false,
+      "cap_add": [],
+      "published_port_count": 0,
+      "dockerfile_sha256": "a8b692beaa20bfe746f17dff72e5973366075f5b270d6e5caaae2ee95a17ee96",
+      "copy_instructions": [
+        "COPY requirements.txt .",
+        "COPY . ."
+      ],
+      "base_images": [
+        "python:3.11-slim"
+      ]
+    },
+    "adminconsole": {
+      "depends_on": [],
+      "networks": [
+        "int"
+      ],
+      "image": null,
+      "build": {
+        "context": "./vuln-sites/adminconsole"
+      },
+      "environment_keys": [
+        "PORT"
+      ],
+      "mounts": [],
+      "network_mode": null,
+      "privileged": false,
+      "cap_add": [],
+      "published_port_count": 0,
+      "dockerfile_sha256": "58fa4fa1a8e3ef4dc3035017aacdb4760155b17d7d729ac366cff889c6dcb119",
+      "copy_instructions": [
+        "COPY requirements.txt .",
+        "COPY . ."
+      ],
+      "base_images": [
+        "python:3.11-slim"
+      ]
+    },
+    "aicompanion": {
+      "depends_on": [],
+      "networks": [
+        "int"
+      ],
+      "image": null,
+      "build": {
+        "context": "./vuln-sites/aicompanion"
+      },
+      "environment_keys": [
+        "LLM_BACKEND",
+        "LLM_CFG_PATH",
+        "OLLAMA_MODEL",
+        "OLLAMA_URL",
+        "PORT"
+      ],
+      "mounts": [
+        "aicompanion-data:/data"
+      ],
+      "network_mode": null,
+      "privileged": false,
+      "cap_add": [],
+      "published_port_count": 0,
+      "dockerfile_sha256": "a98458c9b2c70065b1681b0265dc7f7c89ee2882c6ad44f6f45cc13265d5c8ef",
+      "copy_instructions": [
+        "COPY requirements.txt .",
+        "COPY . ."
+      ],
+      "base_images": [
+        "python:3.11-slim"
+      ]
+    }
+  },
+  "snapshot_files": [
+    {
+      "path": "docker-compose.yaml",
+      "sha256": "0d28e508105d3ba8b8605b0d5b5bb12b6c461dc9b2e716a141fccf1613470cd6",
+      "bytes": 41549
+    },
+    {
+      "path": "kt66-net.sh",
+      "sha256": "ca703f1733d4cf6eb2043800dde1c294ae559b90f6e646cc661571abfe91bb45",
+      "bytes": 8194
+    },
+    {
+      "path": "endpoints/user-network.sh",
+      "sha256": "028aec3a16761738cf112b14aaa018bc45bc6a3f4589a211fc7e968a023922df",
+      "bytes": 2080
+    },
+    {
+      "path": "fw/Dockerfile",
+      "sha256": "822df463e415a656e01258f2496de4f98c7d2b3b54a0de37241677886043f33d",
+      "bytes": 2349
+    },
+    {
+      "path": "fw/entrypoint.sh",
+      "sha256": "1e6477c4162d92c735785c75a675857e678708d8212017c64ae7c4a9ff24e285",
+      "bytes": 8721
+    },
+    {
+      "path": "fw/nftables.conf",
+      "sha256": "17bfe9c061552b836996a82d978fdb239b95220776e11418f3d076d956c19cc3",
+      "bytes": 1030
+    },
+    {
+      "path": "ips/Dockerfile",
+      "sha256": "211b9473ed8314a90307b23a443c570bd901b1980f1659929bf09df6a9ccbf06",
+      "bytes": 2333
+    },
+    {
+      "path": "ips/entrypoint.sh",
+      "sha256": "8eec52b796d9a070edb38dbe6a3268436bff95e6d7f087c616b52ce1c3297541",
+      "bytes": 14354
+    },
+    {
+      "path": "ips/suricata-local.rules",
+      "sha256": "989ef0ca3577fe9cb811deb8b47d21718d9a828cd9380e5c3203f12385fe7999",
+      "bytes": 913
+    },
+    {
+      "path": "web/Dockerfile",
+      "sha256": "e3947a442d1ae88d56c480f9738d577d35159c06dca9cb3b86214c9f50641988",
+      "bytes": 4632
+    },
+    {
+      "path": "web/entrypoint.sh",
+      "sha256": "11d28fddb2e9c158e56ce5ea5388e83486b2421b51fcd95a4b252d50e39c0fda",
+      "bytes": 5384
+    },
+    {
+      "path": "web/configure-domain.py",
+      "sha256": "ceba5f264bae1123b2e9921bf6084081c05e6efbea1370ae5dba6e4b1dac2866",
+      "bytes": 1354
+    },
+    {
+      "path": "web/request-rules.conf",
+      "sha256": "f206818e2aad0b78bc29c2275a6055fb0f4d09af3d4b72bd837778c2689c4193",
+      "bytes": 141
+    },
+    {
+      "path": "web/wazuh-agent.conf.append",
+      "sha256": "efb24bb1b9cfe9f8b9072ff6abf3f6904b1d96c8920329e749d939223dcada86",
+      "bytes": 2264
+    },
+    {
+      "path": "web/vhosts/000-landing.conf",
+      "sha256": "c70a47a396d3db3ae557d8f535b8814642dd461eecbfc4e10e3ec0b1177fd045",
+      "bytes": 1165
+    },
+    {
+      "path": "web/vhosts/010-juice.conf",
+      "sha256": "44c9375c23082d1edbb6b2920729d92424caedb275df94a771c316c32b9019c5",
+      "bytes": 1544
+    },
+    {
+      "path": "web/vhosts/020-dvwa.conf",
+      "sha256": "2a75467808c3702daa7762bfef57c8c32eef4d6df7573f2c8d662c855e28ba27",
+      "bytes": 1012
+    },
+    {
+      "path": "web/vhosts/030-neobank.conf",
+      "sha256": "b585bd57ae3c16ca297185665c0686073006f465fa747cbb1606a42c619043d2",
+      "bytes": 1078
+    },
+    {
+      "path": "web/vhosts/040-govportal.conf",
+      "sha256": "ebf664b370ad3c19247cfaced850369f6d8723aed728f04afb37c855521162a5",
+      "bytes": 1110
+    },
+    {
+      "path": "web/vhosts/050-mediforum.conf",
+      "sha256": "bd90d41c78300af7e87dc1e6b916ea8387b1d96c31119c05fffd3d8d2d7ec433",
+      "bytes": 1110
+    },
+    {
+      "path": "web/vhosts/060-admin.conf",
+      "sha256": "9a0c7aa0d9563617c268372ef1e7b6d5e222b2ee3fc18dbdbaf91c44790e71a6",
+      "bytes": 1109
+    },
+    {
+      "path": "web/vhosts/070-ai.conf",
+      "sha256": "94ef328416863c88b82d3178afa569751740ce410cd5b4be5f0bac312e1cf7e4",
+      "bytes": 1759
+    },
+    {
+      "path": "web/vhosts/080-portal.conf",
+      "sha256": "e2ba7589601339483e5db4b848bc3a0985fe2bc6c255b00d91b8391044ef6036",
+      "bytes": 827
+    },
+    {
+      "path": "web/vhosts/090-siem.conf",
+      "sha256": "5130a7540aa82cd4c222dd07a14ca7018184d23fdb70ae4bca916c0eb4712f2c",
+      "bytes": 2527
+    },
+    {
+      "path": "web/vhosts/100-bastion.conf",
+      "sha256": "50744035f40277bf81f5f715fae5955fb48dc23e421d272e656474bf87f7fd8d",
+      "bytes": 1389
+    },
+    {
+      "path": "web/vhosts/110-secops-gui.conf",
+      "sha256": "5065d5998208a9e77710664c6d6b724b957c015293a386a09c71c1bf9ec78d40",
+      "bytes": 3848
+    },
+    {
+      "path": "web/vhosts/120-datacenter.conf",
+      "sha256": "1379c9ff84c07e50e0ec38182258724f88a12cadbba71cd51bf07b3c0e2f3c7a",
+      "bytes": 8130
+    },
+    {
+      "path": "web/vhosts/130-mail.conf",
+      "sha256": "36f96567c380074fe9ea479c660daffb9057e85c6b09d6bdbad7a7973d7fc40f",
+      "bytes": 932
+    },
+    {
+      "path": "web/vhosts/140-exchange.conf",
+      "sha256": "b67eea02290f5581ac2dbf1247f5754a086409bd5d22c970c3840d36e2304554",
+      "bytes": 2565
+    },
+    {
+      "path": "web/vhosts/200-ports.conf",
+      "sha256": "48ec52a20d6e6d54d13c75ba7741f02eab587b90f7e2837e35c4026d84a9e093",
+      "bytes": 2868
+    }
+  ],
+  "networks": {
+    "user": {
+      "internal": true,
+      "driver": "bridge",
+      "ipam": {
+        "config": [
+          {
+            "subnet": "10.20.70.0/24",
+            "gateway": "10.20.70.254"
+          }
+        ]
+      }
+    },
+    "ext": {
+      "driver": "bridge",
+      "ipam": {
+        "config": [
+          {
+            "subnet": "10.20.30.0/24",
+            "gateway": "10.20.30.254"
+          }
+        ]
+      }
+    },
+    "pipe": {
+      "driver": "bridge",
+      "ipam": {
+        "config": [
+          {
+            "subnet": "10.20.31.0/24",
+            "gateway": "10.20.31.254"
+          }
+        ]
+      }
+    },
+    "dmz": {
+      "driver": "bridge",
+      "ipam": {
+        "config": [
+          {
+            "subnet": "10.20.32.0/24",
+            "gateway": "10.20.32.254"
+          }
+        ]
+      }
+    },
+    "int": {
+      "driver": "bridge",
+      "ipam": {
+        "config": [
+          {
+            "subnet": "10.20.40.0/24",
+            "gateway": "10.20.40.254"
+          }
+        ]
+      }
+    },
+    "app": {
+      "driver": "bridge",
+      "ipam": {
+        "config": [
+          {
+            "subnet": "10.20.50.0/24",
+            "gateway": "10.20.50.254"
+          }
+        ]
+      }
+    },
+    "ot": {
+      "driver": "bridge",
+      "ipam": {
+        "config": [
+          {
+            "subnet": "10.20.60.0/24",
+            "gateway": "10.20.60.254"
+          }
+        ]
+      }
+    }
+  },
+  "web_proxy_edges": [
+    {
+      "from": "web",
+      "source": "web/vhosts/010-juice.conf",
+      "line": 7,
+      "directive": "ProxyPass",
+      "scheme": "ws",
+      "backend": "juiceshop",
+      "port": 3000,
+      "path": "/socket.io/"
+    },
+    {
+      "from": "web",
+      "source": "web/vhosts/010-juice.conf",
+      "line": 9,
+      "directive": "ProxyPass",
+      "scheme": "http",
+      "backend": "juiceshop",
+      "port": 3000,
+      "path": "/"
+    },
+    {
+      "from": "web",
+      "source": "web/vhosts/010-juice.conf",
+      "line": 28,
+      "directive": "ProxyPass",
+      "scheme": "ws",
+      "backend": "juiceshop",
+      "port": 3000,
+      "path": "/socket.io/"
+    },
+    {
+      "from": "web",
+      "source": "web/vhosts/010-juice.conf",
+      "line": 30,
+      "directive": "ProxyPass",
+      "scheme": "http",
+      "backend": "juiceshop",
+      "port": 3000,
+      "path": "/"
+    },
+    {
+      "from": "web",
+      "source": "web/vhosts/020-dvwa.conf",
+      "line": 7,
+      "directive": "ProxyPass",
+      "scheme": "ws",
+      "backend": "dvwa",
+      "port": 80,
+      "path": "/socket.io/"
+    },
+    {
+      "from": "web",
+      "source": "web/vhosts/020-dvwa.conf",
+      "line": 9,
+      "directive": "ProxyPass",
+      "scheme": "http",
+      "backend": "dvwa",
+      "port": 80,
+      "path": "/"
+    },
+    {
+      "from": "web",
+      "source": "web/vhosts/020-dvwa.conf",
+      "line": 24,
+      "directive": "ProxyPass",
+      "scheme": "ws",
+      "backend": "dvwa",
+      "port": 80,
+      "path": "/socket.io/"
+    },
+    {
+      "from": "web",
+      "source": "web/vhosts/020-dvwa.conf",
+      "line": 26,
+      "directive": "ProxyPass",
+      "scheme": "http",
+      "backend": "dvwa",
+      "port": 80,
+      "path": "/"
+    },
+    {
+      "from": "web",
+      "source": "web/vhosts/030-neobank.conf",
+      "line": 7,
+      "directive": "ProxyPass",
+      "scheme": "ws",
+      "backend": "neobank",
+      "port": 3001,
+      "path": "/socket.io/"
+    },
+    {
+      "from": "web",
+      "source": "web/vhosts/030-neobank.conf",
+      "line": 9,
+      "directive": "ProxyPass",
+      "scheme": "http",
+      "backend": "neobank",
+      "port": 3001,
+      "path": "/"
+    },
+    {
+      "from": "web",
+      "source": "web/vhosts/030-neobank.conf",
+      "line": 24,
+      "directive": "ProxyPass",
+      "scheme": "ws",
+      "backend": "neobank",
+      "port": 3001,
+      "path": "/socket.io/"
+    },
+    {
+      "from": "web",
+      "source": "web/vhosts/030-neobank.conf",
+      "line": 26,
+      "directive": "ProxyPass",
+      "scheme": "http",
+      "backend": "neobank",
+      "port": 3001,
+      "path": "/"
+    },
+    {
+      "from": "web",
+      "source": "web/vhosts/040-govportal.conf",
+      "line": 7,
+      "directive": "ProxyPass",
+      "scheme": "ws",
+      "backend": "govportal",
+      "port": 3002,
+      "path": "/socket.io/"
+    },
+    {
+      "from": "web",
+      "source": "web/vhosts/040-govportal.conf",
+      "line": 9,
+      "directive": "ProxyPass",
+      "scheme": "http",
+      "backend": "govportal",
+      "port": 3002,
+      "path": "/"
+    },
+    {
+      "from": "web",
+      "source": "web/vhosts/040-govportal.conf",
+      "line": 24,
+      "directive": "ProxyPass",
+      "scheme": "ws",
+      "backend": "govportal",
+      "port": 3002,
+      "path": "/socket.io/"
+    },
+    {
+      "from": "web",
+      "source": "web/vhosts/040-govportal.conf",
+      "line": 26,
+      "directive": "ProxyPass",
+      "scheme": "http",
+      "backend": "govportal",
+      "port": 3002,
+      "path": "/"
+    },
+    {
+      "from": "web",
+      "source": "web/vhosts/050-mediforum.conf",
+      "line": 7,
+      "directive": "ProxyPass",
+      "scheme": "ws",
+      "backend": "mediforum",
+      "port": 3003,
+      "path": "/socket.io/"
+    },
+    {
+      "from": "web",
+      "source": "web/vhosts/050-mediforum.conf",
+      "line": 9,
+      "directive": "ProxyPass",
+      "scheme": "http",
+      "backend": "mediforum",
+      "port": 3003,
+      "path": "/"
+    },
+    {
+      "from": "web",
+      "source": "web/vhosts/050-mediforum.conf",
+      "line": 24,
+      "directive": "ProxyPass",
+      "scheme": "ws",
+      "backend": "mediforum",
+      "port": 3003,
+      "path": "/socket.io/"
+    },
+    {
+      "from": "web",
+      "source": "web/vhosts/050-mediforum.conf",
+      "line": 26,
+      "directive": "ProxyPass",
+      "scheme": "http",
+      "backend": "mediforum",
+      "port": 3003,
+      "path": "/"
+    },
+    {
+      "from": "web",
+      "source": "web/vhosts/060-admin.conf",
+      "line": 7,
+      "directive": "ProxyPass",
+      "scheme": "ws",
+      "backend": "adminconsole",
+      "port": 3004,
+      "path": "/socket.io/"
+    },
+    {
+      "from": "web",
+      "source": "web/vhosts/060-admin.conf",
+      "line": 9,
+      "directive": "ProxyPass",
+      "scheme": "http",
+      "backend": "adminconsole",
+      "port": 3004,
+      "path": "/"
+    },
+    {
+      "from": "web",
+      "source": "web/vhosts/060-admin.conf",
+      "line": 24,
+      "directive": "ProxyPass",
+      "scheme": "ws",
+      "backend": "adminconsole",
+      "port": 3004,
+      "path": "/socket.io/"
+    },
+    {
+      "from": "web",
+      "source": "web/vhosts/060-admin.conf",
+      "line": 26,
+      "directive": "ProxyPass",
+      "scheme": "http",
+      "backend": "adminconsole",
+      "port": 3004,
+      "path": "/"
+    },
+    {
+      "from": "web",
+      "source": "web/vhosts/070-ai.conf",
+      "line": 7,
+      "directive": "ProxyPass",
+      "scheme": "ws",
+      "backend": "aicompanion",
+      "port": 3005,
+      "path": "/socket.io/"
+    },
+    {
+      "from": "web",
+      "source": "web/vhosts/070-ai.conf",
+      "line": 9,
+      "directive": "ProxyPass",
+      "scheme": "http",
+      "backend": "aicompanion",
+      "port": 3005,
+      "path": "/"
+    },
+    {
+      "from": "web",
+      "source": "web/vhosts/070-ai.conf",
+      "line": 29,
+      "directive": "ProxyPass",
+      "scheme": "ws",
+      "backend": "aicompanion",
+      "port": 3005,
+      "path": "/socket.io/"
+    },
+    {
+      "from": "web",
+      "source": "web/vhosts/070-ai.conf",
+      "line": 31,
+      "directive": "ProxyPass",
+      "scheme": "http",
+      "backend": "aicompanion",
+      "port": 3005,
+      "path": "/"
+    },
+    {
+      "from": "web",
+      "source": "web/vhosts/080-portal.conf",
+      "line": 7,
+      "directive": "ProxyPass",
+      "scheme": "http",
+      "backend": "portal",
+      "port": 8000,
+      "path": "/"
+    },
+    {
+      "from": "web",
+      "source": "web/vhosts/080-portal.conf",
+      "line": 22,
+      "directive": "ProxyPass",
+      "scheme": "http",
+      "backend": "portal",
+      "port": 8000,
+      "path": "/"
+    },
+    {
+      "from": "web",
+      "source": "web/vhosts/090-siem.conf",
+      "line": 28,
+      "directive": "ProxyPass",
+      "scheme": "https",
+      "backend": "wazuh-dashboard",
+      "port": 5601,
+      "path": "/"
+    },
+    {
+      "from": "web",
+      "source": "web/vhosts/100-bastion.conf",
+      "line": 13,
+      "directive": "ProxyPass",
+      "scheme": "http",
+      "backend": "10.20.30.201",
+      "port": 9100,
+      "path": "/"
+    },
+    {
+      "from": "web",
+      "source": "web/vhosts/100-bastion.conf",
+      "line": 28,
+      "directive": "ProxyPass",
+      "scheme": "http",
+      "backend": "10.20.30.201",
+      "port": 9100,
+      "path": "/"
+    },
+    {
+      "from": "web",
+      "source": "web/vhosts/110-secops-gui.conf",
+      "line": 21,
+      "directive": "ProxyPass",
+      "scheme": "http",
+      "backend": "10.20.31.1",
+      "port": 8080,
+      "path": "/"
+    },
+    {
+      "from": "web",
+      "source": "web/vhosts/110-secops-gui.conf",
+      "line": 34,
+      "directive": "ProxyPass",
+      "scheme": "http",
+      "backend": "10.20.31.1",
+      "port": 8080,
+      "path": "/"
+    },
+    {
+      "from": "web",
+      "source": "web/vhosts/110-secops-gui.conf",
+      "line": 46,
+      "directive": "ProxyPass",
+      "scheme": "http",
+      "backend": "10.20.32.1",
+      "port": 8080,
+      "path": "/"
+    },
+    {
+      "from": "web",
+      "source": "web/vhosts/110-secops-gui.conf",
+      "line": 59,
+      "directive": "ProxyPass",
+      "scheme": "http",
+      "backend": "10.20.32.1",
+      "port": 8080,
+      "path": "/"
+    },
+    {
+      "from": "web",
+      "source": "web/vhosts/110-secops-gui.conf",
+      "line": 71,
+      "directive": "ProxyPass",
+      "scheme": "http",
+      "backend": "127.0.0.1",
+      "port": 8080,
+      "path": "/"
+    },
+    {
+      "from": "web",
+      "source": "web/vhosts/110-secops-gui.conf",
+      "line": 84,
+      "directive": "ProxyPass",
+      "scheme": "http",
+      "backend": "127.0.0.1",
+      "port": 8080,
+      "path": "/"
+    },
+    {
+      "from": "web",
+      "source": "web/vhosts/120-datacenter.conf",
+      "line": 32,
+      "directive": "ProxyPass",
+      "scheme": "http",
+      "backend": "10.20.32.51",
+      "port": 8000,
+      "path": "/"
+    },
+    {
+      "from": "web",
+      "source": "web/vhosts/120-datacenter.conf",
+      "line": 45,
+      "directive": "ProxyPass",
+      "scheme": "http",
+      "backend": "10.20.32.51",
+      "port": 8000,
+      "path": "/"
+    },
+    {
+      "from": "web",
+      "source": "web/vhosts/120-datacenter.conf",
+      "line": 57,
+      "directive": "ProxyPass",
+      "scheme": "http",
+      "backend": "10.20.32.52",
+      "port": 8000,
+      "path": "/"
+    },
+    {
+      "from": "web",
+      "source": "web/vhosts/120-datacenter.conf",
+      "line": 70,
+      "directive": "ProxyPass",
+      "scheme": "http",
+      "backend": "10.20.32.52",
+      "port": 8000,
+      "path": "/"
+    },
+    {
+      "from": "web",
+      "source": "web/vhosts/120-datacenter.conf",
+      "line": 84,
+      "directive": "ProxyPass",
+      "scheme": "http",
+      "backend": "10.20.32.60",
+      "port": 8000,
+      "path": "/"
+    },
+    {
+      "from": "web",
+      "source": "web/vhosts/120-datacenter.conf",
+      "line": 97,
+      "directive": "ProxyPass",
+      "scheme": "http",
+      "backend": "10.20.32.60",
+      "port": 8000,
+      "path": "/"
+    },
+    {
+      "from": "web",
+      "source": "web/vhosts/120-datacenter.conf",
+      "line": 109,
+      "directive": "ProxyPass",
+      "scheme": "http",
+      "backend": "10.20.32.61",
+      "port": 8000,
+      "path": "/"
+    },
+    {
+      "from": "web",
+      "source": "web/vhosts/120-datacenter.conf",
+      "line": 122,
+      "directive": "ProxyPass",
+      "scheme": "http",
+      "backend": "10.20.32.61",
+      "port": 8000,
+      "path": "/"
+    },
+    {
+      "from": "web",
+      "source": "web/vhosts/120-datacenter.conf",
+      "line": 134,
+      "directive": "ProxyPass",
+      "scheme": "http",
+      "backend": "10.20.32.62",
+      "port": 8000,
+      "path": "/"
+    },
+    {
+      "from": "web",
+      "source": "web/vhosts/120-datacenter.conf",
+      "line": 147,
+      "directive": "ProxyPass",
+      "scheme": "http",
+      "backend": "10.20.32.62",
+      "port": 8000,
+      "path": "/"
+    },
+    {
+      "from": "web",
+      "source": "web/vhosts/120-datacenter.conf",
+      "line": 160,
+      "directive": "ProxyPass",
+      "scheme": "http",
+      "backend": "10.20.50.60",
+      "port": 8000,
+      "path": "/"
+    },
+    {
+      "from": "web",
+      "source": "web/vhosts/120-datacenter.conf",
+      "line": 173,
+      "directive": "ProxyPass",
+      "scheme": "http",
+      "backend": "10.20.50.60",
+      "port": 8000,
+      "path": "/"
+    },
+    {
+      "from": "web",
+      "source": "web/vhosts/130-mail.conf",
+      "line": 8,
+      "directive": "ProxyPass",
+      "scheme": "http",
+      "backend": "10.20.32.26",
+      "port": null,
+      "path": "/"
+    },
+    {
+      "from": "web",
+      "source": "web/vhosts/130-mail.conf",
+      "line": 22,
+      "directive": "ProxyPass",
+      "scheme": "http",
+      "backend": "10.20.32.26",
+      "port": null,
+      "path": "/"
+    },
+    {
+      "from": "web",
+      "source": "web/vhosts/140-exchange.conf",
+      "line": 13,
+      "directive": "ProxyPass",
+      "scheme": "ws",
+      "backend": "10.20.32.28",
+      "port": 8080,
+      "path": "/stream"
+    },
+    {
+      "from": "web",
+      "source": "web/vhosts/140-exchange.conf",
+      "line": 15,
+      "directive": "ProxyPass",
+      "scheme": "http",
+      "backend": "10.20.32.28",
+      "port": 8080,
+      "path": "/"
+    },
+    {
+      "from": "web",
+      "source": "web/vhosts/140-exchange.conf",
+      "line": 41,
+      "directive": "ProxyPass",
+      "scheme": "ws",
+      "backend": "10.20.32.28",
+      "port": 8080,
+      "path": "/stream"
+    },
+    {
+      "from": "web",
+      "source": "web/vhosts/140-exchange.conf",
+      "line": 43,
+      "directive": "ProxyPass",
+      "scheme": "http",
+      "backend": "10.20.32.28",
+      "port": 8080,
+      "path": "/"
+    },
+    {
+      "from": "web",
+      "source": "web/vhosts/200-ports.conf",
+      "line": 16,
+      "directive": "ProxyPass",
+      "scheme": "ws",
+      "backend": "juiceshop",
+      "port": 3000,
+      "path": "/socket.io/"
+    },
+    {
+      "from": "web",
+      "source": "web/vhosts/200-ports.conf",
+      "line": 18,
+      "directive": "ProxyPass",
+      "scheme": "http",
+      "backend": "juiceshop",
+      "port": 3000,
+      "path": "/"
+    },
+    {
+      "from": "web",
+      "source": "web/vhosts/200-ports.conf",
+      "line": 30,
+      "directive": "ProxyPass",
+      "scheme": "http",
+      "backend": "dvwa",
+      "port": 80,
+      "path": "/"
+    },
+    {
+      "from": "web",
+      "source": "web/vhosts/200-ports.conf",
+      "line": 41,
+      "directive": "ProxyPass",
+      "scheme": "http",
+      "backend": "neobank",
+      "port": 3001,
+      "path": "/"
+    },
+    {
+      "from": "web",
+      "source": "web/vhosts/200-ports.conf",
+      "line": 52,
+      "directive": "ProxyPass",
+      "scheme": "http",
+      "backend": "govportal",
+      "port": 3002,
+      "path": "/"
+    },
+    {
+      "from": "web",
+      "source": "web/vhosts/200-ports.conf",
+      "line": 63,
+      "directive": "ProxyPass",
+      "scheme": "http",
+      "backend": "mediforum",
+      "port": 3003,
+      "path": "/"
+    },
+    {
+      "from": "web",
+      "source": "web/vhosts/200-ports.conf",
+      "line": 74,
+      "directive": "ProxyPass",
+      "scheme": "http",
+      "backend": "adminconsole",
+      "port": 3004,
+      "path": "/"
+    },
+    {
+      "from": "web",
+      "source": "web/vhosts/200-ports.conf",
+      "line": 85,
+      "directive": "ProxyPass",
+      "scheme": "http",
+      "backend": "aicompanion",
+      "port": 3005,
+      "path": "/"
+    }
+  ],
+  "boundary_findings": [
+    {
+      "service": "netglue",
+      "source": "kt66-net.sh",
+      "finding": "Changes bridge sysctl, persists it in sysctl.conf, flushes DOCKER-USER, inserts raw PREROUTING rules. Do not import as host initialization."
+    },
+    {
+      "service": "fw",
+      "source": "fw/entrypoint.sh",
+      "finding": "DNAT preserves source for web; mail/bastion API forwarding and Wazuh registration are coupled to baseline startup."
+    },
+    {
+      "service": "ips",
+      "source": "ips/entrypoint.sh",
+      "finding": "Suricata uses -i capture, not NFQUEUE; includes GPU/OT routes, Wazuh registration, shell audit and embedded console."
+    },
+    {
+      "service": "web",
+      "source": "docker-compose.yaml",
+      "finding": "Requires seven target services; all vhosts are enabled; target removal must also remove routes, ports and landing links."
+    }
+  ]
+}

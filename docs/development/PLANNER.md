@@ -1,6 +1,6 @@
 # 설치 계획기 v0.1
 
-현재 CLI는 로컬 패키지 검증과 Compose 생성까지 담당한다. 다운로드·설치·Docker 실행·제거·업데이트를 수행하지 않는다.
+`plan`과 `doctor`는 로컬 패키지 검증과 Compose 생성까지 담당하며 Docker를 실행하지 않는다. 별도의 `lab` 명령은 실험 구성에 한해 전용 VM에서 Docker 기동·검증·종료를 수행한다. 일반 설치·업데이트·롤백은 아직 없다.
 
 ## 명령
 
@@ -30,13 +30,17 @@ xoc plan --output my-first-plan
 
 Core 버전 범위는 `>=0.1.0 <0.2.0` 같은 공백으로 구분한 비교식이며 prerelease·caret·OR 문법은 지원하지 않는다. `requires.components`는 자동 포함하고 위상 정렬한다. `requires.capabilities`는 선택 집합 안에서 충족되어야 하며 제공자를 임의 선택하지 않는다.
 
-`planned` 구성요소는 카탈로그에만 표시한다. 실행 계획을 생성하려면 `ready`이고 유효한 Compose fragment가 있어야 한다. `ready`는 이 단계에서 조합 가능한 상태를 의미하며 릴리스 검증 완료 표시가 아니다. M1~M19, 상용 또는 상위 티어 선언은 C7 구현 전까지 거부한다.
+`planned` 구성요소는 카탈로그에만 표시한다. `ready`는 이 단계에서 조합 가능한 상태를 의미하며 릴리스 검증 완료 표시가 아니다. `experimental`은 별도의 `--allow-experimental`을 요구한다. M1~M19, 상용 또는 상위 티어 선언은 C7 구현 전까지 거부한다.
 
 ## 조합 검사
 
 중복 ID, 누락·순환 의존성, capability 부재, Core/C1 버전 불일치, 구성요소 간 충돌, 서비스명·전역 설정 키·호스트 포트 중복을 검사한다. wildcard 포트 바인딩도 보수적으로 충돌로 처리한다. 호스트에서 이미 사용 중인 포트는 아직 확인하지 않는다.
 
-Compose는 [제한된 bootstrap 문법](../../src/xocrange/contracts/compose-fragment.json)만 받는다. non-root·read-only·capability 제거를 요구하며 host network, privileged, volume, env_file, `$` interpolation 등은 아직 허용하지 않는다. 이것은 Docker Compose 전체 문법의 대체물이 아니다. 향후 fw/netglue가 필요로 하는 권한은 K05에서 명시적인 네트워크 모델·테스트와 함께 확장한다.
+일반 구성은 [제한된 Compose 문법](../../src/xocrange/contracts/compose-fragment.json)을 사용한다. non-root·read-only·capability 제거를 요구하며 host network, privileged, volume, env_file, `$` interpolation 등은 허용하지 않는다. IPAM과 정적 IPv4 주소는 선언·충돌 검사를 거친다.
+
+Core의 `security-path`에만 [별도 실험 스키마](../../src/xocrange/contracts/security-compose-fragment.json)와 장비별 정책을 적용한다. fw는 NET_ADMIN, IPS는 NET_ADMIN/NET_RAW, web은 경로 설정과 uid 전환에 필요한 NET_ADMIN/SETUID/SETGID만 허용한다. web은 경로 설정 후 www-data로 전환한다. 확장 모듈은 이 예외를 사용할 수 없다. 이것은 Compose 전체 문법이나 임의 코드 실행의 보안 보증이 아니다.
+
+타깃의 `http_targets`는 `id`, 자신이 소유한 backend `service`, `port`를 선언한다. backend는 int 네트워크에 있어야 한다. 선택한 타깃만 web의 JSON 구성과 서비스 시작 의존성에 반영하고, 타깃 ID 중복을 거부한다.
 
 경로는 패키지 내부로 제한하고 외부 symlink를 거부한다. build context 내부의 모든 파일은 manifest·Compose 또는 `build_inputs`로 기록되어야 한다. build context에는 symlink를 허용하지 않는다. manifest 검증은 임의 Dockerfile/이미지 실행의 안전성을 보증하지 않으므로 검토한 패키지에만 사용한다.
 

@@ -3,16 +3,39 @@ id: security-path
 kind: component
 title: Firewall, IPS, Web and routing
 version: 0.1.0
-core: ">=0.1.0 <0.2.0"
-status: planned
+core: '>=0.1.0 <0.2.0'
+status: experimental
 commercial: false
 minimum_tier: community
 requires:
-  components: ["platform"]
+  components:
+  - platform
   capabilities: []
-provides: ["security.path"]
+provides:
+- security.path
+- security.http-proxy
 conflicts: []
-networks: ["ext","pipe","dmz","int","app","ot"]
-config_keys: []
-contracts: {}
-build_inputs: []
+networks:
+- ext
+- pipe
+- dmz
+- int
+config_keys:
+- XOC_WEB_TARGETS
+contracts:
+  C1: 0.1.0
+build_inputs:
+- .dockerignore
+- fw/Dockerfile
+- fw/rules.nft
+- ips/Dockerfile
+- ips/configure.py
+- ips/probe.rules
+- ips/rules.nft
+- runtime/entrypoint.sh
+- web/Dockerfile
+- web/apache.conf
+- web/envvars
+- web/modsecurity.conf
+- web/start.py
+compose: compose.yaml

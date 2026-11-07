@@ -1,0 +1,108 @@
+services:
+  fw:
+    build:
+      context: .
+      dockerfile: fw/Dockerfile
+    user: 0:0
+    read_only: true
+    cap_drop:
+    - ALL
+    cap_add:
+    - NET_ADMIN
+    security_opt:
+    - no-new-privileges:true
+    networks:
+      ext:
+        ipv4_address: 172.29.10.1
+      pipe:
+        ipv4_address: 172.29.11.1
+    sysctls:
+      net.ipv4.ip_forward: '1'
+    restart: 'no'
+  ips:
+    build:
+      context: .
+      dockerfile: ips/Dockerfile
+    user: 0:0
+    read_only: true
+    cap_drop:
+    - ALL
+    cap_add:
+    - NET_ADMIN
+    - NET_RAW
+    security_opt:
+    - no-new-privileges:true
+    networks:
+      pipe:
+        ipv4_address: 172.29.11.2
+      dmz:
+        ipv4_address: 172.29.12.1
+    sysctls:
+      net.ipv4.ip_forward: '1'
+    restart: 'no'
+    tmpfs:
+    - /run:size=8m,mode=0755
+    - /tmp:size=16m,mode=1777
+    - /var/log/suricata:size=32m,mode=0755
+    depends_on:
+    - fw
+  web:
+    build:
+      context: .
+      dockerfile: web/Dockerfile
+    user: 0:0
+    read_only: true
+    cap_drop:
+    - ALL
+    cap_add:
+    - NET_ADMIN
+    - SETUID
+    - SETGID
+    security_opt:
+    - no-new-privileges:true
+    networks:
+      dmz:
+        ipv4_address: 172.29.12.80
+      int: {}
+    sysctls:
+      net.ipv4.ip_forward: '0'
+    restart: 'no'
+    tmpfs:
+    - /tmp:size=16m,mode=1777
+    - /run/apache2:size=8m,mode=0755,uid=33,gid=33
+    - /var/log/apache2:size=32m,mode=0755,uid=33,gid=33
+    - /var/lib/modsecurity:size=8m,mode=0755,uid=33,gid=33
+    depends_on:
+    - ips
+    environment:
+      XOC_WEB_TARGETS: '[]'
+networks:
+  int:
+    internal: true
+  ext:
+    internal: true
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.enable_ip_masquerade: 'false'
+    ipam:
+      config:
+      - subnet: 172.29.10.0/24
+        gateway: 172.29.10.254
+  pipe:
+    internal: true
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.enable_ip_masquerade: 'false'
+    ipam:
+      config:
+      - subnet: 172.29.11.0/24
+        gateway: 172.29.11.254
+  dmz:
+    internal: true
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.enable_ip_masquerade: 'false'
+    ipam:
+      config:
+      - subnet: 172.29.12.0/24
+        gateway: 172.29.12.254
