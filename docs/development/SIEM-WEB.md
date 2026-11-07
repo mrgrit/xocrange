@@ -1,6 +1,6 @@
 # Core SIEM 웹 관제와 WAF 예외
 
-`siem-ui`는 `siem`·`security-path`에 의존하는 선택형 Community 구성요소다. Wazuh 4.14.10 분석 결과를 같은 버전의 Wazuh Indexer에 저장하고, 내장 OpenSearch 2.19.6에 맞춘 OpenSearch Dashboards 2.19.6으로 조회한다. Wazuh 에이전트 관리 플러그인/API를 제공하는 구성은 아니다.
+`siem-ui`는 `siem`·`security-path`에 의존하는 선택형 Community 구성요소다. Wazuh 4.14.10 분석 결과를 같은 버전의 Wazuh Indexer에 저장하고, 내장 OpenSearch 2.19.6에 맞춘 OpenSearch Dashboards 2.19.6으로 조회한다. Wazuh 에이전트 관리 플러그인/API를 제공하는 구성은 아니다. **현재 화면은 실험 구성이다.** 정식 Wazuh Manager·Indexer·Dashboard와 원본 경보 유지의 최종 목표는 [ADR 0007](../adr/0007-wazuh-roadmap-alignment.md), 단계별 상태는 [로드맵 실행 상태](ROADMAP-STATUS.md)를 따른다.
 
 ## 설치와 접속
 
@@ -83,3 +83,5 @@ python tests/browser/siem.py --url https://VM주소 \
 운영 규모 부하·외부 Windows 에이전트·기관별 다중 사용자 권한 분리·장기 장애 복구·전체 Community 완성은 이번 범위가 아니다. 이 설치는 실험 상태이며 최종 수용 결과와 남은 범위는 검증 기록에 구분한다.
 
 공식 참고: [Wazuh Indexer 구성](https://documentation.wazuh.com/current/installation-guide/wazuh-indexer/step-by-step.html), [OpenSearch Dashboards Docker](https://docs.opensearch.org/2.19/install-and-configure/install-dashboards/docker/), [Dashboards 브랜딩](https://docs.opensearch.org/latest/dashboards/branding/).
+
+재설치·재부팅·원본/검색 데이터 보존·Indexer 중단은 [수명주기 검증 절차](SIEM-LIFECYCLE-VALIDATION.md)로 반복할 수 있다. 새 검증 도구의 코드 검사와 VM에서 실제 실행한 결과를 구분한다.

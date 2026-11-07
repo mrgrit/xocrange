@@ -26,3 +26,7 @@
 ## 이식 기준
 
 kt66의 네트워크·장비 제어·SIEM 회귀 자산을 재사용한다. 보안콘솔 정본은 `~/pjt/{nft,modsec,suricata}_edu_gui`다. Core의 SSH/일반 관제와 유료 AI 운영/평가 기능을 분리하고, Community의 운영 로그·감사는 유지한다. 상세 의존성·완료 기준·티어 정책 쟁점은 정본 계획을 따른다.
+
+## 실행 상태
+
+현재 단계별 구현·검증·미완료 항목은 [로드맵 실행 상태](docs/development/ROADMAP-STATUS.md)에 기록한다. 정식 Wazuh Manager·Indexer·Dashboard와 원본 경보 유지가 K05/K06의 목표이며, 일반 OpenSearch 실험 화면의 검증을 기능 동등성 완료로 해석하지 않는다.

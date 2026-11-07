@@ -1,0 +1,53 @@
+{
+  "date": "2026-11-07",
+  "scope": "Roadmap alignment and lifecycle acceptance tooling; no Wazuh runtime migration in this increment",
+  "roadmap_repository": "mrgrit/xocrange_plan",
+  "roadmap_commit": "f548caaa2b271565c38f953049d97675f0d4071a",
+  "runtime_source_sha256": "7fff737a8024799e5d7a21bb9391c120a1079494f4d17528e4a1438c3497fbda",
+  "runtime_source_changed": false,
+  "tool_sha256": "98d5895a12ece184216eb259cc187c33b32cffcee3e0d1e59034baa0fdf55c43",
+  "local_checks": {
+    "python": "3.10.12",
+    "full_suite_passed": 197,
+    "lifecycle_regressions_passed": 16,
+    "python_compilation": "passed",
+    "documentation_links": "passed"
+  },
+  "regression_coverage": [
+    "All eight sources and 24 durable evidence anchors",
+    "Raw and C1 modification detection",
+    "Missing or unacknowledged source rejection",
+    "Missing, duplicate and altered search documents",
+    "Checkpoint overwrite and symlink refusal",
+    "Private state permissions",
+    "Indexer restart attempted after stop/probe failure",
+    "Foreign source release rejection",
+    "Actual boot ID change required",
+    "New installer run required",
+    "Installer and verifier mutual exclusion",
+    "Explicit dedicated VM selection"
+  ],
+  "vm_execution": {
+    "new_tool": "passed",
+    "python": "3.14",
+    "full_suite_passed": 197,
+    "same_source_reinstall": "passed",
+    "reboot": "passed",
+    "evidence_anchors": 24,
+    "fresh_security_path_checks": 15,
+    "fresh_source_checks": 8,
+    "fresh_https_checks": 33,
+    "browser_checks": 11,
+    "indexer_outage_recovered_unique_documents": 100,
+    "credential_ca_saved_object_preservation": true,
+    "actual_boot_id_changed": true,
+    "temporary_test_saved_objects": "removed; evidence and volumes retained"
+  },
+  "wazuh_target": {
+    "native_manager_api": "pending K05-S1",
+    "native_dashboard": "pending K05-S2",
+    "original_alert_path_and_c1_link": "pending K06-S1",
+    "native_waf_regression": "pending K06-S2",
+    "feature_equivalence_claimed": false
+  }
+}

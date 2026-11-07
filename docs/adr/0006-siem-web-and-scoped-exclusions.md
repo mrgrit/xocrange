@@ -2,6 +2,7 @@
 
 - 상태: 실험 구현, 2026-11-07
 - 선행: [ADR 0005](0005-core-telemetry.md)
+- 후속 결정: [ADR 0007](0007-wazuh-roadmap-alignment.md). 이 문서의 일반 OpenSearch 화면은 실험 구성이다. 정식 Wazuh 통합과 기능 유지의 완료 조건은 ADR 0007을 따른다.
 
 ## 문제
 

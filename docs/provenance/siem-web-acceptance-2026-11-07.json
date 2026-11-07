@@ -117,12 +117,15 @@
     "scope": "Existing Core VM with empty UI data stores after preserving development prototype data; not a pristine full OS installation."
   },
   "same_source_reinstall": {
-    "status": "pending",
-    "reason": "Windows SSH tunnel disconnected after preservation baseline was captured."
+    "status": "passed",
+    "evidence_anchors": 24,
+    "credentials_ca_saved_object_preserved": true
   },
   "reboot": {
-    "status": "pending",
-    "reason": "Windows SSH tunnel disconnected before reboot."
+    "status": "passed",
+    "boot_id_changed": true,
+    "evidence_anchors": 24,
+    "browser_checks": 11
   },
   "known_limitations": [
     "Truncated JSON is rejected with HTTP 500 by ModSecurity 2.x upstream issue #2807; ordinary malformed JSON is rejected with 400.",
@@ -136,5 +139,11 @@
     "screenshots",
     "evidence identifiers",
     "VM network addresses"
-  ]
+  ],
+  "lifecycle_followup": {
+    "report": "siem-lifecycle-tool-validation-2026-11-07.json",
+    "same_source_reinstall": "passed",
+    "reboot": "passed",
+    "browser_after_reboot": "11 passed"
+  }
 }
