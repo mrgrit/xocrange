@@ -1,6 +1,6 @@
 # Core SIEM 웹 관제와 WAF 예외
 
-`siem-ui`는 `siem`·`security-path`에 의존하는 선택형 Community 구성요소다. Wazuh 4.14.10 분석 결과를 같은 버전의 Wazuh Indexer에 저장하고, 내장 OpenSearch 2.19.6에 맞춘 OpenSearch Dashboards 2.19.6으로 조회한다. Wazuh 에이전트 관리 플러그인/API를 제공하는 구성은 아니다. **현재 화면은 실험 구성이다.** 정식 Wazuh Manager·Indexer·Dashboard와 원본 경보 유지의 최종 목표는 [ADR 0007](../adr/0007-wazuh-roadmap-alignment.md), 단계별 상태는 [로드맵 실행 상태](ROADMAP-STATUS.md)를 따른다.
+`siem-ui`는 `siem`·`security-path`에 의존하는 선택형 Community 구성요소다. Wazuh Manager·Indexer·전용 Dashboard 4.14.10을 사용하며, Indexer/Dashboard 내부 엔진은 OpenSearch 2.19.6이다. 전용 화면과 내부 Manager API를 연결하고 C1 화면도 유지한다. **개발 중인 실험 구성**이며 기존 기능 전체의 동등성 완료를 선언하지 않는다. [정식 연동 범위](WAZUH-NATIVE.md), [ADR 0007](../adr/0007-wazuh-roadmap-alignment.md), [로드맵 상태](ROADMAP-STATUS.md)를 함께 본다.
 
 ## 설치와 접속
 
@@ -16,7 +16,7 @@ sudo bash install.sh --without siem-ui
 sudo bash install.sh --without siem
 ```
 
-HTTPS 주소는 기본 `https://VM주소/siem/`다. 외부에는 80(HTTPS 리다이렉트), 443만 공개한다. 9200·5601을 호스트에 공개하지 않는다. 관리자 비밀번호, Dashboard 서비스 비밀번호, 색인 전송 계정, 쿠키 암호화 키를 설치마다 무작위로 생성하며 기존 설치에서는 유지한다. 비밀번호를 Compose 환경 변수·이미지·Git·설치 로그에 넣지 않는다. 로컬 관리자만 `/var/lib/xocrange/ui/credentials.json`을 읽을 수 있다.
+HTTPS 주소는 기본 `https://VM주소/siem/`다. 외부에는 80(HTTPS 리다이렉트), 443만 공개한다. 9200·5601·55000·1514·1515를 호스트에 공개하지 않는다. 관리자 비밀번호, Dashboard 서비스 비밀번호, 색인 전송 계정, 쿠키 암호화 키를 설치마다 무작위로 생성하며 기존 설치에서는 유지한다. 비밀번호를 Compose 환경 변수·이미지·Git·설치 로그에 넣지 않는다. 로컬 관리자만 `/var/lib/xocrange/ui/credentials.json`을 읽을 수 있다.
 
 설치기는 개인 로컬 CA와 서버 인증서를 생성한다. 접속 PC에 `/etc/xocrange/ca.crt`를 신뢰 등록하면 브라우저 인증서 경고가 없어진다. 공개 CA 인증서만 `https://VM주소/ca.crt`에서도 받을 수 있다. CA 개인 키는 VM의 관리자 전용 디렉토리에 남는다. DNS 이름을 지정하면 접속 PC에서 그 이름이 VM으로 해석되어야 한다. 관리자 계정의 외부 비밀번호 변경과 설치기 자격 증명 동기화, 공개 CA 인증서 수명 관리는 별도 운영 기능으로 남아 있다.
 
@@ -30,15 +30,16 @@ flowchart LR
     ingress -->|HTTP / 전용 내부망| fw[nftables]
     fw --> ips[Suricata NFQUEUE]
     ips --> waf[Apache / ModSecurity CRS]
-    waf -->|검증된 HTTPS| dashboard[OpenSearch Dashboards]
+    waf -->|검증된 HTTPS| dashboard[Wazuh Dashboard]
     dashboard -->|검증된 HTTPS| indexer[Wazuh Indexer]
+    dashboard -->|검증된 HTTPS / 내부 API| manager[Wazuh Manager]
     logs[8종 원본 로그] --> collector[수집기 / C1 / Wazuh 확인]
     collector -->|전용 전송 계정 / HTTPS| indexer
 ```
 
 TLS를 Ingress에서 해제한 뒤 IPS가 HTTP 본문까지 검사한다. PROXY 프로토콜 헤더를 TLS 앞에 붙여 Suricata TLS 파서 오류를 만드는 구성을 피했다. fw는 SIEM 내부 리스너 접근을 Ingress의 고정 주소로 제한한다. Ingress는 클라이언트가 보낸 출처 헤더를 덮어쓰고, WAF는 해당 주소에서 온 전용 헤더만 신뢰한다. nftables/Suricata의 네트워크 출처는 프록시 주소이며 Apache에는 복원한 브라우저 출처를 기록한다.
 
-WAF→Dashboard와 Dashboard/수집기→Indexer는 CA와 서버 이름을 검증한다. WAF의 `ProxyPreserveHost Off`는 내부 TLS SNI를 `dashboard`로 유지한다. 경로 `/siem`은 Dashboard의 basePath 처리에 맡긴다. HTTPS 쿠키는 Secure·HttpOnly이며 HTTP는 경로·쿼리를 보존하여 HTTPS로 이동한다.
+WAF→Dashboard, Dashboard/수집기→Indexer, Dashboard→Manager API는 CA와 서버 이름을 검증한다. WAF의 `ProxyPreserveHost Off`는 내부 TLS SNI를 `dashboard`로 유지한다. 경로 `/siem`은 Dashboard의 basePath 처리에 맡긴다. HTTPS 쿠키는 Secure·HttpOnly이며 HTTP는 경로·쿼리를 보존하여 HTTPS로 이동한다.
 
 일반 확장 모듈에는 새 권한을 부여하지 않았다. `siem-ui`의 정확한 서비스·볼륨·포트 구성을 별도 스키마로 고정했다. 세 서비스는 root 권한이나 추가 capability 없이 실행하고 설정 볼륨은 읽기 전용으로 마운트한다. 데이터·로그는 각 구성요소의 소유 볼륨에 보관한다.
 
@@ -60,9 +61,9 @@ WAF JSON body processor를 명시적으로 켜고 일반 JSON 문법 오류는 4
 
 ## 데이터와 화면
 
-기본 화면은 소스별 분포·이벤트 수·시간 추이·이벤트 표다. Discover에서 8종을 함께 조회하고 `producer`, `event.outcome`, `rule.id`, 프로세스·IP·HTTP 상태 등 C1 필드로 필터링한다. README의 기존 xOC 로고를 사용한다. 원본 본문과 민감한 명령행은 웹 색인에 복사하지 않는다. 원본은 로컬 관리자 CLI에서 evidence ref로 조회한다.
+기본 화면은 소스별 분포·이벤트 수·시간 추이·이벤트 표다. Discover에서 8종을 함께 조회하고 `producer`, `event.outcome`, `rule.id`, 프로세스·IP·HTTP 상태 등 C1 필드로 필터링한다. README의 기존 xOC 로고를 사용한다. C1 색인은 요청 본문·인증 헤더·민감한 명령행을 제외한다. 별도의 `wazuh-alerts-4.x-*`에는 Wazuh 원본 경보 구조와 `full_log`를 유지하므로 원본 경보에 포함된 값이 인증된 관리자에게 표시될 수 있다. C1은 `event_id`와 evidence ref로 원본 경보에 연결한다.
 
-`xoc siem status`는 분석 대기와 색인 대기를 구분한다. Indexer 전송 계정은 `xoc-events-*` 쓰기만 허용하며 검색·삭제를 허용하지 않는다. `_id`가 고정되어 중복 전송은 같은 문서를 갱신한다. 선택 제외 시 데이터·자격 증명을 보존한다. 기본 saved object는 생성 시 충돌을 덮어쓰지 않아 사용자의 수정과 추가 화면을 재설치 때 유지한다.
+`xoc siem status`는 분석 대기와 색인 대기를 구분한다. Indexer 전송 계정은 `xoc-events-*`·`wazuh-alerts-4.x-*` 쓰기만 허용하며 검색·삭제를 허용하지 않는다. `_id`가 고정되어 중복 전송은 같은 문서를 갱신한다. 선택 제외 시 데이터·자격 증명을 보존한다. 기본 saved object는 생성 시 충돌을 덮어쓰지 않아 사용자의 수정과 추가 화면을 재설치 때 유지한다.
 
 ## 검증 방법
 
@@ -75,7 +76,7 @@ python -m pip install -e '.[browser-test]'
 python -m playwright install chromium
 python tests/browser/siem.py --url https://VM주소 \
   --credentials /private/test-login.json --certificate /private/web.pem \
-  --ca /private/ca.pem --output .local/validation/siem-browser.json
+  --ca /private/ca.pem --output .local/validation/siem-browser.json --native
 ```
 
 테스트 로그인 파일은 0600 권한의 `{"username":"admin","password":"…"}` 형식이다. CA·호스트 이름 검증 후 테스트 브라우저에서 지정한 인증서 공개키만 고정한다. 운영 TLS 검증 설정을 해제하지 않는다. 테스트용 인증 파일·쿠키·원본 로그·스크린샷은 공개 검증 기록에 넣지 않는다.
@@ -85,3 +86,5 @@ python tests/browser/siem.py --url https://VM주소 \
 공식 참고: [Wazuh Indexer 구성](https://documentation.wazuh.com/current/installation-guide/wazuh-indexer/step-by-step.html), [OpenSearch Dashboards Docker](https://docs.opensearch.org/2.19/install-and-configure/install-dashboards/docker/), [Dashboards 브랜딩](https://docs.opensearch.org/latest/dashboards/branding/).
 
 재설치·재부팅·원본/검색 데이터 보존·Indexer 중단은 [수명주기 검증 절차](SIEM-LIFECYCLE-VALIDATION.md)로 반복할 수 있다. 새 검증 도구의 코드 검사와 VM에서 실제 실행한 결과를 구분한다.
+
+정식 Manager·전용 Dashboard 구성의 실제 결과는 [2026-11-07 native 검증 기록](WAZUH-NATIVE-VALIDATION-2026-11-07.md)에 있다.

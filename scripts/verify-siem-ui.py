@@ -49,6 +49,38 @@ def verify(root, plan_name):
     checks['secure_httponly_session_cookie']=any(c.secure and c.has_nonstandard_attr('HttpOnly') for c in jar)
     code,_,_=request('/siem/api/status')
     checks['authenticated_api']=code==200
+    from xocrange.manager_api import ManagerClient
+    manager=ManagerClient(engine,plan['compose']['name'])
+    token=manager.authenticate()
+    code,info=manager.request('GET','/manager/info',token=token)
+    checks['native_manager_version']=code==200 and info.get('data',{}).get('affected_items',[{}])[0].get('version')=='v4.14.10'
+    code,status=manager.request('GET','/manager/status',token=token)
+    daemons=status.get('data',{}).get('affected_items',[{}])[0]
+    checks['native_manager_daemons']=code==200 and all(daemons.get(name)=='running' for name in ('wazuh-analysisd','wazuh-db','wazuh-remoted','wazuh-logcollector','wazuh-modulesd','wazuh-execd','wazuh-syscheckd'))
+    checks['manager_anonymous_rejected']=manager.request('GET','/manager/info')[0]==401
+    checks['manager_default_password_rejected']=manager.request('POST','/security/user/authenticate',basic=('wazuh','wazuh'))[0]==401
+    # Run Node inside the real Dashboard image. Neither a wrong server name nor
+    # an unrelated CA may connect to the Manager; no credentials are sent.
+    tls_probe='''const https=require('https'),fs=require('fs');
+const options=JSON.parse(process.argv[1]);
+if(options.caFile){options.ca=fs.readFileSync(options.caFile);delete options.caFile;}
+const r=https.get({hostname:'siem',port:55000,path:'/',...options},()=>process.exit(2));
+r.on('error',e=>process.exit(['ERR_TLS_CERT_ALTNAME_INVALID','UNABLE_TO_VERIFY_LEAF_SIGNATURE','UNABLE_TO_GET_ISSUER_CERT_LOCALLY'].includes(e.code)?0:3));r.setTimeout(10000,()=>process.exit(4));'''
+    for name,options in [('manager_wrong_hostname_rejected',{'servername':'untrusted.invalid'}),('manager_wrong_ca_rejected',{'caFile':'/run/xoc-secrets/ca.pem'})]:
+        try:
+            engine.run(['exec','-T','dashboard','/usr/share/wazuh-dashboard/node/bin/node','-e',tls_probe,json.dumps(options)],compose=True)
+            checks[name]=True
+        except Exception:checks[name]=False
+    code,_,body=request('/siem/api/check-stored-api','POST',{'id':'xoc'})
+    connection=json.loads(body).get('data',{}) if code==200 else {}
+    checks['native_plugin_manager_connection']=code==200 and connection.get('url')=='https://siem' and bool(connection.get('cluster_info',{}).get('manager')) and not connection.get('apiIsDown')
+    checks['native_plugin_hides_service_password']='password' not in connection and manager.credentials['wazuh-wui'].encode() not in body
+    checks['native_plugin_session']=request('/siem/api/login','POST',{'idHost':'xoc','force':True})[0]==200
+    code,_,body=request('/siem/api/request','POST',{'id':'xoc','method':'GET','path':'/manager/info','body':{}})
+    checks['native_plugin_manager_info']=code==200 and b'4.14.10' in body
+    code,_,body=request('/siem/api/request','POST',{'id':'xoc','method':'GET','path':'/agents','body':{}})
+    checks['native_plugin_agents']=code==200 and b'affected_items' in body
+    checks['native_plugin_xss_still_blocked']=request('/siem/api/request','POST',{'id':'xoc','method':'GET','path':'/agents','body':{'search':'<script>alert(1)</script>'}})[0]==403
     code,_,body=request('/siem/app/dashboards')
     checks['dashboard_html']=code==200 and b'<html' in body
     scripts=re.findall(r'<script[^>]+src="([^"]+)"',body.decode(errors='replace'))
@@ -131,9 +163,30 @@ def verify(root, plan_name):
         if set(SOURCES)<=found or time.monotonic()>=deadline: break
         time.sleep(3)
     checks['all_eight_fresh_sources_indexed']=code==200 and set(SOURCES)<=found
+    deadline=time.monotonic()+180
+    while True:
+        code,data=client.request('POST','/wazuh-alerts-4.x-*/_search',{'size':0,'query':{'range':{'timestamp':{'gte':since}}},'aggs':{'sources':{'terms':{'field':'data.producer','size':8}}}})
+        found={b['key'] for b in data.get('aggregations',{}).get('sources',{}).get('buckets',[])}
+        if set(SOURCES)<=found or time.monotonic()>=deadline:break
+        time.sleep(3)
+    checks['native_alerts_contain_all_eight_c1_links']=code==200 and set(SOURCES)<=found
+    # Exercise a stock decoder/rule independently of C1. This is an explicitly
+    # synthetic syslog probe, not an SSH attempt or a modification of host users.
+    marker='xocprobe'+uuid.uuid4().hex[:12]
+    line=time.strftime('%b %d %H:%M:%S')+' xoc sshd[43210]: Invalid user '+marker+' from 192.0.2.10 port 4444'
+    engine.run(['exec','-T','--user','999:999','siem','/var/ossec/framework/python/bin/python3','-c',
+                'import socket,sys;s=socket.socket(socket.AF_UNIX,socket.SOCK_DGRAM);s.connect("/var/ossec/queue/sockets/queue");s.send(("1:xoc-native-probe:"+sys.argv[1]).encode())',line],compose=True)
+    deadline=time.monotonic()+60;native_hits=[]
+    while time.monotonic()<deadline:
+        code,data=client.request('POST','/wazuh-alerts-4.x-*/_search',{'size':2,'query':{'match_phrase':{'full_log':line}}})
+        native_hits=data.get('hits',{}).get('hits',[])
+        if native_hits:break
+        time.sleep(2)
+    checks['stock_sshd_rule_indexes_original_alert']=code==200 and len(native_hits)==1 and native_hits[0]['_source']['rule']['id']=='5710' and 'event_id' not in native_hits[0]['_source']['xoc']
     # The ingestion service credential cannot read or delete search data.
     writer=Client(engine,plan['compose']['name'])
     checks['writer_cannot_read_events']=writer.request('POST','/xoc-events-*/_search',{'size':0})[0]==403
+    checks['writer_cannot_read_native_alerts']=writer.request('POST','/wazuh-alerts-4.x-*/_search',{'size':0})[0]==403
     code,_,_=request('/siem/auth/logout','POST',{})
     checks['logout']=code in (200,302)
     code,_,_=request('/siem/api/saved_objects/_find?type=dashboard')

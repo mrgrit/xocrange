@@ -1,0 +1,17 @@
+{
+  "upstream": "https://github.com/wazuh/wazuh",
+  "version": "4.14.10",
+  "asset": "components/siem-ui/wazuh-template.json",
+  "source": "wazuh/wazuh-manager@sha256:dcda4869e2f792e92f03bce93f85b4bdf103756ea61cfca8ba9f3eabeb05365b:/var/ossec/data_tmp/exclusion/etc/filebeat/wazuh-template.json",
+  "sha256": "b2d182f49cc68957849e77fd2d79528fd2273ebaec1106c9661c9e320577a089",
+  "copyright": "Wazuh, Inc.",
+  "license": "GPL-2.0; see docs/licenses/WAZUH-GPL-2.0.txt",
+  "changes": "Vendored file unchanged. At provisioning time: one shard, no auto-expand replicas, add xoc link keywords.",
+  "dashboard_patch": {
+    "upstream_commit": "5005c3e2213abeb5c7798f489a7304a6abb7c6d1",
+    "path": "plugins/wazuh-core/server/services/server-api-client.ts",
+    "change": "2026-11-07: enforce rejectUnauthorized:true in the built JS; trust the installation Manager CA via NODE_EXTRA_CA_CERTS.",
+    "image": "wazuh/wazuh-dashboard@sha256:0eebab19802342b841a258f56d6fa0fb085cdae08ab5eb2e45f9455c906d719a"
+  },
+  "line_endings": "Upstream CRLF bytes preserved; .gitattributes disables conversion for this asset."
+}

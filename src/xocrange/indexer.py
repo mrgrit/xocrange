@@ -7,6 +7,7 @@ import json
 import socket
 import ssl
 import time
+from urllib.parse import urlencode
 
 from .errors import XocError
 from .event_store import Store, now
@@ -122,6 +123,20 @@ def initialize(client, root, timeout=240):
             raise XocError('indexer_start_timeout','Indexer did not become healthy within the startup deadline.')
         time.sleep(3)
     template=json.loads((root/'components/siem-ui/index-template.json').read_text())
+    # Default security YAML is read only for an empty security index. Reconcile
+    # this installation-owned role on upgrades without resetting other users.
+    from .ui_setup import writer_role
+    role=writer_role();role.pop('reserved')
+    status,_=client.request('PUT','/_plugins/_security/api/roles/xoc_ingest',role)
+    if status not in (200,201):raise XocError('indexer_writer_role','Cannot reconcile the ingestion role.')
+    # Preserve upstream native field mappings for the Wazuh plugin. Separate
+    # namespaces prevent normalized C1 fields from replacing native alert fields.
+    native=json.loads((root/'components/siem-ui/wazuh-template.json').read_text())
+    native['settings']['index.number_of_shards']='1'
+    native['settings']['index.auto_expand_replicas']='false'
+    native['mappings']['properties']['xoc']={'properties':{name:{'type':'keyword'} for name in ('event_id','evidence_ref','native_alert_id')}}
+    status,_=client.request('PUT','/_template/xoc-wazuh',native)
+    if status!=200:raise XocError('native_template','Cannot install native Wazuh mappings.')
     status,_=client.request('PUT','/_index_template/xoc-events',template)
     if status!=200: raise XocError('indexer_template','Cannot install the C1 search mapping.')
     # Additive mappings cover prior local releases too. Re-export through the
@@ -137,6 +152,7 @@ def initialize(client, root, timeout=240):
     with store.transaction():
         if store.cursor('indexer-mapping') != digest or store.cursor('indexer-cluster') != cluster:
             store.db.execute('UPDATE events SET indexed=NULL WHERE confirmed IS NOT NULL')
+            store.db.execute('UPDATE wazuh_alerts SET indexed=NULL')
             store.set_cursor('indexer-mapping',digest)
             store.set_cursor('indexer-cluster',cluster)
     store.db.close()
@@ -147,10 +163,21 @@ def initialize(client, root, timeout=240):
         status,_=client.request('PUT','/_plugins/_ism/policies/xoc-events-retention',policy)
         if status!=201: raise XocError('indexer_retention','Cannot install the index retention policy.')
     elif status!=200: raise XocError('indexer_retention','Cannot inspect the index retention policy.')
+    native_policy=json.loads(json.dumps(policy))
+    native_policy['policy']['description']='xOC native Wazuh alerts: seven-day index retention'
+    native_policy['policy']['ism_template'][0]['index_patterns']=['wazuh-alerts-4.x-*']
+    status,_=client.request('GET','/_plugins/_ism/policies/xoc-native-retention')
+    if status==404:
+        status,_=client.request('PUT','/_plugins/_ism/policies/xoc-native-retention',native_policy)
+        if status!=201:raise XocError('native_retention','Cannot install native alert retention.')
+    elif status!=200:raise XocError('native_retention','Cannot inspect native alert retention.')
     today=datetime.now(timezone.utc).strftime('%Y.%m.%d')
     status,result=client.request('PUT','/xoc-events-'+today,{})
     if status not in (200,400) or status==400 and result.get('error',{}).get('type')!='resource_already_exists_exception':
         raise XocError('indexer_create','Cannot initialize the C1 index.')
+    status,result=client.request('PUT','/wazuh-alerts-4.x-'+today,{})
+    if status not in (200,400) or status==400 and result.get('error',{}).get('type')!='resource_already_exists_exception':
+        raise XocError('native_index_create','Cannot initialize the native alert index.')
     while True:
         try:
             status,_=client.request('GET','/siem/api/status',service='dashboard')
@@ -159,6 +186,18 @@ def initialize(client, root, timeout=240):
         if time.monotonic()>=deadline:
             raise XocError('dashboard_start_timeout','Dashboard did not become ready within the startup deadline.')
         time.sleep(3)
+    # A first login must also work before the first scheduled statistics job.
+    # Use Wazuh's ISO-week names and its own templates, without fabricated data.
+    week=datetime.now(timezone.utc).isocalendar()
+    for name,prefix in [('wazuh-agent','wazuh-monitoring-'),('wazuh-statistics','wazuh-statistics-')]:
+        while True:
+            status,_=client.request('GET','/_template/'+name)
+            if status==200:break
+            if status!=404 or time.monotonic()>=deadline:raise XocError('native_dashboard_template','Native Dashboard templates are not ready.')
+            time.sleep(2)
+        status,result=client.request('PUT','/'+prefix+str(week.year)+'.'+str(week.week)+'w',{})
+        if status not in (200,400) or status==400 and result.get('error',{}).get('type')!='resource_already_exists_exception':
+            raise XocError('native_dashboard_index','Cannot initialize native monitoring indices.')
     objects=[json.loads(line) for line in (root/'components/siem-ui/saved-objects.ndjson').read_text().splitlines()]
     fields=[]
     def visit(properties, prefix=''):
@@ -170,6 +209,13 @@ def initialize(client, root, timeout=240):
                 fields.append({'name':name,'type':dtype,'esTypes':[kind],'searchable':True,'aggregatable':kind!='text','readFromDocValues':kind!='text','scripted':False})
     visit(template['template']['mappings']['properties'])
     objects[0]['attributes']['fields']=json.dumps(fields)
+    # Provision the native index patterns before the first browser health check.
+    # Never replace an existing user-edited pattern. Manager-ready startup lets
+    # Wazuh's own monitoring/statistics jobs initialize their real indices.
+    for pattern,time_field in [('wazuh-alerts-*','timestamp'),('wazuh-monitoring-*','timestamp'),('wazuh-statistics-*','timestamp')]:
+        status,result=client.request('GET','/siem/api/index_patterns/_fields_for_wildcard?'+urlencode({'pattern':pattern}),service='dashboard')
+        if status!=200 or not isinstance(result.get('fields'),list):raise XocError('native_dashboard_fields','Cannot initialize native field definitions.')
+        objects.append({'type':'index-pattern','id':pattern,'attributes':{'title':pattern,'timeFieldName':time_field,'fields':json.dumps(result['fields'])}})
     status,result=client.request('POST','/siem/api/saved_objects/_bulk_create?overwrite=false',objects,service='dashboard')
     saved=result.get('saved_objects',[])
     if status!=200 or len(saved)!=len(objects) or any(row.get('error',{}).get('statusCode',0) not in (0,409) for row in saved):

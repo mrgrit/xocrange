@@ -1,5 +1,5 @@
 <group name="xoc,c1,">
-  <rule id="110000" level="1"><decoded_as>xoc-c1</decoded_as><field name="schema_version">^xoc.event/0.2.0$</field><description>xOC C1 event</description></rule>
+  <rule id="110000" level="0"><decoded_as>xoc-c1</decoded_as><field name="schema_version">^xoc.event/0.2.0$</field><description>xOC C1 event grouping</description></rule>
   <rule id="110001" level="3"><if_sid>110000</if_sid><field name="producer">^nftables$</field><description>xOC nftables: $(event.action)</description><group>nftables,</group></rule>
   <rule id="110002" level="3"><if_sid>110000</if_sid><field name="producer">^suricata$</field><description>xOC suricata: $(event.action)</description><group>suricata,</group></rule>
   <rule id="110003" level="3"><if_sid>110000</if_sid><field name="producer">^modsecurity$</field><description>xOC modsecurity: $(event.action)</description><group>modsecurity,</group></rule>

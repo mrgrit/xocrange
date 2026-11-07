@@ -24,6 +24,7 @@ def main():
     parser.add_argument('--certificate',type=Path,required=True)
     parser.add_argument('--ca',type=Path,required=True)
     parser.add_argument('--output',type=Path,required=True)
+    parser.add_argument('--native',action='store_true',help='Also exercise native Wazuh applications')
     args=parser.parse_args()
     if args.credentials.is_symlink() or args.credentials.stat().st_mode & 0o077:
         raise SystemExit('Credentials must be a private regular file')
@@ -76,6 +77,18 @@ def main():
         page.wait_for_timeout(12000)
         checks['no_authenticated_http_errors']=not errors
         checks['no_search_error_notice']='Search Error' not in page.locator('body').inner_text()
+        if args.native:
+            page.goto(base+'/siem/app/wz-home',wait_until='domcontentloaded')
+            page.get_by_text('Threat Hunting',exact=True).first.wait_for(timeout=90000)
+            page.wait_for_timeout(4000)
+            checks['native_wazuh_home']=page.get_by_text('Threat Hunting',exact=True).first.is_visible()
+            for app in ('server-status','threat-hunting'):
+                page.goto(base+'/siem/app/'+app,wait_until='domcontentloaded')
+                page.wait_for_timeout(15000)
+                body=page.locator('body').inner_text()
+                expected='Authentication failure' if app=='threat-hunting' else 'wazuh-analysisd'
+                checks['native_'+app.replace('-','_')]=expected in body and 'No API available' not in body and 'Error: 3099' not in body and '/app/login' not in page.url
+            checks['native_requests_without_http_errors']=not errors
         args.output.parent.mkdir(parents=True,exist_ok=True)
         page.screenshot(path=str(args.output.with_suffix('.png')))
         browser.close()

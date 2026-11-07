@@ -23,8 +23,9 @@ def test_siem_is_optional_and_volumes_are_private(siem_checkout):
     base = plan(siem_checkout,preset='security-path',allow_experimental=True)
     added = plan(siem_checkout,preset='security-path',include=['siem'],allow_experimental=True)
     assert 'siem' not in base['compose']['services']
-    assert set(added['compose']['volumes']) == {'fw-logs','ips-logs','web-logs','siem-logs'}
-    assert added['compose']['services']['siem']['volumes'] == ['siem-logs:/var/ossec/logs']
+    assert set(added['compose']['volumes']) == {'fw-logs','ips-logs','web-logs','siem-logs','siem-etc','siem-api','siem-queue','siem-var','siem-config'}
+    assert 'siem-api:/var/ossec/api/configuration' in added['compose']['services']['siem']['volumes']
+    assert 'siem-queue:/var/ossec/queue' in added['compose']['services']['siem']['volumes']
     assert 'ports' not in added['compose']['services']['siem']
 
 

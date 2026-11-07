@@ -252,6 +252,7 @@ sysctl -w net.bridge.bridge-nf-call-iptables=0
 "${xoc[@]}" lab check --plan "$plan_name"
 
 stage image-build
+"$runtime/bin/python" "$release/scripts/setup-siem-manager.py" "$release" "$plan_name"
 if "$runtime/bin/python" -c 'import json,sys; sys.exit("siem-ui" not in json.load(open(sys.argv[1]))["lock"]["selected"])' "$plan_json"; then
     stage siem-ui-identities
     "$runtime/bin/python" "$release/scripts/setup-siem-ui.py" prepare "$release" "$plan_name" "$public_host"
@@ -287,6 +288,7 @@ ExecStartPre=/usr/sbin/modprobe -a br_netfilter nfnetlink_queue nfnetlink_log
 ExecStartPre=/usr/sbin/sysctl -w net.bridge.bridge-nf-call-iptables=0
 ExecStart=$runtime/bin/xoc --root $release lab start --plan $plan_name --isolated-vm
 ExecStartPost=$runtime/bin/xoc --root $release lab verify --plan $plan_name --isolated-vm
+ExecStartPost=$runtime/bin/python $release/scripts/setup-siem-manager.py $release $plan_name check
 ExecStartPost=$runtime/bin/python $release/scripts/setup-siem-ui.py initialize $release $plan_name
 ExecStop=$runtime/bin/xoc --root $release lab down --plan $plan_name --isolated-vm
 TimeoutStartSec=600

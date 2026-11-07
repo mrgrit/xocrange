@@ -6,15 +6,15 @@
 
 선택한 기능으로 구성하는 보안 운영 실습 환경. Core의 공통 계약 위에 Live Fire·Joint Force 모듈을 연결한다.
 
-**개발 초기 단계:** Ubuntu 26.04 VM에서 자동 설치와 fw·IPS·WAF의 실제 통신·차단을 검증했다. 8종 보안 로그의 C1 정규화·원본 보관·Wazuh 분석, Indexer 검색과 HTTPS SIEM 대시보드를 구현했다. 장비 콘솔·포털과 전체 Community 배포본은 개발 중이다. `bootstrap`은 설치 기반 확인용 health 서비스다.
+**개발 초기 단계:** Ubuntu 26.04 VM에서 자동 설치와 fw·IPS·WAF의 실제 통신·차단을 검증했다. 8종 보안 로그의 C1 정규화·원본 보관·Wazuh Manager/API·Indexer·전용 Dashboard와 C1 통합 검색을 연결했다. 장비 콘솔·포털과 전체 Community 배포본은 개발 중이다. `bootstrap`은 설치 기반 확인용 health 서비스다.
 
 ## 지금 실행할 수 있는 것
 
 | 기능 | 현재 구현 |
 |---|---|
 | C1 이벤트 계약 | v0.2 JSON Schema, nftables·Suricata·ModSecurity·osquery·Sysmon·auditd·Apache access/error 정규화 |
-| SIEM 백엔드 | 실제 로그 수집, 원본 SHA-256, 오류 격리·재처리, Wazuh 규칙 분석 확인, 로컬 검색 |
-| SIEM 웹 관제 | Wazuh Indexer + OpenSearch Dashboards, 8종 통합 검색·차트·필터, HTTPS 인증, 범위를 제한한 WAF Rule 예외 |
+| SIEM 백엔드 | 실제 로그 수집, 원본 SHA-256, 오류 격리·재처리, Wazuh Manager/API·기본 규칙, 원본 경보와 C1 연결 |
+| SIEM 웹 관제 | Wazuh Indexer + 전용 Dashboard, 8종 통합 검색·차트·필터, HTTPS 인증, 범위를 제한한 WAF Rule 예외 |
 | 설치 계획 | manifest 검증, 의존성·충돌·포트 검사, Compose·입력 해시 생성 |
 | 구성 진단 | `xoc doctor`: 로컬 구성과 Docker CLI 존재 확인 |
 | 구성요소 목록 | 필수 platform + 선택 기능 12개; 준비된 기능과 계획 단계 구분 |
@@ -109,7 +109,7 @@ sudo xoc siem retry --source auditd
 ## 개발 문서
 
 - [SIEM 백엔드와 8종 디코더](docs/development/SIEM.md)
-- [SIEM 웹 관제와 WAF Rule 예외](docs/development/SIEM-WEB.md)
+- [SIEM 웹 관제와 WAF Rule 예외](docs/development/SIEM-WEB.md) · [정식 Wazuh 연동 범위](docs/development/WAZUH-NATIVE.md)
 - [첫 구현 결과와 다음 작업](docs/development/IMPLEMENTATION-01.md)
 - [보안 경로 분리 결과와 검증 대기 항목](docs/development/IMPLEMENTATION-02.md)
 - [한 번 실행 설치기](docs/development/INSTALLER.md) · [설치기 구현·검증 상태](docs/development/IMPLEMENTATION-03.md)

@@ -84,7 +84,12 @@
     },
     "volumes": {
       "const": {
-        "siem-logs": {}
+        "siem-logs": {},
+        "siem-etc": {},
+        "siem-api": {},
+        "siem-queue": {},
+        "siem-var": {},
+        "siem-config": {}
       }
     }
   },
@@ -106,7 +111,8 @@
         "security_opt",
         "cap_add",
         "volumes",
-        "tmpfs"
+        "tmpfs",
+        "hostname"
       ],
       "anyOf": [
         {
@@ -262,6 +268,8 @@
           "const": [
             "CHOWN",
             "DAC_OVERRIDE",
+            "FOWNER",
+            "KILL",
             "SETUID",
             "SETGID",
             "SYS_CHROOT"
@@ -281,15 +289,23 @@
         },
         "tmpfs": {
           "const": [
-            "/var/ossec/queue:size=128m,mode=0750,uid=999,gid=999",
-            "/var/ossec/var:size=16m,mode=0750,uid=999,gid=999",
+            "/run:size=16m,mode=0755",
+            "/var/ossec/var/run:size=16m,mode=0750,uid=999,gid=999",
             "/tmp:size=16m,mode=1777"
           ]
         },
         "volumes": {
           "const": [
-            "siem-logs:/var/ossec/logs"
+            "siem-logs:/var/ossec/logs",
+            "siem-etc:/var/ossec/etc",
+            "siem-api:/var/ossec/api/configuration",
+            "siem-queue:/var/ossec/queue",
+            "siem-var:/var/ossec/var",
+            "siem-config:/run/xoc-manager:ro"
           ]
+        },
+        "hostname": {
+          "const": "xoc-manager"
         }
       }
     }

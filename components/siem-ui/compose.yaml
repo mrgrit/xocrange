@@ -41,7 +41,7 @@ services:
     tmpfs:
     - /tmp:size=64m,mode=1777
     volumes:
-    - dashboard-data:/usr/share/opensearch-dashboards/data
+    - dashboard-data:/usr/share/wazuh-dashboard/data
     - dashboard-config:/run/xoc-secrets:ro
     depends_on:
     - indexer

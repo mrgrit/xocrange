@@ -51,6 +51,21 @@ def test_checkpoint_rejects_missing_or_unacknowledged_source(store):
     with pytest.raises(XocError,match='Every source'):lifecycle.capture_anchors(store)
 
 
+def test_checkpoint_waits_for_search_refresh_of_the_same_anchors(store,tmp_path,monkeypatch):
+    installed=lifecycle.Installed.__new__(lifecycle.Installed)
+    installed.store=store;installed.root=tmp_path/'release';installed.project='owned'
+    installed.install={'log':'new-install'};installed.identity=lambda:{}
+    class Client:
+        def request(self,*args,**kwargs):return 200,{'attributes':{'title':'probe'}}
+    installed.client=Client();seen=[];sleeps=[]
+    def searchable(client,anchors):
+        seen.append([a['id'] for a in anchors]);return len(seen)>=3
+    monkeypatch.setattr(lifecycle,'indexed_integrity',searchable)
+    monkeypatch.setattr(lifecycle.time,'sleep',sleeps.append)
+    assert installed.checkpoint(tmp_path/'checkpoint.json')['status']=='checkpoint-created'
+    assert len(seen)==3 and seen[0]==seen[1]==seen[2] and sleeps==[2,2]
+
+
 @pytest.mark.parametrize('change',['none','duplicate','wrong-content','missing'])
 def test_index_verification_requires_matching_c1_and_unique_documents(store,change):
     anchors=lifecycle.capture_anchors(store)
@@ -108,6 +123,37 @@ def test_reboot_requires_boot_id_change_before_live_commands(tmp_path,monkeypatc
 
 def test_live_actions_require_explicit_isolated_vm_selection():
     with pytest.raises(XocError,match='--isolated-vm'):lifecycle.Installed(False)
+
+
+def test_native_checkpoint_covers_eight_sources_and_creates_only_an_unprivileged_probe(store):
+    from xocrange.native_alerts import accept
+    with store.transaction():
+        for i,row in enumerate(store.db.execute('SELECT event FROM events').fetchall()):
+            accept(store,canonical({'id':str(i),'timestamp':'2026-11-07T13:00:00Z','manager':{'name':'xoc'},'data':json.loads(row[0]),'rule':{'id':'110020'}}))
+        store.db.execute("UPDATE wazuh_alerts SET indexed='2026-11-07T13:01:00Z'")
+    calls=[]
+    class Manager:
+        def request(self,method,path,body,**kwargs):
+            calls.append((method,path,body))
+            return 200,{'data':{'affected_items':[{'id':100,'username':body['username'],'roles':[],'allow_run_as':False}]}}
+    installed=lifecycle.Installed.__new__(lifecycle.Installed);installed.store=store;installed.manager=lambda:(Manager(),'private-token')
+    proof=installed.native_checkpoint()
+    assert len(proof['anchors'])==24 and len({a['id'] for a in proof['anchors']})==24
+    assert proof['user']['roles']==[] and not proof['user']['allow_run_as']
+    assert len(calls)==1 and calls[0][:2]==('POST','/security/users') and set(calls[0][2])=={'username','password'}
+    assert 'password' not in proof['user']
+
+
+def test_native_cleanup_never_deletes_a_different_api_user():
+    calls=[]
+    class Manager:
+        def request(self,method,path,**kwargs):
+            calls.append(method)
+            return 200,{'data':{'affected_items':[{'id':100,'username':'someone-else'}]}}
+    installed=lifecycle.Installed.__new__(lifecycle.Installed);installed.manager=lambda:(Manager(),'private-token')
+    with pytest.raises(XocError,match='unrelated'):
+        installed.remove_native_user({'user':{'id':100,'username':'xoc-lifecycle-'+'a'*12}})
+    assert calls==['GET']
 
 
 def test_reinstall_requires_a_new_installer_run(tmp_path,monkeypatch):

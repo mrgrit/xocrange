@@ -45,6 +45,10 @@ class Store:
         CREATE INDEX IF NOT EXISTS events_pending ON events(confirmed, sent);
         CREATE TABLE IF NOT EXISTS cursors (name TEXT PRIMARY KEY, value TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS health (source TEXT PRIMARY KEY, checked TEXT NOT NULL, status TEXT NOT NULL);
+        CREATE TABLE IF NOT EXISTS wazuh_alerts (
+          id TEXT PRIMARY KEY, observed TEXT NOT NULL, raw BLOB NOT NULL, sha256 TEXT NOT NULL,
+          document TEXT NOT NULL, event_id TEXT, indexed TEXT);
+        CREATE INDEX IF NOT EXISTS native_alerts_pending ON wazuh_alerts(indexed,observed);
         ''')
         if 'source_id' not in {r[1] for r in self.db.execute('PRAGMA table_info(records)')}:
             self.db.execute('ALTER TABLE records ADD COLUMN source_id TEXT')
@@ -98,7 +102,17 @@ class Store:
 
     def pending(self, limit=4096):
         cutoff = (datetime.now(timezone.utc) - timedelta(seconds=30)).isoformat().replace("+00:00", "Z")
-        return self.db.execute("SELECT id,event FROM events WHERE confirmed IS NULL AND (sent IS NULL OR sent<?) ORDER BY observed LIMIT ?", (cutoff, limit)).fetchall()
+        if limit<1:return []
+        # Reserve a quarter for fresh observations during recovery, while the
+        # remaining slots drain oldest evidence. Neither stream can starve.
+        query="SELECT id,event FROM events WHERE confirmed IS NULL AND (sent IS NULL OR sent<?) ORDER BY observed {} LIMIT ?"
+        recent=self.db.execute(query.format('DESC'),(cutoff,max(1,limit//4))).fetchall()
+        oldest=self.db.execute(query.format('ASC'),(cutoff,limit)).fetchall()
+        result=[];seen=set()
+        for row in [*recent,*oldest]:
+            if row['id'] not in seen:result.append(row);seen.add(row['id'])
+            if len(result)==limit:break
+        return result
 
     def confirm(self, alert):
         data = alert.get("data", {})
@@ -112,7 +126,9 @@ class Store:
         if data.get("producer") != expected["producer"] or data.get("evidence", {}).get("sha256") != expected["evidence"]["sha256"]:
             raise XocError("siem_mismatch", "Wazuh decoded fields differ from the stored C1 event.")
         if not rule.startswith("110"):
-            raise XocError("siem_rule", "Expected an xOC C1 rule from Wazuh.")
+            # Native rules can also match JSON carrying an event_id. Preserve
+            # that alert separately, but never acknowledge C1 with a native rule.
+            return
         self.db.execute("UPDATE events SET confirmed=COALESCE(confirmed,?), rule_id=? WHERE id=?", (now(), rule, data["event_id"]))
 
     def query(self, producer=None, limit=20, confirmed=False):
@@ -160,6 +176,9 @@ class Store:
             result['index_pending']=row[0]
             result['oldest_index_pending_seconds']=max(0,int((current-datetime.fromisoformat(row[1].replace('Z','+00:00'))).total_seconds())) if row[1] else 0
             if result['oldest_index_pending_seconds']>=120: result['status']='degraded'
+            row=self.db.execute('SELECT COUNT(*),MIN(observed) FROM wazuh_alerts WHERE indexed IS NULL').fetchone()
+            result['native_alerts_pending']=row[0]
+            if row[1] and (current-datetime.fromisoformat(row[1].replace('Z','+00:00'))).total_seconds()>=120:result['status']='degraded'
         return result
 
     def prune(self, days=7):
@@ -167,4 +186,5 @@ class Store:
         with self.db:
             self.db.execute("DELETE FROM events WHERE observed<? AND confirmed IS NOT NULL AND (?=0 OR indexed IS NOT NULL)", (cutoff,int(bool(self.cursor('indexer-enabled')))))
             self.db.execute("DELETE FROM records WHERE observed<? AND ref NOT IN (SELECT ref FROM events)", (cutoff,))
+            self.db.execute('DELETE FROM wazuh_alerts WHERE observed<? AND (?=0 OR indexed IS NOT NULL)',(cutoff,int(bool(self.cursor('indexer-enabled')))))
         self.db.execute("PRAGMA wal_checkpoint(TRUNCATE)")

@@ -12,5 +12,7 @@ for line in sys.stdin.buffer:
     data = json.loads(line)
     if data.get('schema_version') != 'xoc.event/0.2.0':
         raise SystemExit('Unsupported C1 frame')
-    sock.send(b'1:xoc-c1:' + line.rstrip(b'\n'))
+    # A distinct message prefix prevents the stock JSON decoder from claiming
+    # C1 before its own decoder; the queue location remains xoc-c1.
+    sock.send(b'1:xoc-c1:xoc-c1: ' + line.rstrip(b'\n'))
     print(data['event_id'], flush=True)

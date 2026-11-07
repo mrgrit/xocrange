@@ -10,7 +10,7 @@
 sudo bash install.sh
 ```
 
-현재는 개발 버전이라 위 실행이 experimental security-path를 선택한다. platform·fw·IPS·WAF, SIEM 분석 백엔드, osquery·Sysmon·auditd와 무해한 검증용 client/backend를 설치한다. 기본 선택인 `siem-ui`는 Wazuh Indexer와 OpenSearch Dashboards, HTTPS 진입점을 추가한다. `--without siem-ui`는 웹 관제만, `--without siem`은 웹 관제와 SIEM·xOC 호스트 수집을 함께 제외한다. 장비 콘솔·사용자 포털은 아직 포함하지 않으며, 전체 Community 완성본으로 성공을 표시하지 않는다. [8종 수집·검증](SIEM.md)을 함께 참고한다.
+현재는 개발 버전이라 위 실행이 experimental security-path를 선택한다. platform·fw·IPS·WAF, Wazuh Manager/API, osquery·Sysmon·auditd와 무해한 검증용 client/backend를 설치한다. 기본 선택인 `siem-ui`는 같은 버전의 Wazuh Indexer·전용 Dashboard와 HTTPS 진입점을 추가한다. `--without siem-ui`는 웹 관제만, `--without siem`은 웹 관제와 SIEM·xOC 호스트 수집을 함께 제외한다. 장비 콘솔·사용자 포털은 아직 포함하지 않으며, 전체 Community 완성본으로 성공을 표시하지 않는다. [8종 수집·검증](SIEM.md)을 함께 참고한다.
 
 현재 프로필의 실행 전 검사는 2 vCPU, 웹 관제 포함 시 RAM 약 8GB(제외 시 약 4GB), 데이터 경로 여유 20GB 이상이다. 이번 웹 관제 검증 VM은 8 vCPU·16GB RAM이다. 이는 전체 Core 최소 사양을 실측한 값이 아니다. 전체 개발을 위한 권장 예산은 8 vCPU·32GB RAM·OS 80GB + 데이터 300GB다.
 

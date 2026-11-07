@@ -15,6 +15,7 @@ import json
 import os
 from pathlib import Path
 import re
+import secrets
 import subprocess
 import time
 import uuid
@@ -158,24 +159,79 @@ class Installed:
     def identity(self):
         # Hashes remain in root-only state; public reports contain booleans only.
         private_json(STATE/'ui/credentials.json')
-        return {'credentials_sha256':fingerprint(STATE/'ui/credentials.json'),'ca_sha256':fingerprint(STATE/'ui/ca.pem')}
+        result={'credentials_sha256':fingerprint(STATE/'ui/credentials.json'),'ca_sha256':fingerprint(STATE/'ui/ca.pem')}
+        if (self.root/'components/siem/bootstrap.py').is_file():
+            result.update(manager_credentials_sha256=fingerprint(STATE/'manager/credentials.json'),manager_ca_sha256=fingerprint(STATE/'manager/ca.pem'))
+        return result
+
+    def manager(self):
+        from xocrange.manager_api import ManagerClient
+        client=ManagerClient(self.engine,self.project)
+        return client,client.authenticate()
+
+    def native_checkpoint(self):
+        anchors=[]
+        for producer in SOURCES:
+            rows=self.store.db.execute('''SELECT n.id,n.observed,n.raw,n.sha256,n.document FROM wazuh_alerts n JOIN events e ON e.id=n.event_id
+              WHERE e.producer=? AND n.indexed IS NOT NULL ORDER BY n.observed DESC LIMIT 3''',(producer,)).fetchall()
+            if len(rows)!=3:raise XocError('native_evidence_missing','Need three native alerts from every source.')
+            for row in rows:
+                if hashlib.sha256(row['raw']).hexdigest()!=row['sha256']:raise XocError('evidence_corrupt','Native evidence is corrupt.')
+                anchors.append({'id':row['id'],'observed':row['observed'],'sha256':row['sha256'],'document_sha256':hashlib.sha256(canonical(json.loads(row['document']))).hexdigest()})
+        client,token=self.manager();username='xoc-lifecycle-'+uuid.uuid4().hex[:12]
+        code,data=client.request('POST','/security/users',{'username':username,'password':'Xoc1!'+secrets.token_urlsafe(24)},token=token)
+        items=data.get('data',{}).get('affected_items',[])
+        if code not in (200,201) or len(items)!=1:raise XocError('native_checkpoint_user','Cannot create the private RBAC persistence probe.')
+        return {'anchors':anchors,'user':items[0]}
+
+    def remove_native_user(self,native):
+        user=native['user']
+        if not re.fullmatch('xoc-lifecycle-[a-f0-9]{12}',user.get('username','')) or type(user.get('id')) is not int:
+            raise XocError('native_checkpoint_user','Unexpected lifecycle API user.')
+        client,token=self.manager()
+        code,data=client.request('GET','/security/users?user_ids='+str(user['id']),token=token)
+        items=data.get('data',{}).get('affected_items',[])
+        if not items:return
+        if code!=200 or len(items)!=1 or items[0]['username']!=user['username']:
+            raise XocError('native_checkpoint_user','Refusing to delete an unrelated API user.')
+        code,data=client.request('DELETE','/security/users?user_ids='+str(user['id']),token=token)
+        if code!=200 or data.get('data',{}).get('total_affected_items')!=1:raise XocError('native_cleanup','Cannot delete the owned API probe.')
+
+    def verify_native(self,native):
+        anchors=native['anchors'];matches=0
+        for anchor in anchors:
+            row=self.store.db.execute('SELECT raw,sha256,document,indexed FROM wazuh_alerts WHERE id=?',(anchor['id'],)).fetchone()
+            matches+=bool(row and row['indexed'] and hashlib.sha256(row['raw']).hexdigest()==anchor['sha256'] and hashlib.sha256(canonical(json.loads(row['document']))).hexdigest()==anchor['document_sha256'])
+        docs=[{'_index':'wazuh-alerts-4.x-'+a['observed'][:10].replace('-','.'),'_id':a['id']} for a in anchors]
+        code,data=self.client.request('POST','/_mget',{'docs':docs})
+        found=data.get('docs',[])
+        indexed=code==200 and len(found)==len(anchors) and all(row.get('found') and row.get('_id')==a['id'] and hashlib.sha256(canonical(row.get('_source',{}))).hexdigest()==a['document_sha256'] for a,row in zip(anchors,found))
+        code,data=self.client.request('POST','/wazuh-alerts-4.x-*/_search',{'size':0,'track_total_hits':True,'query':{'ids':{'values':[a['id'] for a in anchors]}}})
+        unique=code==200 and data.get('hits',{}).get('total',{}).get('value')==len(anchors)
+        client,token=self.manager();code,data=client.request('GET','/security/users?user_ids='+str(native['user']['id']),token=token)
+        return {'native_alerts_preserved':matches==len(anchors)==24,'native_index_documents_preserved':indexed and unique,'custom_manager_api_user_preserved':code==200 and data.get('data',{}).get('affected_items')==[native['user']]}
 
     def checkpoint(self,path):
         if path.exists() or path.is_symlink():
             raise XocError('checkpoint_exists','Choose a new run ID; checkpoints cannot be overwritten.')
         anchors=capture_anchors(self.store)
-        if not indexed_integrity(self.client,anchors):
-            raise XocError('indexer_evidence','Checkpoint evidence must also be searchable without duplicates.')
+        # Bulk acknowledgment and realtime _mget precede the five-second search
+        # refresh. Wait on these fixed anchors, without selecting newer ones.
+        wait_for(lambda:indexed_integrity(self.client,anchors),30,
+                 'Checkpoint evidence must also be searchable without duplicates.')
         object_id='xoc-lifecycle-'+uuid.uuid4().hex
         attributes={'title':'xOC lifecycle acceptance '+object_id,'description':'Temporary preservation probe','columns':['producer','event.action'],'sort':[['timestamp','desc']],'kibanaSavedObjectMeta':{'searchSourceJSON':'{"query":{"query":"","language":"kuery"},"filter":[]}'}}
         route='/siem/api/saved_objects/search/'+object_id
         code,obj=self.client.request('POST',route,{'attributes':attributes},service='dashboard')
         if code!=200:raise XocError('checkpoint_object','Cannot create the preservation probe.')
+        native=None
         try:
             code,obj=self.client.request('GET',route,service='dashboard')
             if code!=200:raise XocError('checkpoint_object','Cannot read the preservation probe.')
-            save_new(path,{'schema':'xoc.siem.lifecycle/1','created_at':now(),'release':self.root.name,'project':self.project,'install_run':self.install['log'],'boot_id':Path('/proc/sys/kernel/random/boot_id').read_text().strip(),**self.identity(),'anchors':anchors,'object_id':object_id,'attributes':obj['attributes']})
+            if (self.root/'components/siem/bootstrap.py').is_file():native=self.native_checkpoint()
+            save_new(path,{'schema':'xoc.siem.lifecycle/1','created_at':now(),'release':self.root.name,'project':self.project,'install_run':self.install['log'],'boot_id':Path('/proc/sys/kernel/random/boot_id').read_text().strip(),**self.identity(),'anchors':anchors,'object_id':object_id,'attributes':obj['attributes'],'native':native})
         except BaseException:
+            if native:self.remove_native_user(native)
             self.client.request('DELETE',route,service='dashboard');raise
         return {'status':'checkpoint-created','evidence_anchors':len(anchors),'release':self.root.name}
 
@@ -206,20 +262,27 @@ class Installed:
         code,obj=self.client.request('GET','/siem/api/saved_objects/search/'+before['object_id'],service='dashboard')
         checks={'credentials_preserved':identity['credentials_sha256']==before['credentials_sha256'],'ca_preserved':identity['ca_sha256']==before['ca_sha256'],'saved_object_preserved':code==200 and obj.get('attributes')==before['attributes'],'raw_evidence_preserved':integrity['raw_matches']==integrity['total'],'c1_events_preserved':integrity['event_matches']==integrity['total'],'all_anchors_acknowledged':integrity['indexed']==integrity['total'],'index_documents_preserved_without_duplicates':indexed_integrity(self.client,before['anchors']),'core_active':subprocess.run(['systemctl','is-active','--quiet','xocrange-core']).returncode==0,'collector_active':subprocess.run(['systemctl','is-active','--quiet','xocrange-collector']).returncode==0}
         if after=='reboot':checks['boot_id_changed']=before['boot_id']!=boot
+        if before.get('native'):
+            checks.update(self.verify_native(before['native']))
+            checks['manager_credentials_preserved']=identity['manager_credentials_sha256']==before['manager_credentials_sha256']
+            checks['manager_ca_preserved']=identity['manager_ca_sha256']==before['manager_ca_sha256']
         return {'status':'passed' if all(checks.values()) else 'failed','after':after,'release':self.root.name,'checks':checks,'evidence':integrity,'fresh_security_path_checks':15,'fresh_source_checks':len(SOURCES),'fresh_https_checks':len(private_json(STATE/'siem-ui-acceptance.json')['checks'])}
 
     def outage(self,timeout):
         code,health=self.client.request('GET','/_cluster/health')
         if code!=200 or health.get('status') not in ('green','yellow'):
             raise XocError('indexer_not_ready','Start outage verification from a healthy Indexer.')
-        cutoff=now();queued=[]
+        cutoff=now();queued=[];native_queued=[]
+        native=(self.root/'components/siem/bootstrap.py').is_file()
         def probe():
             self.engine.run(['exec','-T','lab-client','python','-B','/app/probe.py'],compose=True)
             subprocess.run(['/usr/bin/true'],check=True)
             def observed():
                 queued[:]=self.store.db.execute('SELECT id,observed FROM events WHERE observed>=? AND confirmed IS NOT NULL AND indexed IS NULL ORDER BY observed LIMIT 100',(cutoff,)).fetchall()
                 health=self.store.db.execute("SELECT status FROM health WHERE source='indexer'").fetchone()
-                return len(queued)==100 and health is not None and health[0]!='ready'
+                if native:
+                    native_queued[:]=self.store.db.execute('SELECT id FROM wazuh_alerts WHERE observed>=? AND indexed IS NULL ORDER BY observed LIMIT 100',(cutoff,)).fetchall()
+                return len(queued)==100 and health is not None and health[0]!='ready' and (not native or len(native_queued)==100)
             wait_for(observed,min(timeout,90),'Did not observe 100 Wazuh-confirmed queued events and an Indexer failure.')
         stopped_indexer_probe(self.engine,probe)
         ids=[r['id'] for r in queued]
@@ -228,10 +291,20 @@ class Installed:
             code,data=self.client.request('POST','/xoc-events-*/_search',{'size':0,'track_total_hits':True,'query':{'ids':{'values':ids}}})
             return code==200 and data.get('hits',{}).get('total',{}).get('value')==len(ids)
         wait_for(searchable,30,'Recovered queue is missing or duplicated in search.')
-        return {'status':'passed','wazuh_confirmation_continued':True,'indexer_failure_reported':True,'queued_events_checked':len(ids),'recovered_unique_documents':len(ids)}
+        result={'status':'passed','wazuh_confirmation_continued':True,'indexer_failure_reported':True,'queued_events_checked':len(ids),'recovered_unique_documents':len(ids)}
+        if native:
+            native_ids=[r['id'] for r in native_queued]
+            wait_for(lambda:all(self.store.db.execute('SELECT indexed FROM wazuh_alerts WHERE id=?',(i,)).fetchone()[0] for i in native_ids),timeout,'Native alert queue did not recover.')
+            def native_searchable():
+                code,data=self.client.request('POST','/wazuh-alerts-4.x-*/_search',{'size':0,'track_total_hits':True,'query':{'ids':{'values':native_ids}}})
+                return code==200 and data.get('hits',{}).get('total',{}).get('value')==len(native_ids)
+            wait_for(native_searchable,30,'Native alert recovery is missing or duplicated.')
+            result['native_alerts_recovered_without_duplicates']=len(native_ids)
+        return result
 
     def cleanup(self,path):
         before=self.validate_checkpoint(path)
+        if before.get('native'):self.remove_native_user(before['native'])
         code,_=self.client.request('DELETE','/siem/api/saved_objects/search/'+before['object_id'],service='dashboard')
         if code not in (200,404):raise XocError('cleanup_failed','Could not remove the owned preservation probe.')
         return {'status':'cleaned','retained':['checkpoint','reports','all_evidence','all_volumes']}

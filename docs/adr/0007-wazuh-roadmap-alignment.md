@@ -8,9 +8,11 @@
 
 Core SIEM의 목표는 정식 Wazuh Manager·Indexer·Dashboard와 기존 원본 경보 경로를 유지하고, 그 위에 C1 통합 조회를 제공하는 것이다. 무료 구성요소의 선택 설치와 전체 Community의 기능 범위를 구분한다.
 
-현재 구현은 Wazuh 분석 엔진에 정규화된 C1을 보내 분석 확인을 받고, Wazuh Indexer의 `xoc-events-*`와 일반 OpenSearch Dashboards로 조회한다. 이 경로는 실제로 검증했지만 정식 Manager 전체 서비스·API, Wazuh 전용 Dashboard 플러그인, 원본 경보 색인까지의 호환을 검증한 것은 아니다. 로그인·검색 성공이나 버전 일치만으로 기존 Wazuh 기능이 유지됐다고 판정하지 않는다.
+이 ADR을 작성한 시점의 구현은 Wazuh 분석 엔진에 정규화된 C1을 보내 분석 확인을 받고, Wazuh Indexer의 `xoc-events-*`와 일반 OpenSearch Dashboards로 조회한다. 이 경로는 실제로 검증했지만 정식 Manager 전체 서비스·API, Wazuh 전용 Dashboard 플러그인, 원본 경보 색인까지의 호환을 검증한 것은 아니다. 로그인·검색 성공이나 버전 일치만으로 기존 Wazuh 기능이 유지됐다고 판정하지 않는다.
 
 정식 구성의 통합은 K05/K06 안에서 진행한다. 그 완료 조건을 G1 이후로 미루거나 기존 Wazuh 기능을 없애는 것으로 로드맵을 바꾸지 않는다. 한편 M17의 고급 엔드포인트 에뮬레이션·자동 공격, 기관 운영과 Live Fire의 다중 사용자 기능을 이번 작업에 앞당겨 포함하지 않는다.
+
+후속 정식 구성과 실제 검증 결과는 [Wazuh 통합 범위](../development/WAZUH-NATIVE.md)와 [로드맵 실행 상태](../development/ROADMAP-STATUS.md)에서 관리한다. 아래 완료 조건은 그대로 적용한다.
 
 ## 이어갈 구현 단위
 

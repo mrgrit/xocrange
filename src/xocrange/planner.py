@@ -167,7 +167,7 @@ def plan(root: Path, *, preset="bootstrap", include=(), without=(), allow_fixtur
         if siem:
             service = fragment["services"]["siem"]
             if fragment["networks"] != {"int": {"internal": True}} or service["networks"] != ["int"] or any(k in service for k in ("ports", "sysctls", "environment", "command", "entrypoint")):
-                raise XocError("siem_privileges", "SIEM has only its private log volume and internal network.")
+                raise XocError("siem_privileges", "SIEM has only reviewed private Manager volumes and its internal network.")
 
         if security_path:
             security_role_policy(fragment)

@@ -25,6 +25,7 @@ build_inputs:
 - Dockerfile
 - start.sh
 - queue.py
+- bootstrap.py
 - ossec.conf
 - c1-decoder.xml
 - c1-rules.xml

@@ -1,0 +1,241 @@
+{
+  "date": "2026-11-07",
+  "status": "passed",
+  "scope": "Native Wazuh baseline integration, scoped WAF regression and dedicated-VM lifecycle acceptance; not full feature parity or a Community release",
+  "runtime_source_sha256": "ea51175547ffb005aff8fb835be43dafa664d3c1ada0b390d07cb883ea009840",
+  "roadmap_repository": "mrgrit/xocrange_plan",
+  "roadmap_commit": "f548caaa2b271565c38f953049d97675f0d4071a",
+  "environment": {
+    "os": "Ubuntu Server 26.04.1 amd64",
+    "vcpu": 8,
+    "ram_gib": 16,
+    "disk_gib": 300,
+    "wazuh_manager_indexer_dashboard": "4.14.10"
+  },
+  "unit_tests": {
+    "development_python": "3.10.12",
+    "development_passed": 209,
+    "vm_python": "3.14",
+    "vm_passed": 209
+  },
+  "live_checks": {
+    "security_path": 15,
+    "c1_sources": 8,
+    "https_api": {
+      "status": "passed",
+      "checks": {
+        "http_redirect_preserves_path_query": true,
+        "anonymous_api_requires_login": true,
+        "rule_exception_preserves_authentication": true,
+        "wrong_password_rejected": true,
+        "login_through_waf": true,
+        "secure_httponly_session_cookie": true,
+        "authenticated_api": true,
+        "native_manager_version": true,
+        "native_manager_daemons": true,
+        "manager_anonymous_rejected": true,
+        "manager_default_password_rejected": true,
+        "manager_wrong_hostname_rejected": true,
+        "manager_wrong_ca_rejected": true,
+        "native_plugin_manager_connection": true,
+        "native_plugin_hides_service_password": true,
+        "native_plugin_session": true,
+        "native_plugin_manager_info": true,
+        "native_plugin_agents": true,
+        "native_plugin_xss_still_blocked": true,
+        "dashboard_html": true,
+        "static_javascript": true,
+        "discover_highlight_rule_exception": true,
+        "other_search_field_still_inspected": true,
+        "other_path_still_inspected": true,
+        "unrelated_put_still_blocked": true,
+        "xss_still_blocked": true,
+        "file_path_investigation_allowed": true,
+        "unrelated_field_keeps_lfi_detection": true,
+        "oversized_request_rejected": true,
+        "malformed_json_rejected": true,
+        "truncated_json_fails_closed_in_waf": true,
+        "waf_marker_blocks_siem": true,
+        "forwarded_client_header_cannot_be_spoofed": true,
+        "ips_inspects_decrypted_https": true,
+        "ui_recovers_after_block": true,
+        "create_index_pattern": true,
+        "field_definition_rule_exceptions": true,
+        "wrong_method_gets_no_field_exception": true,
+        "other_attribute_still_inspected": true,
+        "large_field_list_allowed": true,
+        "temporary_object_deleted": true,
+        "all_eight_fresh_sources_indexed": true,
+        "native_alerts_contain_all_eight_c1_links": true,
+        "stock_sshd_rule_indexes_original_alert": true,
+        "writer_cannot_read_events": true,
+        "writer_cannot_read_native_alerts": true,
+        "logout": true,
+        "logout_revokes_browser_session": true
+      },
+      "scope": "Real HTTPS ingress -> fw -> IPS -> ModSecurity CRS -> authenticated Dashboards; C1 in Indexer.",
+      "known_limitations": [
+        "ModSecurity 2.x #2807 rejects truncated JSON with HTTP 500 before phase 2; ordinary malformed JSON returns 400."
+      ]
+    },
+    "browser_after_reboot": {
+      "status": "passed",
+      "checks": {
+        "login_form": true,
+        "four_dashboard_panels": true,
+        "secure_httponly_cookie": true,
+        "custom_logo_loaded": true,
+        "session_survives_reload": true,
+        "source_filter": true,
+        "file_path_search": true,
+        "all_events": true,
+        "discover_deep_link_reload": true,
+        "no_authenticated_http_errors": true,
+        "no_search_error_notice": true,
+        "native_wazuh_home": true,
+        "native_server_status": true,
+        "native_threat_hunting": true,
+        "native_requests_without_http_errors": true
+      },
+      "http_errors": []
+    },
+    "waf_exclusions_expanded": false
+  },
+  "same_source_reinstall": {
+    "status": "passed",
+    "after": "reinstall",
+    "release": "ea51175547ffb005aff8fb835be43dafa664d3c1ada0b390d07cb883ea009840",
+    "checks": {
+      "credentials_preserved": true,
+      "ca_preserved": true,
+      "saved_object_preserved": true,
+      "raw_evidence_preserved": true,
+      "c1_events_preserved": true,
+      "all_anchors_acknowledged": true,
+      "index_documents_preserved_without_duplicates": true,
+      "core_active": true,
+      "collector_active": true,
+      "native_alerts_preserved": true,
+      "native_index_documents_preserved": true,
+      "custom_manager_api_user_preserved": true,
+      "manager_credentials_preserved": true,
+      "manager_ca_preserved": true
+    },
+    "evidence": {
+      "total": 24,
+      "raw_matches": 24,
+      "event_matches": 24,
+      "indexed": 24
+    },
+    "fresh_security_path_checks": 15,
+    "fresh_source_checks": 8,
+    "fresh_https_checks": 48
+  },
+  "actual_reboot": {
+    "status": "passed",
+    "after": "reboot",
+    "release": "ea51175547ffb005aff8fb835be43dafa664d3c1ada0b390d07cb883ea009840",
+    "checks": {
+      "credentials_preserved": true,
+      "ca_preserved": true,
+      "saved_object_preserved": true,
+      "raw_evidence_preserved": true,
+      "c1_events_preserved": true,
+      "all_anchors_acknowledged": true,
+      "index_documents_preserved_without_duplicates": true,
+      "core_active": true,
+      "collector_active": true,
+      "boot_id_changed": true,
+      "native_alerts_preserved": true,
+      "native_index_documents_preserved": true,
+      "custom_manager_api_user_preserved": true,
+      "manager_credentials_preserved": true,
+      "manager_ca_preserved": true
+    },
+    "evidence": {
+      "total": 24,
+      "raw_matches": 24,
+      "event_matches": 24,
+      "indexed": 24
+    },
+    "fresh_security_path_checks": 15,
+    "fresh_source_checks": 8,
+    "fresh_https_checks": 48
+  },
+  "indexer_outage": {
+    "status": "passed",
+    "wazuh_confirmation_continued": true,
+    "indexer_failure_reported": true,
+    "queued_events_checked": 100,
+    "recovered_unique_documents": 100,
+    "native_alerts_recovered_without_duplicates": 100
+  },
+  "ui_selection": {
+    "excluded": {
+      "status": "passed",
+      "checks": {
+        "ui_excluded_from_plan": true,
+        "ui_services_absent": true,
+        "fresh_eight_sources": true,
+        "manager_api_user_preserved": true,
+        "no_stale_indexer_health": true,
+        "native_alerts_still_collected": true,
+        "indexer_disabled": true,
+        "source_release_unchanged": true,
+        "credentials_preserved": true,
+        "ca_preserved": true,
+        "manager_credentials_preserved": true,
+        "manager_ca_preserved": true
+      },
+      "source_sha256": "da5e0505e29265ea09236a5f663b3364ffbf9a522265f7fcac3b4b473ee5dbf5"
+    },
+    "restored": {
+      "status": "passed",
+      "checks": {
+        "only_readme_changed": true,
+        "raw_and_c1_anchors_preserved": true,
+        "indexed_c1_documents_preserved": true,
+        "native_alerts_preserved": true,
+        "native_index_documents_preserved": true,
+        "custom_manager_api_user_preserved": true,
+        "credentials_and_ca_preserved": true,
+        "saved_object_preserved": true
+      },
+      "before_release": "da5e0505e29265ea09236a5f663b3364ffbf9a522265f7fcac3b4b473ee5dbf5",
+      "after_release": "ea51175547ffb005aff8fb835be43dafa664d3c1ada0b390d07cb883ea009840",
+      "source_changes": [
+        "README.md"
+      ],
+      "probe_cleanup": "owned API user and saved search removed"
+    },
+    "note": "Reinclusion included only README wording changes; installed manifests were compared. Runtime code and configuration were identical. All 24 C1 and 24 native evidence anchors were compared across this transition."
+  },
+  "cleanup": {
+    "status": "cleaned",
+    "retained": [
+      "checkpoint",
+      "reports",
+      "all_evidence",
+      "all_volumes"
+    ]
+  },
+  "lifecycle_tool_sha256": "4c6e26dc1daa3fbc7568a813ab781fb611748f6728d9f316667b6b0736f7c74b",
+  "coverage_notes": [
+    "Eight real local source formats are normalized through C1 and linked to original Wazuh alerts.",
+    "The stock SSH rule 5710 is checked with a synthetic queue record, not a real login attempt.",
+    "Manager API wrong-CA and wrong-hostname rejection are tested inside the Dashboard image.",
+    "An added unprivileged Manager API user, installation credentials, CAs and a saved search survive reinstall and reboot.",
+    "The first checkpoint attempt encountered the five-second search refresh delay; the tool now waits on fixed evidence anchors and has a regression test.",
+    "This increment upgrades an existing dedicated VM; a fresh OS-disk installation of the final native bundle was not repeated."
+  ],
+  "remaining": [
+    "Full native decoding and kt66 detection parity for all eight raw formats",
+    "External agent enrollment, host/agent SCA, vulnerability feeds and inventory state indexing",
+    "Advanced Wazuh settings and rule-editing WAF regressions; common platform RBAC",
+    "Full SIEM exclusion, long-term load, the local 4 GiB evidence budget and backup/restore",
+    "ModSecurity 2.x upstream truncated-JSON behavior: fails closed with HTTP 500, while ordinary malformed JSON returns HTTP 400"
+  ],
+  "private_data_published": false,
+  "community_complete": false,
+  "full_wazuh_feature_equivalence_claimed": false
+}

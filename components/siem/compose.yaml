@@ -1,20 +1,31 @@
 services:
   siem:
     build: {context: ., dockerfile: Dockerfile}
+    hostname: xoc-manager
     user: '0:0'
     read_only: true
     cap_drop: [ALL]
-    cap_add: [CHOWN, DAC_OVERRIDE, SETUID, SETGID, SYS_CHROOT]
+    cap_add: [CHOWN, DAC_OVERRIDE, FOWNER, KILL, SETUID, SETGID, SYS_CHROOT]
     security_opt: [no-new-privileges:true]
     networks: [int]
     restart: 'no'
     tmpfs:
-    - /var/ossec/queue:size=128m,mode=0750,uid=999,gid=999
-    - /var/ossec/var:size=16m,mode=0750,uid=999,gid=999
+    - /run:size=16m,mode=0755
+    - /var/ossec/var/run:size=16m,mode=0750,uid=999,gid=999
     - /tmp:size=16m,mode=1777
     volumes:
     - siem-logs:/var/ossec/logs
+    - siem-etc:/var/ossec/etc
+    - siem-api:/var/ossec/api/configuration
+    - siem-queue:/var/ossec/queue
+    - siem-var:/var/ossec/var
+    - siem-config:/run/xoc-manager:ro
 networks:
   int: {internal: true}
 volumes:
   siem-logs: {}
+  siem-etc: {}
+  siem-api: {}
+  siem-queue: {}
+  siem-var: {}
+  siem-config: {}

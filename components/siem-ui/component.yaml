@@ -29,7 +29,10 @@ build_inputs:
 - indexer.Dockerfile
 - indexer-start.sh
 - dashboard.Dockerfile
+- dashboard-start.sh
+- wait-manager.js
 - ingress.Dockerfile
 - index-template.json
+- wazuh-template.json
 - saved-objects.ndjson
 compose: compose.yaml

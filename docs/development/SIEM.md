@@ -1,6 +1,6 @@
 # Core SIEM 수집·디코딩 백엔드
 
-현재 구성은 `원본 로그 → C1 v0.2 → Wazuh 분석 → 로컬 증거 저장소 → Indexer → 웹 관제`다. Wazuh 4.14.10의 실제 analysisd/DB를 사용한다. 선택형 `siem-ui`가 Wazuh Indexer 4.14.10과 OpenSearch Dashboards 2.19.6을 연결한다. [웹 관제·WAF 예외](SIEM-WEB.md)를 함께 참고한다. 원격 에이전트 관리·전체 K06/Community 완료를 뜻하지 않는다.
+현재 구성은 `원본 로그 → C1 v0.2 → Wazuh 분석 → 로컬 증거 저장소 → Indexer → 웹 관제`다. Wazuh Manager/API 4.14.10의 기본 규칙과 C1 규칙을 함께 사용한다. 선택형 `siem-ui`가 같은 버전의 Wazuh Indexer와 전용 Dashboard를 연결하며 원본 경보도 별도로 보존·색인한다. [웹 관제·WAF 예외](SIEM-WEB.md)와 [정식 연동 범위](WAZUH-NATIVE.md)를 함께 참고한다. 원격 에이전트 관리·전체 K06/Community 완료를 뜻하지 않는다.
 
 ## 소스와 매핑
 

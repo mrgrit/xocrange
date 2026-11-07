@@ -1,6 +1,6 @@
 <decoder name="xoc-c1">
-  <prematch type="pcre2">^\{</prematch>
-  <plugin_decoder>JSON_Decoder</plugin_decoder>
+  <prematch type="pcre2">^xoc-c1: </prematch>
+  <plugin_decoder offset="after_prematch">JSON_Decoder</plugin_decoder>
 </decoder>
 <!-- Wazuh requires both program-name and non-program decoder lists. -->
 <decoder name="xoc-c1">

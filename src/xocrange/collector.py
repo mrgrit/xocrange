@@ -128,7 +128,7 @@ class Collector:
         with self.store.transaction():
             self.store.set_cursor('indexer-enabled', bool(self.indexer))
             if not self.indexer:
-                self.store.db.execute("DELETE FROM health WHERE source='indexer'")
+                self.store.db.execute("DELETE FROM health WHERE source IN ('indexer','native-indexer')")
         self.lock = open(self.store.directory / 'collector.lock', 'a')
         try:
             fcntl.flock(self.lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
@@ -190,6 +190,8 @@ class Collector:
                 self.accept_audit_line(source_id, position, raw)
             elif source == 'wazuh':
                 self.store.confirm(json.loads(raw))
+                from .native_alerts import accept
+                accept(self.store,raw)
             elif raw.strip():
                 store.ingest(source, source_id, position, raw)
             consumed = end
@@ -304,6 +306,11 @@ class Collector:
                 self.store.health('indexer',export(self.store,self.indexer))
             except (XocError,OSError,ValueError) as exc:
                 self.store.health('indexer',getattr(exc,'code','indexer_failed'))
+            from .native_alerts import export as export_native
+            try:
+                self.store.health('native-indexer',export_native(self.store,self.indexer))
+            except (XocError,OSError,ValueError) as exc:
+                self.store.health('native-indexer',getattr(exc,'code','native_indexer_failed'))
         return self.store.status()
 
     def run(self):

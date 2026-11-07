@@ -73,6 +73,12 @@ def indexer_config():
     return cfg
 
 
+def writer_role():
+    return {'reserved':False,'cluster_permissions':['cluster_composite_ops'],
+            'index_permissions':[{'index_patterns':['xoc-events-*','wazuh-alerts-4.x-*'],
+            'allowed_actions':['indices:admin/create','indices:admin/mapping/put','indices:data/write/index*','indices:data/write/bulk*']}]}
+
+
 def dashboard_config(credentials):
     return {'server.host':'0.0.0.0','server.port':5601,'server.name':'xOC Range SIEM',
             'server.basePath':'/siem','server.rewriteBasePath':True,
@@ -86,7 +92,7 @@ def dashboard_config(credentials):
             'opensearch_security.cookie.secure':True,'opensearch_security.cookie.password':credentials['cookie'],
             'opensearch_security.session.ttl':3600000,'opensearch_security.session.keepalive':True,
             'opensearch_security.auth.type':'basicauth','server.maxPayloadBytes':1048576,
-            'opensearchDashboards.branding':{'logo':{'defaultUrl':'/assets/xoc-range-logo.png'},'applicationTitle':'xOC Range SIEM'},
+            'opensearchDashboards.branding':{'logo':{'defaultUrl':'/assets/xoc-range-logo.png'},'mark':{'defaultUrl':'/assets/xoc-range-logo.png'},'loadingLogo':{'defaultUrl':'/assets/xoc-range-logo.png'},'applicationTitle':'xOC Range SIEM'},
             'data.search.usageTelemetry.enabled':False,
             'uiSettings.overrides':{'defaultRoute':'/app/dashboards#/view/xoc-overview','defaultIndex':'xoc-events'}}
 
@@ -179,9 +185,19 @@ def prepare(engine, project, host=None, state=STATE, root=None):
     for user in ('admin','kibanaserver','xoc-writer'):
         users[user]={'hash':bcrypt.hashpw(credentials[user].encode(),bcrypt.gensalt(rounds=12)).decode(),'reserved':True,'backend_roles':['admin'] if user=='admin' else []}
     mapping={'_meta':{'type':'rolesmapping','config_version':2},'all_access':{'backend_roles':['admin']},'kibana_server':{'users':['kibanaserver']},'xoc_ingest':{'users':['xoc-writer']}}
-    writer={'xoc_ingest':{'reserved':False,'cluster_permissions':['cluster_composite_ops'],'index_permissions':[{'index_patterns':['xoc-events-*'],'allowed_actions':['indices:admin/create','indices:admin/mapping/put','indices:data/write/index*','indices:data/write/bulk*']}]}}
+    writer={'xoc_ingest':writer_role()}
     populate('indexer-config',1000,{'opensearch.yml':indexer_config(),'certs/ca.pem':(state/'ca.pem').read_bytes(),'certs/indexer.pem':(state/'indexer.pem').read_bytes(),'certs/indexer-key.pem':(state/'indexer-key.pem').read_bytes(),'opensearch-security/internal_users.yml':users,'opensearch-security/roles_mapping.yml':mapping,'roles-extra.yml':writer})
-    populate('dashboard-config',1000,{'dashboard.yml':dashboard_config(credentials),'ca.pem':(state/'ca.pem').read_bytes(),'dashboard.pem':(state/'dashboard.pem').read_bytes(),'dashboard-key.pem':(state/'dashboard-key.pem').read_bytes()})
+    from .manager_setup import STATE as manager_state
+    manager_credentials=private_json(manager_state/'credentials.json')
+    populate('dashboard-config',1000,{'dashboard.yml':dashboard_config(credentials),'ca.pem':(state/'ca.pem').read_bytes(),'dashboard.pem':(state/'dashboard.pem').read_bytes(),'dashboard-key.pem':(state/'dashboard-key.pem').read_bytes(),'manager-ca.pem':(manager_state/'ca.pem').read_bytes(),'manager-api.json':json.dumps({'username':'wazuh-wui','password':manager_credentials['wazuh-wui']})})
+    dashboard_data=owned_volume(engine,project,'dashboard-data')
+    dashboard_data.chmod(0o700);os.chown(dashboard_data,1000,1000)
+    native={'hosts':[{'xoc':{'url':'https://siem','port':55000,'username':'wazuh-wui','password':manager_credentials['wazuh-wui'],'run_as':True}}]}
+    for relative in ('wazuh','wazuh/config','wazuh/logs'):
+        directory=dashboard_data/relative
+        if directory.is_symlink():raise XocError('unsafe_config','Dashboard data must not redirect managed paths.')
+        directory.mkdir(mode=0o700,exist_ok=True);os.chown(directory,1000,1000)
+    write(dashboard_data/'wazuh/config/wazuh.yml',yaml.safe_dump(native),1000)
     web_files={'ca.pem':(state/'ca.pem').read_bytes(),'host-rule.conf':host_rule(host)}
     if root is not None:
         web_files['logo.png']=(root/'assets/branding/xoc-range-logo.png').read_bytes()
