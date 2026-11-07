@@ -28,6 +28,7 @@ build_inputs:
 - .dockerignore
 - fw/Dockerfile
 - fw/rules.nft
+- fw/nflog.py
 - ips/Dockerfile
 - ips/configure.py
 - ips/probe.rules

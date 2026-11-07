@@ -10,4 +10,7 @@ RFC3339 = re.compile(
 def parse_timestamp(value):
     if not isinstance(value, str) or not RFC3339.fullmatch(value):
         raise ValueError("Expected RFC 3339 timestamp with timezone")
+    # Sysmon emits nanoseconds. Normalize explicitly to datetime's microseconds
+    # so Python 3.10 (3/6 fractional digits only) and 3.14 agree.
+    value = re.sub(r"\.(\d+)(?=Z|[+-])", lambda m: '.' + (m[1] + '000000')[:6], value)
     return datetime.fromisoformat(value.replace("Z", "+00:00"))

@@ -11,7 +11,8 @@ from .documents import MAX_BYTES, canonical, json_document, validate
 from .errors import XocError
 from .timestamps import parse_timestamp
 
-VERSION = "xoc.event/0.1.0"
+VERSION = "xoc.event/0.2.0"
+SOURCES = ("nftables", "suricata", "modsecurity", "osquery", "sysmon", "auditd", "apache-access", "apache-error")
 
 
 def utc(value: str) -> str:
@@ -216,8 +217,14 @@ def nftables(raw, ctx):
 def normalize(source: str, raw: bytes, context: Context):
     if not raw or len(raw) > MAX_BYTES:
         raise XocError("input_size", "Expected a nonempty input of at most 1 MiB.")
-    adapters = {"suricata": suricata, "modsecurity": modsecurity, "nftables": nftables}
+    from .endpoint_events import osquery, sysmon, auditd, apache_access, apache_error
+    adapters = {"suricata": suricata, "modsecurity": modsecurity, "nftables": nftables,
+                "osquery": osquery, "sysmon": sysmon, "auditd": auditd,
+                "apache-access": apache_access, "apache-error": apache_error}
     if source not in adapters:
         raise XocError("unknown_source", "Unknown source adapter.")
-    events = adapters[source](raw, context)
+    try:
+        events = adapters[source](raw, context)
+    except (KeyError, TypeError, OverflowError, RecursionError) as exc:
+        raise XocError("invalid_event", "Source record fields are missing or invalid.") from exc
     return [validate(event, "c1-event") for event in events]

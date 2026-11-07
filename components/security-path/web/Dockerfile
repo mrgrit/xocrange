@@ -9,5 +9,6 @@ COPY web/apache.conf /etc/apache2/conf-enabled/xoc.conf
 COPY web/modsecurity.conf /etc/modsecurity/xoc.conf
 COPY web/envvars /etc/apache2/envvars
 RUN chmod 0755 /usr/local/bin/xoc-entrypoint \
+    && chown -R 33:33 /var/log/apache2 \
     && printf 'Listen 8080\n' > /etc/apache2/ports.conf
 ENTRYPOINT ["/usr/local/bin/xoc-entrypoint", "web"]

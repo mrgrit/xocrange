@@ -10,7 +10,8 @@ Usage: sudo bash install.sh [options]
 Install the current experimental Core security path on a dedicated Ubuntu 26.04
 amd64 VM. Docker, Python, network prerequisites, images and verification are automatic.
 The current default includes platform, fw, IPS, WAF and harmless acceptance probes.
-SIEM, portals and other planned modules are not implemented yet.
+SIEM collection and eight decoders are included; --without siem omits them.
+Portals and the complete Community release remain under development.
 
   --include ID       Add an implemented module (repeatable)
   --without ID       Exclude an optional module (repeatable)
@@ -29,6 +30,7 @@ fail() { printf 'xOC install failed: %s\n' "$*" >&2; exit 2; }
 stage() { current_stage=$1; printf '\n[xOC] %s\n' "$current_stage"; }
 need_value() { [[ $# -ge 2 && -n $2 && $2 != --* ]] || fail "Missing value for $1"; }
 selection=()
+siem_selection=(--include siem)
 data_directory=/var/lib/xocrange/data
 source_ref=
 dry_run=false
@@ -48,6 +50,9 @@ while (($#)); do
         *) fail "Unknown option: $1" ;;
     esac
 done
+for ((i=0; i<${#selection[@]}; i++)); do
+    if [[ ${selection[i]} == --without && ${selection[i+1]:-} == siem ]]; then siem_selection=(); fi
+done
 [[ $data_directory =~ ^/[A-Za-z0-9_/-]+$ && $data_directory != / ]] || fail 'Invalid data directory'
 if $dry_run; then
     usage
@@ -60,7 +65,7 @@ if $dry_run; then
 fi
 (( EUID == 0 )) || fail 'Run this single installer with sudo: sudo bash install.sh'
 export PATH=/usr/sbin:/usr/bin:/sbin:/bin
-export DEBIAN_FRONTEND=noninteractive PYTHONDONTWRITEBYTECODE=1 PIP_DISABLE_PIP_VERSION_CHECK=1
+export DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a PYTHONDONTWRITEBYTECODE=1 PIP_DISABLE_PIP_VERSION_CHECK=1
 unset DOCKER_HOST DOCKER_CONTEXT DOCKER_CONFIG COMPOSE_FILE COMPOSE_PROJECT_NAME PYTHONPATH PYTHONHOME
 
 # Check before any package or host mutation. The existing kt66 host is not a target.
@@ -149,11 +154,11 @@ xoc=("$runtime/bin/xoc" --root "$release")
 stage module-plan
 plan_json=$state/plan-$run_id.json
 "${xoc[@]}" plan --preset security-path --allow-experimental --allow-fixtures \
-    --include fixture-security-probe "${selection[@]}" > "$plan_json"
+    --include fixture-security-probe "${siem_selection[@]}" "${selection[@]}" > "$plan_json"
 plan_name=install-$("$runtime/bin/python" -c 'import json,sys; print(json.load(open(sys.argv[1]))["lock"]["plan_id"])' "$plan_json")
 if [[ ! -d $release/.local/plans/$plan_name ]]; then
     "${xoc[@]}" plan --preset security-path --allow-experimental --allow-fixtures \
-        --include fixture-security-probe "${selection[@]}" --output "$plan_name" > "$plan_json"
+        --include fixture-security-probe "${siem_selection[@]}" "${selection[@]}" --output "$plan_name" > "$plan_json"
 fi
 # Prevent exclusion of a required acceptance service, before any Docker installation.
 "$runtime/bin/python" - "$release" "$plan_name" <<'PY'
@@ -230,7 +235,7 @@ failures = [key for key,value in report['checks'].items() if not value and key n
 if failures:
     print(json.dumps(report,indent=2)); raise SystemExit(2)
 PY
-modprobe -a br_netfilter nfnetlink_queue
+modprobe -a br_netfilter nfnetlink_queue nfnetlink_log
 [[ -f $state/original-bridge-nf ]] || cat /proc/sys/net/bridge/bridge-nf-call-iptables > "$state/original-bridge-nf"
 sysctl -w net.bridge.bridge-nf-call-iptables=0
 "${compose[@]}" config --quiet
@@ -239,6 +244,7 @@ sysctl -w net.bridge.bridge-nf-call-iptables=0
 stage image-build
 "${compose[@]}" build
 stage start-services
+systemctl disable --now xocrange-collector.service 2>/dev/null || true
 if systemctl is-active --quiet xocrange-core.service; then
     systemctl stop xocrange-core.service
 fi
@@ -261,7 +267,7 @@ Type=oneshot
 RemainAfterExit=yes
 Environment=PYTHONDONTWRITEBYTECODE=1
 WorkingDirectory=$release
-ExecStartPre=/usr/sbin/modprobe -a br_netfilter nfnetlink_queue
+ExecStartPre=/usr/sbin/modprobe -a br_netfilter nfnetlink_queue nfnetlink_log
 ExecStartPre=/usr/sbin/sysctl -w net.bridge.bridge-nf-call-iptables=0
 ExecStart=$runtime/bin/xoc --root $release lab start --plan $plan_name --isolated-vm
 ExecStartPost=$runtime/bin/xoc --root $release lab verify --plan $plan_name --isolated-vm
@@ -275,22 +281,39 @@ WantedBy=multi-user.target
 EOF
 systemctl daemon-reload
 systemctl enable --now xocrange-core.service
+if "$runtime/bin/python" -c 'import json,sys; sys.exit("siem" not in json.load(open(sys.argv[1]))["lock"]["selected"])' "$plan_json"; then
+    stage siem-telemetry
+    bash "$release/scripts/install-telemetry.sh" "$release" "$runtime" "$plan_name"
+    "$runtime/bin/python" "$release/scripts/verify-siem.py" "$release" "$plan_name"
+else
+    systemctl disable --now xocrange-collector.service xocrange-osquery.service 2>/dev/null || true
+    if [[ -f $state/telemetry-owned ]]; then
+        systemctl disable --now sysmon.service
+        python3 "$release/scripts/configure-audit.py" "$release/components/siem/audit.rules" --remove
+        python3 -c 'from pathlib import Path; Path("/etc/audit/rules.d/70-xocrange.rules").unlink(missing_ok=True)'
+    fi
+fi
 ln -sfn "$release" "$prefix/current"
 cat > /usr/local/bin/xoc <<EOF
 #!/bin/sh
 exec "$runtime/bin/xoc" --root "$release" "\$@"
 EOF
 chmod 0755 /usr/local/bin/xoc
-"$runtime/bin/python" - "$state/last-install.json" "$release" "$plan_name" "$data_directory" "$log" "$state/acceptance-$run_id.json" <<'PY'
+"$runtime/bin/python" - "$state/last-install.json" "$release" "$plan_name" "$data_directory" "$log" "$state/acceptance-$run_id.json" "$plan_json" <<'PY'
 import json,sys
 from pathlib import Path
 report = json.loads(Path(sys.argv[6]).read_text())
 assert report['status'] == 'passed' and report['checks'] and all(report['checks'].values())
-result = dict(status='installed', scope='experimental-security-path', release=sys.argv[2],
+selected = json.loads(Path(sys.argv[7]).read_text())['lock']['selected']
+result = dict(status='installed', scope='experimental-security-path', release=sys.argv[2], selected=selected,
               plan=sys.argv[3], data_directory=sys.argv[4], log=sys.argv[5], acceptance=report,
               community_complete=False, reboot_verified=False)
+if 'siem' in selected:
+    siem = json.loads(Path('/var/lib/xocrange/siem-acceptance.json').read_text())
+    assert siem['status'] == 'passed' and all(siem['checks'].values())
+    result.update(scope='experimental-security-path-and-siem', siem_acceptance=siem)
 Path(sys.argv[1]).write_text(json.dumps(result, indent=2) + '\n')
 PY
 printf '\nInstalled and verified: experimental platform + fw + IPS + WAF.\n'
 printf 'State: %s/last-install.json\nLogs: %s\n' "$state" "$log"
-printf 'SIEM, portals and the complete Community release remain under development.\n'
+printf 'Portals and the complete Community release remain under development.\n'

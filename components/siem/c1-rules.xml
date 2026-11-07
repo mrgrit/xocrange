@@ -1,0 +1,12 @@
+<group name="xoc,c1,">
+  <rule id="110000" level="1"><decoded_as>xoc-c1</decoded_as><field name="schema_version">^xoc.event/0.2.0$</field><description>xOC C1 event</description></rule>
+  <rule id="110001" level="3"><if_sid>110000</if_sid><field name="producer">^nftables$</field><description>xOC nftables: $(event.action)</description><group>nftables,</group></rule>
+  <rule id="110002" level="3"><if_sid>110000</if_sid><field name="producer">^suricata$</field><description>xOC suricata: $(event.action)</description><group>suricata,</group></rule>
+  <rule id="110003" level="3"><if_sid>110000</if_sid><field name="producer">^modsecurity$</field><description>xOC modsecurity: $(event.action)</description><group>modsecurity,</group></rule>
+  <rule id="110004" level="3"><if_sid>110000</if_sid><field name="producer">^osquery$</field><description>xOC osquery: $(event.action)</description><group>osquery,</group></rule>
+  <rule id="110005" level="3"><if_sid>110000</if_sid><field name="producer">^sysmon$</field><description>xOC sysmon: $(event.action)</description><group>sysmon,</group></rule>
+  <rule id="110006" level="3"><if_sid>110000</if_sid><field name="producer">^auditd$</field><description>xOC auditd: $(event.action)</description><group>auditd,</group></rule>
+  <rule id="110007" level="3"><if_sid>110000</if_sid><field name="producer">^apache-access$</field><description>xOC apache-access: $(event.action)</description><group>apache_access,</group></rule>
+  <rule id="110008" level="3"><if_sid>110000</if_sid><field name="producer">^apache-error$</field><description>xOC apache-error: $(event.action)</description><group>apache_error,</group></rule>
+  <rule id="110020" level="7"><if_sid>110001,110002,110003,110004,110005,110006,110007,110008</if_sid><field name="event.outcome">^blocked$</field><description>xOC confirmed control block: $(producer)</description><group>access_denied,</group></rule>
+</group>

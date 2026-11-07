@@ -10,7 +10,7 @@
 sudo bash install.sh
 ```
 
-현재는 개발 버전이라 위 실행이 experimental security-path를 선택한다. platform·fw·IPS·WAF와 무해한 검증용 client/backend를 설치한다. SIEM·콘솔·포털 등 계획 단계 기능은 포함하지 않으며, 전체 Community 완성본으로 성공을 표시하지 않는다.
+현재는 개발 버전이라 위 실행이 experimental security-path를 선택한다. platform·fw·IPS·WAF, SIEM 분석 백엔드, osquery·Sysmon·auditd와 무해한 검증용 client/backend를 설치한다. `--without siem`으로 SIEM 및 xOC 호스트 수집을 제외한다. Wazuh Indexer/Dashboard·콘솔·포털은 아직 포함하지 않으며, 전체 Community 완성본으로 성공을 표시하지 않는다. [8종 수집·검증](SIEM.md)을 함께 참고한다.
 
 현재 프로필의 실행 전 검사는 2 vCPU, RAM 약 4GB, 데이터 경로 여유 20GB 이상이다. 이는 전체 Core 최소 사양을 실측한 값이 아니다. 전체 개발을 위한 권장 예산은 8 vCPU·32GB RAM·OS 80GB + 데이터 300GB다.
 
@@ -84,3 +84,7 @@ sudo xoc catalog
 - [Docker Ubuntu 설치](https://docs.docker.com/engine/install/ubuntu/): 공식 apt 저장소·패키지 구성.
 - [Docker daemon 저장 위치](https://docs.docker.com/engine/daemon/): Docker data-root만 바꿔서는 containerd 이미지 저장 위치가 바뀌지 않는다.
 - [ADR 0004](../adr/0004-single-command-installation.md): 설치 책임과 성공 조건.
+
+## SIEM 선택과 데이터 유지
+
+기본 설치는 SIEM을 포함하며 15개 통신 검사에 이어 실제 8종 로그가 Wazuh에서 디코딩되는지 검사한다. xOC collector·osquery·Sysmon·auditd 구성을 설치기가 수행한다. `last-install.json`에 선택 모듈과 SIEM 검사 결과를 기록한다. 제외·재포함 시 컨테이너 로그 볼륨과 원본 DB를 삭제하지 않으며, source volume의 안정된 식별자로 재수집 중복을 방지한다. 실험 중 초기 디코더 오류는 원본을 보관한 채 수정 후 재처리했다.

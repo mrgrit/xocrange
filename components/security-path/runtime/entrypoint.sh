@@ -7,7 +7,7 @@ case "${1:-}" in
   fw)
     ip route replace 172.29.12.0/24 via 172.29.11.2
     nft -f /etc/xoc/fw.nft
-    exec sleep infinity
+    exec python3 -B /usr/local/lib/xoc/nflog.py
     ;;
   ips)
     ip route replace 172.29.10.0/24 via 172.29.11.1

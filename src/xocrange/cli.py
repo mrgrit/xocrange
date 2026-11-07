@@ -10,7 +10,7 @@ from pathlib import Path
 from . import __version__
 from .documents import json_document, read_bytes, validate
 from .errors import XocError
-from .events import Context, normalize
+from .events import Context, SOURCES, normalize
 from .planner import catalog, plan, write_plan
 from .lab import run_lab
 
@@ -37,17 +37,45 @@ def parser():
     checking.add_argument("--input", required=True, type=Path)
     converting = event_commands.add_parser("normalize")
     converting.add_argument("--input", required=True, type=Path)
-    converting.add_argument("--source", required=True, choices=("suricata", "modsecurity", "nftables"))
+    converting.add_argument("--source", required=True, choices=SOURCES)
     for name in ("tenant-id", "range-id", "source-id", "evidence-ref", "observed-at"):
         converting.add_argument(f"--{name}", required=True)
     lab = commands.add_parser("lab", help="run packet-path checks on a dedicated Ubuntu 26.04 VM")
     lab.add_argument("action", choices=("check", "up", "start", "verify", "down"))
     lab.add_argument("--plan", required=True, help="plan directory name beneath .local/plans")
     lab.add_argument("--isolated-vm", action="store_true", help="confirm this is the dedicated lab VM")
+    siem = commands.add_parser("siem", help="local evidence, Wazuh decoding and search")
+    siem.add_argument("action", choices=("collect", "once", "status", "query", "evidence", "retry"))
+    siem.add_argument("--plan")
+    siem.add_argument("--store", type=Path, default=Path('/var/lib/xocrange/siem'))
+    siem.add_argument("--source", choices=SOURCES)
+    siem.add_argument("--limit", type=int, default=20)
+    siem.add_argument("--confirmed", action="store_true")
+    siem.add_argument("--ref", help="opaque evidence reference; raw evidence is accessible only to the local owner")
     return cli
 
 
 def run(args):
+    if args.command == "siem":
+        from .collector import Collector
+        from .event_store import Store
+        if args.action in ('collect', 'once'):
+            if not args.plan:
+                raise XocError('missing_plan', 'Collection requires a validated --plan.')
+            collector = Collector(args.root, args.plan, args.store)
+            return collector.run() if args.action == 'collect' else collector.once()
+        store = Store(args.store)
+        if args.action == 'status':
+            return store.status()
+        if args.action == 'query':
+            return store.query(args.source, args.limit, args.confirmed)
+        if args.action == 'retry':
+            return store.retry(args.source)
+        row = store.db.execute('SELECT ref,source,observed,sha256,raw,error FROM records WHERE ref=?', (args.ref,)).fetchone()
+        if not row:
+            raise XocError('evidence_absent', 'Evidence was not found or has expired.')
+        import base64
+        return {**{k: row[k] for k in row.keys() if k != 'raw'}, 'raw_base64': base64.b64encode(row['raw']).decode()}
     if args.command == "lab":
         return run_lab(args.root, args.plan, args.action, args.isolated_vm)
     if args.command == "catalog":

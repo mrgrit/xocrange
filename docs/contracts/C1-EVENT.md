@@ -1,10 +1,10 @@
-# C1 이벤트 계약 v0.1.0
+# C1 이벤트 계약 v0.1 / v0.2
 
-상태: K03의 첫 실행 가능한 계약. [정식 스키마](../../src/xocrange/contracts/c1-event.json), [정규화기](../../src/xocrange/events.py), [합성 fixture](../../tests/fixtures/events/).
+상태: K03 기반 + K06의 v0.2 확장. 새 정규화 출력은 `xoc.event/0.2.0`이며 기존 v0.1 이벤트 검증을 유지한다. 버전이 식별 입력에 포함되므로 v0.1→v0.2 재변환은 새 event ID를 만든다. [정식 스키마](../../src/xocrange/contracts/c1-event.json), [정규화기](../../src/xocrange/events.py), [합성 fixture](../../tests/fixtures/events/).
 
 ## 범위와 신뢰 경계
 
-한 번에 최대 1 MiB의 소스 레코드 하나를 입력받아 C1 이벤트 배열을 반환한다. Suricata EVE alert, ModSecurity **2.x JSON audit**, kt66/xoc 접두사의 nftables 커널 로그를 지원한다. EVE의 다른 유형, ModSecurity 3.x/native audit, 파일 tail·회전·재시도·저장은 아직 구현하지 않았다. fixture는 예약된 문서용 IP를 사용한 합성 자료이며 실제 고객 트래픽을 포함하지 않는다.
+한 번에 최대 1 MiB의 소스 레코드 하나를 입력받아 C1 이벤트 배열을 반환한다. Suricata EVE alert, ModSecurity **2.x JSON audit**, kt66/xoc 접두사의 nftables 커널 로그를 지원한다. v0.2는 osquery 결과·Sysmon XML·auditd 이벤트 묶음·Apache access/error도 지원한다. EVE의 다른 유형과 ModSecurity 3.x/native audit는 현재 수집 프로필의 지원 범위 밖이다. 파일 수집·재시도·보관은 [SIEM 구현](../development/SIEM.md)을 따른다. fixture는 예약된 문서용 IP를 사용한 합성 자료이며 실제 고객 트래픽을 포함하지 않는다.
 
 `tenant_id`, `range_id`, `source_id`는 호출자의 Context에서만 가져온다. 원본 로그의 동일 이름 필드를 신뢰하지 않는다. CLI 인수 자체가 인증 수단은 아니다. 실제 수집기는 인증된 source 등록과 Context를 결합해야 한다. 로그 접두사·producer 표식도 출처 인증을 대신하지 않는다. ID 필드만으로 다중 사용자 격리가 완성되지 않는다.
 
@@ -50,3 +50,13 @@ ModSecurity는 transaction 1개와 audit message별 자식 이벤트를 만든�
 중복 JSON 키, NaN/무한대, 잘못된 endpoint, 범위를 벗어난 port, 알 수 없는 출력 필드는 거부한다. 스키마 오류는 입력 값을 포함하지 않는 오류 코드로 반환한다. 스키마는 패키지 안에서 읽으며 외부 참조를 조회하지 않는다.
 
 계약 버전은 `schema_version`으로 구분한다. 필수 필드·식별 알고리즘·의미가 변경되면 버전을 올리고 fixture 및 호환 계획을 함께 변경한다.
+
+## v0.2 추가 필드
+
+`process`(PID·부모 PID·실행 파일·이름·GUID), `user.id`, `host.name`, `file.path`, `http`(method·status_code·bytes), `log`(level·module·AH code), `osquery`(query·row_index·row_count·허용 목록 columns), `sysmon.event_id`, `audit`(serial·record_types·complete·arch·syscall·key)를 선택 필드로 추가했다. 프로세스 명령행·환경·URL query·임의 osquery 컬럼은 정규화 출력에 복사하지 않는다.
+
+이벤트 category에 host/process/file, type에 observation/audit/diagnostic, outcome에 success/failure를 추가했다. syscall 실패나 HTTP 오류는 `failure`이고, 실제 보안 장비 차단 판정인 `blocked`와 구분한다. auditd EOE가 없는 묶음은 idle timeout 후 `audit.complete=false`로 저장한다. XML DTD/외부 엔티티는 거부한다. ENRICHED audit의 ASCII GS는 줄바꿈이 아니다.
+
+이 문서 앞부분의 v0.1 식별·시간·최소화 규칙은 유지되며 새 출력의 schema_version만 v0.2로 대체한다. 원본 전체에는 민감한 내용이 있을 수 있다. 수집 저장소는 0700, DB는 0600이며 관리자만 접근한다. 정규화·원본 보존의 기본 기간은 7일이고, 미분석 outbox는 기간만으로 폐기하지 않는다.
+
+Sysmon의 9자리 소수 초는 원본에 그대로 보관하고 정규화 시 마이크로초 6자리로 절삭한다. Python 3.10과 3.14에서 동일한 결과를 보장한다.

@@ -210,7 +210,7 @@ def run_lab(root, name, action, isolated_vm=False):
         return report
     if action in ("up", "start"):
         options = ["up", "--build", "--detach"] if action == "up" else ["up", "--detach", "--no-build", "--pull", "never"]
-        engine.run(options, compose=True, timeout=1800 if action == "up" else 120)
+        engine.run(options + ["--remove-orphans"], compose=True, timeout=1800 if action == "up" else 120)
         return {"status": "started", "project": project, "acceptance": "not-yet-verified"}
     if "fixture-security-probe" not in result["lock"]["selected"]:
         raise XocError("probe_missing", "lab verify requires the explicit fixture-security-probe selection.")

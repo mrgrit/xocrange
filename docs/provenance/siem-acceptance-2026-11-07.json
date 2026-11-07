@@ -1,0 +1,297 @@
+{
+  "schema_version": "xoc.siem-validation/0.1.0",
+  "validated_at": "2026-11-07T14:32:28.475926+00:00",
+  "source_sha256": "9ddda09b3eca8e70261286eb612c193adfa06021f7780aa8815e4ad657697eca",
+  "hostname": "xoc",
+  "kernel": "7.0.0-43-generic",
+  "packages": {
+    "auditd": "1:4.1.2-1ubuntu0.1",
+    "osquery": "5.24.1-1.linux",
+    "sysmonforlinux": "1.6.0"
+  },
+  "wazuh_image": "wazuh/wazuh-manager:4.14.10",
+  "unit_tests": {
+    "python_3_10": 156,
+    "python_3_14": 156
+  },
+  "units": {
+    "xocrange-core": "active",
+    "xocrange-collector": "active",
+    "xocrange-osquery": "active",
+    "sysmon": "active",
+    "auditd": "active"
+  },
+  "packet_path_checks": {
+    "platform_health": true,
+    "landing_available": true,
+    "selected_target_available": true,
+    "source_ip_and_forwarded_header": true,
+    "fw_on_packet_path": true,
+    "ips_on_packet_path": true,
+    "fw_denies_other_port": true,
+    "no_direct_waf_bypass": true,
+    "no_direct_backend_bypass": true,
+    "waf_marker_blocked": true,
+    "ips_marker_blocked": true,
+    "ips_c1_block_evidence": true,
+    "waf_c1_block_evidence": true,
+    "ips_unavailable_blocks_path": true,
+    "path_recovers_after_ips_restart": true
+  },
+  "live_decoder_checks": {
+    "nftables": true,
+    "suricata": true,
+    "modsecurity": true,
+    "osquery": true,
+    "sysmon": true,
+    "auditd": true,
+    "apache-access": true,
+    "apache-error": true
+  },
+  "live_decoder_since": "2026-11-07T14:31:58.677304Z",
+  "reboot_changed": true,
+  "evidence_anchors_preserved": true,
+  "evidence_anchor_count": 20,
+  "siem": {
+    "sources": [
+      {
+        "source": "fw-nftables",
+        "checked": "2026-11-07T14:32:25.223407Z",
+        "status": "ready"
+      },
+      {
+        "source": "host-auditd",
+        "checked": "2026-11-07T14:32:25.227041Z",
+        "status": "ready"
+      },
+      {
+        "source": "host-osquery-results",
+        "checked": "2026-11-07T14:32:25.226026Z",
+        "status": "ready"
+      },
+      {
+        "source": "host-osquery-snapshots",
+        "checked": "2026-11-07T14:32:25.226462Z",
+        "status": "ready"
+      },
+      {
+        "source": "host-sysmon",
+        "checked": "2026-11-07T14:32:25.291331Z",
+        "status": "ready"
+      },
+      {
+        "source": "ips-suricata",
+        "checked": "2026-11-07T14:32:25.224003Z",
+        "status": "ready"
+      },
+      {
+        "source": "sensor-auditd",
+        "checked": "2026-11-07T14:32:09.222694Z",
+        "status": "ready"
+      },
+      {
+        "source": "sensor-sysmon",
+        "checked": "2026-11-07T14:32:09.222299Z",
+        "status": "ready"
+      },
+      {
+        "source": "sensor-xocrange-osquery",
+        "checked": "2026-11-07T14:32:09.222904Z",
+        "status": "ready"
+      },
+      {
+        "source": "wazuh",
+        "checked": "2026-11-07T14:32:25.396073Z",
+        "status": "ready"
+      },
+      {
+        "source": "wazuh-process",
+        "checked": "2026-11-07T14:32:09.310102Z",
+        "status": "ready"
+      },
+      {
+        "source": "web-access",
+        "checked": "2026-11-07T14:32:25.225002Z",
+        "status": "ready"
+      },
+      {
+        "source": "web-error",
+        "checked": "2026-11-07T14:32:25.225530Z",
+        "status": "ready"
+      },
+      {
+        "source": "web-modsecurity",
+        "checked": "2026-11-07T14:32:25.224480Z",
+        "status": "ready"
+      }
+    ],
+    "counts": [
+      {
+        "producer": "apache-access",
+        "events": 112,
+        "decoded": 112
+      },
+      {
+        "producer": "apache-error",
+        "events": 125,
+        "decoded": 125
+      },
+      {
+        "producer": "auditd",
+        "events": 8189,
+        "decoded": 8189
+      },
+      {
+        "producer": "modsecurity",
+        "events": 138,
+        "decoded": 138
+      },
+      {
+        "producer": "nftables",
+        "events": 277,
+        "decoded": 277
+      },
+      {
+        "producer": "osquery",
+        "events": 3717,
+        "decoded": 3717
+      },
+      {
+        "producer": "suricata",
+        "events": 26,
+        "decoded": 26
+      },
+      {
+        "producer": "sysmon",
+        "events": 116279,
+        "decoded": 116220
+      }
+    ],
+    "quarantined": 0,
+    "pending": 59,
+    "oldest_pending_seconds": 3,
+    "sysmon_source_lag_seconds": 3,
+    "status": "ready"
+  },
+  "containers": [
+    {
+      "service": "web",
+      "read_only": true,
+      "privileged": false,
+      "cap_add": [
+        "CAP_NET_ADMIN",
+        "CAP_SETGID",
+        "CAP_SETUID"
+      ],
+      "published_ports": {},
+      "mounts": [
+        {
+          "type": "volume",
+          "target": "/var/log/apache2"
+        }
+      ]
+    },
+    {
+      "service": "ips",
+      "read_only": true,
+      "privileged": false,
+      "cap_add": [
+        "CAP_NET_ADMIN",
+        "CAP_NET_RAW"
+      ],
+      "published_ports": {},
+      "mounts": [
+        {
+          "type": "volume",
+          "target": "/var/log/suricata"
+        }
+      ]
+    },
+    {
+      "service": "siem",
+      "read_only": true,
+      "privileged": false,
+      "cap_add": [
+        "CAP_CHOWN",
+        "CAP_DAC_OVERRIDE",
+        "CAP_SETGID",
+        "CAP_SETUID",
+        "CAP_SYS_CHROOT"
+      ],
+      "published_ports": {},
+      "mounts": [
+        {
+          "type": "volume",
+          "target": "/var/ossec/logs"
+        }
+      ]
+    },
+    {
+      "service": "platform",
+      "read_only": true,
+      "privileged": false,
+      "cap_add": [],
+      "published_ports": {},
+      "mounts": []
+    },
+    {
+      "service": "lab-target",
+      "read_only": true,
+      "privileged": false,
+      "cap_add": [],
+      "published_ports": {},
+      "mounts": []
+    },
+    {
+      "service": "fw",
+      "read_only": true,
+      "privileged": false,
+      "cap_add": [
+        "CAP_NET_ADMIN"
+      ],
+      "published_ports": {},
+      "mounts": [
+        {
+          "type": "volume",
+          "target": "/var/log/nftables"
+        }
+      ]
+    },
+    {
+      "service": "lab-client",
+      "read_only": true,
+      "privileged": false,
+      "cap_add": [],
+      "published_ports": {},
+      "mounts": []
+    }
+  ],
+  "selection_exclusion": {
+    "selected": [
+      "platform",
+      "security-path",
+      "fixture-security-probe"
+    ],
+    "units": {
+      "xocrange-collector": "inactive",
+      "xocrange-osquery": "inactive",
+      "sysmon": "inactive"
+    },
+    "containers": [
+      "web",
+      "ips",
+      "fw",
+      "platform",
+      "lab-target",
+      "lab-client"
+    ],
+    "siem_volume_retained": true,
+    "passed": true
+  },
+  "limitations": [
+    "Wazuh analysis backend and local SQLite search; Indexer/Dashboard are not deployed.",
+    "One dedicated VM was upgraded iteratively, not reset for a pristine final-revision installation.",
+    "No production throughput, long-term storage exhaustion, or remote-agent authentication acceptance.",
+    "Windows Sysmon exported XML has fixture coverage, not a live Windows VM test."
+  ]
+}

@@ -160,9 +160,20 @@ def plan(root: Path, *, preset="bootstrap", include=(), without=(), allow_fixtur
         security_path = identifier == "security-path" and manifest["kind"] == "component"
         if security_path and (manifest["status"] != "experimental" or not allow_experimental):
             raise XocError("experimental_component", "The security-path runtime requires explicit experimental selection.")
-        fragment = validate(yaml_document(fragment_path), "security-compose-fragment" if security_path else "compose-fragment")
+        siem = identifier == "siem" and manifest["kind"] == "component"
+        schema = "security-compose-fragment" if security_path else "siem-compose-fragment" if siem else "compose-fragment"
+        fragment = validate(yaml_document(fragment_path), schema)
+        if siem:
+            service = fragment["services"]["siem"]
+            if fragment["networks"] != {"int": {"internal": True}} or service["networks"] != ["int"] or any(k in service for k in ("ports", "sysctls", "environment", "command", "entrypoint")):
+                raise XocError("siem_privileges", "SIEM has only its private log volume and internal network.")
+
         if security_path:
             security_role_policy(fragment)
+        for volume, definition in fragment.get("volumes", {}).items():
+            if volume in compose.setdefault("volumes", {}):
+                raise XocError("volume_conflict", "Persistent volume names must have one owner.")
+            compose["volumes"][volume] = definition
         reject_interpolation(fragment)
         if set(fragment["networks"]) != set(manifest["networks"]):
             raise XocError("undeclared_network", "Fragment networks must match the descriptor declaration.")

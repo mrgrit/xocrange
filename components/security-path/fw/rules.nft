@@ -8,13 +8,16 @@ table inet xoc_fw {
         type filter hook input priority filter; policy drop;
         iifname "lo" accept
         ct state established,related accept
+        limit rate 10/second burst 20 packets log prefix "[xoc-fw] DROP " group 10 snaplen 128 queue-threshold 1
         counter name blocked_input drop
     }
     chain forward {
         type filter hook forward priority filter; policy drop;
         ct state invalid drop
+        ip saddr 172.29.10.0/24 ip daddr 172.29.12.80 tcp dport 8080 ct state new limit rate 10/second burst 20 packets log prefix "[xoc-fw] ACCEPT " group 10 snaplen 128 queue-threshold 1
         ip saddr 172.29.10.0/24 ip daddr 172.29.12.80 tcp dport 8080 counter name forwarded_web accept
         ip saddr 172.29.12.80 ip daddr 172.29.10.0/24 tcp sport 8080 ct state established,related accept
+        limit rate 10/second burst 20 packets log prefix "[xoc-fw] DROP " group 10 snaplen 128 queue-threshold 1
     }
 }
 add table ip xoc_dnat

@@ -19,6 +19,8 @@ services:
     sysctls:
       net.ipv4.ip_forward: '1'
     restart: 'no'
+    volumes:
+    - fw-logs:/var/log/nftables
   ips:
     build:
       context: .
@@ -43,9 +45,10 @@ services:
     tmpfs:
     - /run:size=8m,mode=0755
     - /tmp:size=16m,mode=1777
-    - /var/log/suricata:size=32m,mode=0755
     depends_on:
     - fw
+    volumes:
+    - ips-logs:/var/log/suricata
   web:
     build:
       context: .
@@ -70,12 +73,13 @@ services:
     tmpfs:
     - /tmp:size=16m,mode=1777
     - /run/apache2:size=8m,mode=0755,uid=33,gid=33
-    - /var/log/apache2:size=32m,mode=0755,uid=33,gid=33
     - /var/lib/modsecurity:size=8m,mode=0755,uid=33,gid=33
     depends_on:
     - ips
     environment:
       XOC_WEB_TARGETS: '[]'
+    volumes:
+    - web-logs:/var/log/apache2
 networks:
   int:
     internal: true
@@ -106,3 +110,7 @@ networks:
       config:
       - subnet: 172.29.12.0/24
         gateway: 172.29.12.254
+volumes:
+  fw-logs: {}
+  ips-logs: {}
+  web-logs: {}

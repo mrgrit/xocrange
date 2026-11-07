@@ -57,7 +57,7 @@ def test_boot_start_uses_validated_local_images_without_build_or_pull(lab_checko
     calls = []
     monkeypatch.setattr(lab.Docker, "run", lambda self, args, **kwargs: calls.append(args))
     assert lab.run_lab(lab_checkout, "test-lab", "start", True)["status"] == "started"
-    assert calls == [["up", "--detach", "--no-build", "--pull", "never"]]
+    assert calls == [["up", "--detach", "--no-build", "--pull", "never", "--remove-orphans"]]
 
 
 def test_cleanup_works_after_bridge_configuration_changes(lab_checkout, monkeypatch):

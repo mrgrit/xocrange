@@ -116,7 +116,10 @@
       "additionalProperties": false,
       "properties": {
         "C1": {
-          "const": "0.1.0"
+          "enum": [
+            "0.1.0",
+            "0.2.0"
+          ]
         }
       }
     },

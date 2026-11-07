@@ -1,0 +1,3 @@
+-w /etc/xocrange -p wa -k xoc_config
+-w /usr/bin/sudo -p x -k xoc_privilege
+-w /usr/bin/true -p x -k xoc_probe

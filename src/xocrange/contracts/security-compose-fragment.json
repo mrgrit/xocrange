@@ -5,7 +5,8 @@
   "additionalProperties": false,
   "required": [
     "services",
-    "networks"
+    "networks",
+    "volumes"
   ],
   "properties": {
     "services": {
@@ -88,6 +89,13 @@
           }
         }
       }
+    },
+    "volumes": {
+      "const": {
+        "fw-logs": {},
+        "ips-logs": {},
+        "web-logs": {}
+      }
     }
   },
   "definitions": {
@@ -106,7 +114,8 @@
         "user",
         "cap_drop",
         "security_opt",
-        "cap_add"
+        "cap_add",
+        "volumes"
       ],
       "anyOf": [
         {
@@ -293,7 +302,20 @@
               "/var/log/suricata:size=32m,mode=0755",
               "/run/apache2:size=8m,mode=0755,uid=33,gid=33",
               "/var/log/apache2:size=32m,mode=0755,uid=33,gid=33",
-              "/var/lib/modsecurity:size=8m,mode=0755,uid=33,gid=33"
+              "/var/lib/modsecurity:size=8m,mode=0755,uid=33,gid=33",
+              "/var/log/nftables:size=24m,mode=0755"
+            ]
+          }
+        },
+        "volumes": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1,
+          "items": {
+            "enum": [
+              "fw-logs:/var/log/nftables",
+              "ips-logs:/var/log/suricata",
+              "web-logs:/var/log/apache2"
             ]
           }
         }

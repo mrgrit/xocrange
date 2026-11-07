@@ -30,6 +30,9 @@ def security_role_policy(fragment):
     if fragment["networks"]["int"] != {"internal": True}:
         raise XocError("security_topology", "The backend network must remain internal.")
     for role, service in fragment["services"].items():
+        expected_volume = {"fw": "fw-logs:/var/log/nftables", "ips": "ips-logs:/var/log/suricata", "web": "web-logs:/var/log/apache2"}[role]
+        if service.get("volumes") != [expected_volume]:
+            raise XocError("security_storage", "Each device may mount only its own log volume.")
         if set(service["cap_add"]) != capabilities[role] or service.get("ports"):
             raise XocError("security_privileges", "Device capabilities are role-specific; host publishing is not enabled in this lab.")
         if service["networks"] != LAB_ENDPOINTS[role]:

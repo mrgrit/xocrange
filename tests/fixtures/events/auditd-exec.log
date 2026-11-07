@@ -1,0 +1,4 @@
+type=SYSCALL msg=audit(1794056400.125:42): arch=c000003e syscall=59 success=yes exit=0 ppid=1 pid=42 uid=0 comm="true" exe="/usr/bin/true" key="xoc_probe"
+type=EXECVE msg=audit(1794056400.125:42): argc=2 a0="true" a1="DO-NOT-EXPORT"
+type=PROCTITLE msg=audit(1794056400.125:42): proctitle=74727565
+type=EOE msg=audit(1794056400.125:42):

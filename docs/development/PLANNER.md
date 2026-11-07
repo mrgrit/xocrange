@@ -62,3 +62,7 @@ platform은 내부 포트 8080의 `/healthz`만 제공한다. `lab verify`가 �
 - [PyYAML 문서](https://pyyaml.org/wiki/PyYAMLDocumentation)
 
 YAML은 SafeLoader 기반이며 중복 키·별칭·임의 객체 태그를 거부한다. 실제 Docker 문법 검증은 생성 파일에 대한 `docker compose … config --quiet`로 별도 수행한다.
+
+## SIEM 내장 역할
+
+선택 가능한 `siem`은 experimental이며 `--allow-experimental --include siem`으로 계획한다. 일반 모듈은 volume/추가 capability 권한을 얻지 않는다. 내장 security-path의 장비별 로그 볼륨과 내장 siem의 자체 로그 볼륨·큐 tmpfs만 별도 스키마와 역할 검사로 허용한다. Compose 기동은 검증된 전용 프로젝트에서 제거된 서비스의 orphan을 정리하되 볼륨을 삭제하지 않는다. [결정 근거](../adr/0005-core-telemetry.md)

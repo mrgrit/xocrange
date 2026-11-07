@@ -1,0 +1,1 @@
+{"name": "core_processes", "hostIdentifier": "xoc-fixture", "unixTime": 1794056400, "action": "added", "columns": {"pid": "42", "parent": "1", "uid": "0", "name": "true", "path": "/usr/bin/true", "cmdline": "DO-NOT-EXPORT"}}
