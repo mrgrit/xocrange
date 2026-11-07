@@ -202,6 +202,8 @@ def plan(root: Path, *, preset="bootstrap", include=(), without=(), allow_fixtur
     for name, service in services.items():
         if not set(service.get("depends_on", [])).issubset(services):
             raise XocError("missing_service", "A service dependency is absent from the assembled plan.")
+        if service.get("ports") and all(compose["networks"][network]["internal"] for network in service["networks"]):
+            raise XocError("internal_port_publish", "Docker cannot publish host ports for a service connected only to internal networks.")
         for port in service.get("ports", []):
             for previous in bindings:
                 overlaps = port["host_ip"] == previous["host_ip"] or bool({port["host_ip"], previous["host_ip"]} & {"0.0.0.0", "::"})
@@ -224,7 +226,7 @@ def plan(root: Path, *, preset="bootstrap", include=(), without=(), allow_fixtur
         "Offline plan only; no images built, containers started, or host resources checked.",
         "Image tags are not digest-locked; this is not a reproducible release lock.",
         "Bootstrap is a health endpoint, not the completed Community platform.",
-        *(["Security-path is experimental; Ubuntu 26.04 isolated-VM packet-path validation is pending."] if "security-path" in selected else []),
+        *(["Security-path is experimental; run packet-path acceptance on each dedicated Ubuntu 26.04 VM."] if "security-path" in selected else []),
     ]}
 
 

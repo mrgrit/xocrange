@@ -1,6 +1,6 @@
 # 빈 Ubuntu VM 자동 설치
 
-상태: 개발용 설치기 구현, 실제 VM 설치·통신·재부팅 검증 대기. 현재 실행 대상은 Ubuntu Server 26.04 LTS amd64 전용 VM이다.
+상태: 실제 VM 자동 설치·통신 검증 통과. 재실행·재부팅을 포함한 상세 결과는 [VM 검증 기록](VM-VALIDATION-2026-11-07.md)을 따른다. 현재 실행 대상은 Ubuntu Server 26.04 LTS amd64 전용 VM이다.
 
 ## 사용자 진입점
 
@@ -75,7 +75,7 @@ sudo journalctl -u xocrange-core.service --no-pager
 sudo xoc catalog
 ```
 
-현재 외부 사용자 포털은 없다. platform health는 VM의 `127.0.0.1:18080/healthz`에서만 제공하고, 실습 경로는 내부 probe로 검증한다. 서비스 등록 성공은 실제 재부팅 검증과 구분하며 결과의 `reboot_verified`는 별도 검증 전까지 false다.
+현재 외부 사용자 포털과 게시된 호스트 포트는 없다. platform health는 컨테이너 내부의 `127.0.0.1:8080/healthz`에서 확인하고, 실습 경로는 내부 probe로 검증한다. 서비스 등록 성공은 실제 재부팅 검증과 구분하며 결과의 `reboot_verified`는 별도 검증 전까지 false다.
 
 부팅 시 검증된 계획·로컬 이미지로 `lab start`를 실행하고 `lab verify`까지 통과해야 서비스 성공으로 표시한다. `lab start`는 `--no-build --pull never`를 사용한다. 종료는 해당 프로젝트의 `lab down`만 호출한다.
 

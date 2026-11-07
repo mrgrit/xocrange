@@ -52,7 +52,7 @@ lock에는 Core 버전, 선택·제외·fixture 허용 여부, 사용한 입력 
 
 ## bootstrap과 doctor
 
-platform은 stdlib HTTP 서버의 `/healthz`만 제공한다. Compose의 host 포트는 `127.0.0.1:18080`, 내부 포트는 8080이다. 응답에는 `status=bootstrap`, `ready_for_training=false`가 들어간다. 인증·registry·감사·훈련 UI는 아직 없다.
+platform은 내부 포트 8080의 `/healthz`만 제공한다. `lab verify`가 컨테이너 내부에서 상태를 확인한다. Docker는 내부 네트워크만 연결한 서비스의 host 포트를 게시하지 않으므로 그런 계획은 `internal_port_publish`로 거부한다. 응답에는 `status=bootstrap`, `ready_for_training=false`가 들어간다. 인증·registry·감사·훈련 UI는 아직 없다.
 
 `doctor`는 계획 검증 결과와 Docker CLI 파일 존재 여부를 반환한다. Docker daemon·Compose 플러그인 버전·포트 점유·자원·실제 통신은 `not-checked` 또는 후속 범위다. `configuration-valid`를 설치 가능 판정으로 사용하지 않는다.
 

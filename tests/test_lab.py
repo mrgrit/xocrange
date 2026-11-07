@@ -78,14 +78,15 @@ def fake_host(tmp_path, monkeypatch):
     (tmp_path / "sys/module/nfnetlink_queue").mkdir(parents=True)
     monkeypatch.setattr(lab, "Path", lambda value: tmp_path / value.lstrip("/"))
     monkeypatch.setattr(lab.subprocess, "run", lambda args, **_: SimpleNamespace(returncode=0, stdout="kvm\n" if args[0] == "systemd-detect-virt" else "[]"))
-    state = {"containers": [], "endpoint": "unix:///var/run/docker.sock", "security_options": []}
+    state = {"containers": [], "endpoint": "unix:///var/run/docker.sock", "security_options": [], "networks": []}
 
     class Engine:
         def run(self, args):
             if args[0] == "context": return state["endpoint"]
             if args[0] == "info": return json.dumps({"OSType": "linux", "SecurityOptions": state["security_options"]})
             if args[0] == "ps": return "\n".join(json.dumps(item) for item in state["containers"])
-            if args[0] == "network": return ""
+            if args[:2] == ["network", "ls"]: return "builtin" if state["networks"] else ""
+            if args[:2] == ["network", "inspect"]: return json.dumps(state["networks"])
             if args[0] == "compose": return "Docker Compose version 5"
             raise AssertionError(args)
 
@@ -94,6 +95,12 @@ def fake_host(tmp_path, monkeypatch):
 
 def test_clean_dedicated_vm_passes_prerequisites(fake_host):
     _, _, engine = fake_host
+    assert lab.host_check(engine, "xoc-core-security-path")["status"] == "ready"
+
+
+def test_builtin_docker_networks_can_have_null_ipam_config(fake_host):
+    _, state, engine = fake_host
+    state["networks"] = [{"Name": "host", "IPAM": {"Config": None}}, {"Name": "none", "IPAM": None}]
     assert lab.host_check(engine, "xoc-core-security-path")["status"] == "ready"
 
 

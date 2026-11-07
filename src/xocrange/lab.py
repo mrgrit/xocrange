@@ -72,7 +72,7 @@ def host_check(engine, project):
         owned, overlaps = set(), []
         for network in networks:
             is_owned = (network.get("Labels") or {}).get("com.docker.compose.project") == project
-            for config in network.get("IPAM", {}).get("Config", []):
+            for config in ((network.get("IPAM") or {}).get("Config") or []):
                 subnet = config.get("Subnet", "")
                 if ":" in subnet or not subnet:
                     continue
@@ -116,8 +116,8 @@ def records(text):
 
 def verify(engine):
     checks, evidence = {}, {}
-    log_sources = [("suricata", "ips", "/var/log/suricata/eve.json"),
-                   ("modsecurity", "web", "/var/log/apache2/modsec_audit.json")]
+    log_sources = [("suricata", "ips", "0:0", "/var/log/suricata/eve.json"),
+                   ("modsecurity", "web", "33:33", "/var/log/apache2/modsec_audit.json")]
 
     def probe(*options):
         return json.loads(engine.run(["exec", "-T", "lab-client", "python", "-B", "/app/probe.py", *options], compose=True))
@@ -134,8 +134,12 @@ def verify(engine):
         except XocError:
             pass
         time.sleep(2)
-    offsets = {source: int(engine.run(["exec", "-T", service, "wc", "-c", path], compose=True).split()[0])
-               for source, service, path in log_sources}
+    health_reader = "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:8080/healthz', timeout=3).read(16384).decode())"
+    health = json.loads(engine.run(["exec", "-T", "platform", "python", "-B", "-c", health_reader], compose=True))
+    checks["platform_health"] = isinstance(health, dict) and health.get("service") == "xocrange-core" and health.get("status") == "bootstrap"
+    # Dropped DAC capabilities also constrain uid 0; use each log's actual owner.
+    offsets = {source: int(engine.run(["exec", "-T", "--user", user, service, "wc", "-c", path], compose=True).split()[0])
+               for source, service, user, path in log_sources}
     before_fw, before_ips = counter("fw", "forwarded_web"), counter("ips", "inspected")
     landing = probe(); target = probe("--host", "sample.xoc.test")
     checks["landing_available"] = landing.get("status") == 200
@@ -156,12 +160,12 @@ def verify(engine):
     # Let buffered audit records reach the bounded tmpfs logs.
     time.sleep(2)
     observed = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
-    for source, service, path in log_sources:
+    for source, service, user, path in log_sources:
         # Only this run's appended records count; old alerts must not prove a new block.
         reader = ("import os,sys; f=open(sys.argv[1],'rb'); offset=int(sys.argv[2]); "
                   "assert os.fstat(f.fileno()).st_size>=offset; f.seek(offset); "
                   "data=f.read(1048577); assert len(data)<=1048576; sys.stdout.buffer.write(data)")
-        raw = engine.run(["exec", "-T", service, "python3", "-B", "-c", reader, path, str(offsets[source])], compose=True)
+        raw = engine.run(["exec", "-T", "--user", user, service, "python3", "-B", "-c", reader, path, str(offsets[source])], compose=True)
         normalized = []
         for index, record in enumerate(records(raw)):
             if source == "suricata" and json.loads(record).get("event_type") != "alert":

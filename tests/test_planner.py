@@ -39,7 +39,7 @@ def test_bootstrap_plan_determinism_and_portable_lock(checkout, tmp_path_factory
     first = plan(checkout)
     assert first == plan(checkout)
     assert first["lock"]["selected"] == ["platform"]
-    assert first["compose"]["services"]["platform"]["ports"][0]["host_ip"] == "127.0.0.1"
+    assert "ports" not in first["compose"]["services"]["platform"]
     other = tmp_path_factory.mktemp("relocated") / "repo"
     shutil.copytree(checkout, other)
     assert first["lock"] == plan(other)["lock"]
@@ -116,9 +116,23 @@ def test_invalid_fragments_are_rejected(checkout, mutation, code):
 def test_port_overlaps_include_wildcard_bindings(checkout, host):
     folder = module(checkout)
     fragment = yaml_document(folder / "compose.yaml")
+    fragment["networks"]["int"]["internal"] = False
     fragment["services"]["extension"]["ports"] = [{"target": 1234, "published": 18080, "host_ip": host, "protocol": "tcp"}]
     save(folder / "compose.yaml", fragment)
+    platform_path = checkout / "components/platform/compose.yaml"
+    platform = yaml_document(platform_path)
+    platform["networks"]["int"]["internal"] = False
+    platform["services"]["platform"]["ports"] = [{"target": 8080, "published": 18080, "host_ip": "127.0.0.1", "protocol": "tcp"}]
+    save(platform_path, platform)
     expect("port_conflict", lambda: plan(checkout, include=["extension"]))
+
+
+def test_host_ports_on_internal_only_networks_are_rejected(checkout):
+    path = checkout / "components/platform/compose.yaml"
+    fragment = yaml_document(path)
+    fragment["services"]["platform"]["ports"] = [{"target": 8080, "published": 18080, "host_ip": "127.0.0.1", "protocol": "tcp"}]
+    save(path, fragment)
+    expect("internal_port_publish", lambda: plan(checkout))
 
 
 def test_duplicate_config_and_component_ids(checkout):

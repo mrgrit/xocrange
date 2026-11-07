@@ -6,7 +6,7 @@
 
 선택한 기능으로 구성하는 보안 운영 실습 환경. Core의 공통 계약 위에 Live Fire·Joint Force 모듈을 연결한다.
 
-**개발 초기 단계:** C1 이벤트 정규화와 설치 계획 CLI가 동작한다. fw·IPS·WAF의 실험용 구성과 VM 검증 명령을 추가했으며 실제 통신 검증은 대기 중이다. SIEM·콘솔·포털 이식은 후속 범위다. `bootstrap`은 설치 기반 확인용 health 서비스이며, 훈련 가능한 Community 배포본은 아직 아니다.
+**개발 초기 단계:** Ubuntu 26.04 VM에서 자동 설치와 fw·IPS·WAF의 실제 통신·차단 검증을 통과했다. C1 이벤트 정규화와 모듈 설치 계획 CLI가 동작한다. SIEM·콘솔·포털 이식은 후속 범위다. `bootstrap`은 설치 기반 확인용 health 서비스이며, 훈련 가능한 Community 배포본은 아직 아니다.
 
 ## 지금 실행할 수 있는 것
 
@@ -18,7 +18,7 @@
 | 구성요소 목록 | 필수 platform + 선택 기능 11개; 준비된 기능과 계획 단계 구분 |
 | 확장 경계 | 명시적으로 선택한 테스트 fixture 조합; C7 구현 전 상용 모듈 거부 |
 | 보안 경로 실험 | fw DNAT·Suricata NFQUEUE·WAF, 선택 타깃 등록, 전용 VM 검사·기동·검증 명령 |
-| 단일 실행 설치기 | OS 검사 → 의존성 설치 → 모듈 구성 → 빌드·기동 → 통신 검사 → 부팅 서비스 등록; 실제 VM 설치 검증 대기 |
+| 단일 실행 설치기 | OS 검사 → 의존성 설치 → 모듈 구성 → 빌드·기동 → 통신 검사 → 부팅 서비스 등록; 실제 VM에서 실행 완료 |
 
 ## 빈 Linux에서 설치
 
@@ -30,7 +30,7 @@ Ubuntu Server 26.04 LTS amd64 전용 VM에서 저장소 또는 별도로 받은 
 sudo bash install.sh
 ```
 
-**현재 개발 버전의 설치 범위는 platform + 방화벽 + IPS + WAF + 통신 검증용 타깃이다.** 실행 시 이 실험 구성을 선택한다. SIEM·콘솔·포털까지 완성된 Core 전체 설치로 표시하지 않는다. 원격 VM에서 설치·통신·재부팅 검증은 아직 완료하지 않았다.
+**현재 개발 버전의 설치 범위는 platform + 방화벽 + IPS + WAF + 통신 검증용 타깃이다.** 실행 시 이 실험 구성을 선택한다. SIEM·콘솔·포털까지 완성된 Core 전체 설치로 표시하지 않는다. 실제 환경과 설치·재실행·재부팅 결과는 [VM 검증 기록](docs/development/VM-VALIDATION-2026-11-07.md)에 구분해 기록한다.
 
 설치기는 필요한 패키지를 설치하고 Docker와 containerd의 데이터 경로를 함께 구성한다. 기동 후 실제 차단·우회 방지·출처 보존·장애 복구 검사에 실패하면 비정상 종료하며 완료 상태를 기록하지 않는다. [설치 동작·선택 옵션·재실행](docs/development/INSTALLER.md)
 
@@ -65,7 +65,7 @@ xoc plan --allow-fixtures --include fixture-echo
 
 ## 보안 경로 실험 구성
 
-새 검증 호스트는 **Ubuntu Server 26.04 LTS x86_64 전용 VM**을 기준으로 한다. 아래 계획 생성은 Docker를 실행하지 않는다. `--allow-experimental`은 미검증 실험 구성을 선택한다는 명시적 표시다.
+새 검증 호스트는 **Ubuntu Server 26.04 LTS x86_64 전용 VM**을 기준으로 한다. 아래 계획 생성은 Docker를 실행하지 않는다. `--allow-experimental`은 정식 배포 전 실험 구성을 선택한다는 명시적 표시이며, 새 환경마다 실제 수용 검사를 실행한다.
 
 ```bash
 xoc plan --preset security-path --allow-experimental \
@@ -95,6 +95,7 @@ xoc events validate --input /tmp/xoc-events.json
 - [첫 구현 결과와 다음 작업](docs/development/IMPLEMENTATION-01.md)
 - [보안 경로 분리 결과와 검증 대기 항목](docs/development/IMPLEMENTATION-02.md)
 - [한 번 실행 설치기](docs/development/INSTALLER.md) · [설치기 구현·검증 상태](docs/development/IMPLEMENTATION-03.md)
+- [실제 Ubuntu VM 검증 기록](docs/development/VM-VALIDATION-2026-11-07.md)
 - [Ubuntu 26.04 VM 구성·실행 절차](docs/development/SECURITY-PATH-LAB.md)
 - [C1 v0.1 계약과 소스별 매핑](docs/contracts/C1-EVENT.md)
 - [설치 manifest·CLI 사용법](docs/development/PLANNER.md)

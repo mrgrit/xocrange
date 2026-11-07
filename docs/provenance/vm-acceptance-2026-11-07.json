@@ -1,0 +1,168 @@
+{
+  "schema_version": "xoc.vm-acceptance/0.1",
+  "checked_at": "2026-11-07T13:07:35.671739+00:00",
+  "scope": "experimental-security-path",
+  "community_complete": false,
+  "hostname": "xoc",
+  "os": "Ubuntu Server 26.04.1 LTS amd64",
+  "kernel": "7.0.0-43-generic",
+  "vcpu": 8,
+  "memory_gib": 16,
+  "disk_gib": 300,
+  "docker_engine": "29.9.3",
+  "compose": "5.7.0",
+  "containerd": "containerd containerd v2.4.2 b7a25261e029d68978bbf290df0a62fc819b3c51",
+  "python": "Python 3.14.4",
+  "suricata": "This is Suricata version 8.0.3 RELEASE",
+  "modsecurity_package": "2.9.12-2build1",
+  "source_release_sha256": "5874efa37c8d091a5e71b2f92ec491ab7afe24fc51217fbcd5b1658092389c0e",
+  "plan_id": "407cff482ebd4527bc43800781664941191e47574c0b9c69e3a94978363fddbf",
+  "install_completed": true,
+  "same_source_reinstall_passed": true,
+  "reboot_observed": true,
+  "hostname_persisted": true,
+  "boot_service_active": true,
+  "acceptance_after_boot": {
+    "platform_health": true,
+    "landing_available": true,
+    "selected_target_available": true,
+    "source_ip_and_forwarded_header": true,
+    "fw_on_packet_path": true,
+    "ips_on_packet_path": true,
+    "fw_denies_other_port": true,
+    "no_direct_waf_bypass": true,
+    "no_direct_backend_bypass": true,
+    "waf_marker_blocked": true,
+    "ips_marker_blocked": true,
+    "ips_c1_block_evidence": true,
+    "waf_c1_block_evidence": true,
+    "ips_unavailable_blocks_path": true,
+    "path_recovers_after_ips_restart": true
+  },
+  "published_host_ports": [],
+  "docker_data_root": "/var/lib/xocrange/data/docker",
+  "tests": {
+    "python_3_10": 122,
+    "python_3_14": 122
+  },
+  "containers": [
+    {
+      "service": "web",
+      "running": true,
+      "image_id": "sha256:84d3509440ce17fa834698033f599c6e2806dd0b352fda56d88009541ede7729",
+      "read_only": true,
+      "privileged": false,
+      "cap_add": [
+        "CAP_NET_ADMIN",
+        "CAP_SETGID",
+        "CAP_SETUID"
+      ],
+      "cap_drop": [
+        "ALL"
+      ]
+    },
+    {
+      "service": "ips",
+      "running": true,
+      "image_id": "sha256:b73999ba0e3ad532576e4c92b64bbc7a112a929fe011b0e6902c2c9f26af2bd7",
+      "read_only": true,
+      "privileged": false,
+      "cap_add": [
+        "CAP_NET_ADMIN",
+        "CAP_NET_RAW"
+      ],
+      "cap_drop": [
+        "ALL"
+      ]
+    },
+    {
+      "service": "fw",
+      "running": true,
+      "image_id": "sha256:e98e66b976d1aaaf06e2152e342432e92cb75a476de189d325396ce749982c42",
+      "read_only": true,
+      "privileged": false,
+      "cap_add": [
+        "CAP_NET_ADMIN"
+      ],
+      "cap_drop": [
+        "ALL"
+      ]
+    },
+    {
+      "service": "lab-client",
+      "running": true,
+      "image_id": "sha256:aec26d1ef262c117d924e84c8e40e28b01e7f0536dd90e64a892da64c05f17d1",
+      "read_only": true,
+      "privileged": false,
+      "cap_add": [],
+      "cap_drop": [
+        "ALL"
+      ]
+    },
+    {
+      "service": "platform",
+      "running": true,
+      "image_id": "sha256:ca781728d75b809cac9b9ad250fdfce47a1ff82be7bb1d7ed4f57bf451a0de7e",
+      "read_only": true,
+      "privileged": false,
+      "cap_add": [],
+      "cap_drop": [
+        "ALL"
+      ]
+    },
+    {
+      "service": "lab-target",
+      "running": true,
+      "image_id": "sha256:432ac44b168e9aee4bd8a24e40a5ee5efbb117e4aa8c389916e80082d8892b24",
+      "read_only": true,
+      "privileged": false,
+      "cap_add": [],
+      "cap_drop": [
+        "ALL"
+      ]
+    }
+  ],
+  "idle_container_stats": [
+    {
+      "service": "web",
+      "cpu_percent": "0.01%",
+      "memory_usage": "61.44MiB / 15.07GiB",
+      "pids": "56"
+    },
+    {
+      "service": "ips",
+      "cpu_percent": "0.74%",
+      "memory_usage": "37.59MiB / 15.07GiB",
+      "pids": "4"
+    },
+    {
+      "service": "fw",
+      "cpu_percent": "0.00%",
+      "memory_usage": "24.59MiB / 15.07GiB",
+      "pids": "1"
+    },
+    {
+      "service": "lab-client",
+      "cpu_percent": "0.00%",
+      "memory_usage": "1.973MiB / 15.07GiB",
+      "pids": "1"
+    },
+    {
+      "service": "platform",
+      "cpu_percent": "0.02%",
+      "memory_usage": "33.86MiB / 15.07GiB",
+      "pids": "1"
+    },
+    {
+      "service": "lab-target",
+      "cpu_percent": "0.02%",
+      "memory_usage": "25.84MiB / 15.07GiB",
+      "pids": "1"
+    }
+  ],
+  "limitations": [
+    "Experimental profile only; SIEM, console and portal are not installed.",
+    "Final corrected revision was not tested as an untouched first run on a freshly reset OS.",
+    "Image and apt versions are not yet pinned for reproducible releases."
+  ]
+}

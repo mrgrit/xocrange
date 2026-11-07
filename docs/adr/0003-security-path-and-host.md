@@ -4,7 +4,7 @@
 
 ## 호스트 기준
 
-새 Core 검증 VM은 Ubuntu Server 26.04 LTS x86_64를 사용한다. 기존 kt66의 Ubuntu 22.04 환경은 비교·복구 기준으로 유지한다. 26.04는 사용자가 선택한 검증 대상이며, 아직 Core 통합 테스트로 지원을 인증한 상태는 아니다.
+새 Core 검증 VM은 Ubuntu Server 26.04 LTS x86_64를 사용한다. 기존 kt66의 Ubuntu 22.04 환경은 비교·복구 기준으로 유지한다. 26.04에서 experimental security-path의 실제 설치·통신 검증을 통과했으며, 전체 Core 지원 인증과는 구분한다. [검증 환경과 결과](../development/VM-VALIDATION-2026-11-07.md)
 
 호스트 OS와 컨테이너 이미지의 배포판·패키지 버전은 별도 항목으로 기록한다. 버전 변경 후 nftables, Suricata NFQUEUE, Docker 브리지, WAF 응답 경로와 출처 IP 보존을 검증한다. Docker가 공식 지원하는 호스트 버전이라는 사실만으로 이 보안 경로의 동작을 보증하지 않는다.
 

@@ -245,7 +245,6 @@ fi
 "${xoc[@]}" lab start --plan "$plan_name" --isolated-vm
 stage acceptance
 "${xoc[@]}" lab verify --plan "$plan_name" --isolated-vm | tee "$state/acceptance-$run_id.json"
-curl --fail --silent --show-error --max-time 10 http://127.0.0.1:18080/healthz
 
 stage boot-service
 # Reboot starts the same validated plan and local images; never silently rebuilds.

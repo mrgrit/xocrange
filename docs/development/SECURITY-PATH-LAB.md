@@ -1,6 +1,6 @@
 # Ubuntu 26.04 보안 경로 검증 VM
 
-상태: 실행 구성·검증 코드를 준비했고, 실제 VM build/통신 검증은 아직 수행하지 않았다. 기존 kt66 호스트에서 이 절차를 실행하지 않는다.
+상태: 전용 Ubuntu 26.04 VM에서 이미지 빌드·실제 통신 검증을 통과했다. [실측 검증 기록](VM-VALIDATION-2026-11-07.md)을 참조한다. 기존 kt66 호스트에서 이 절차를 실행하지 않는다.
 
 ## VM 준비
 
@@ -31,9 +31,9 @@ flowchart LR
     web -->|"int · HTTP proxy"| target["선택한 타깃"]
 ```
 
-ext/pipe/dmz는 내부 브리지이고 masquerade를 끈다. web의 IP forwarding은 끄고 HTTP 프록시만 허용한다. WAF까지 클라이언트의 L3 출처를 보존하며, WAF는 외부에서 전달한 X-Forwarded-For를 제거한 뒤 실제 출처를 backend에 전달한다. 이 동작은 현재 설계·설정이며 VM 검증을 통과해야 완료로 판정한다.
+ext/pipe/dmz는 내부 브리지이고 masquerade를 끈다. web의 IP forwarding은 끄고 HTTP 프록시만 허용한다. WAF까지 클라이언트의 L3 출처를 보존하며, WAF는 외부에서 전달한 X-Forwarded-For를 제거한 뒤 실제 출처를 backend에 전달한다. 참조 VM에서 이 동작을 확인했으며, 새 환경에서도 수용 검사를 통과해야 완료로 판정한다.
 
-fw·IPS·WAF에는 호스트 포트·host network·privileged·Docker socket·host bind mount를 사용하지 않는다. bootstrap platform의 기존 `127.0.0.1:18080` health 포트만 남는다. 장비 콘솔·SSH·Wazuh agent·평가 수집은 장비 이미지에 포함하지 않는다.
+fw·IPS·WAF에는 호스트 포트·host network·privileged·Docker socket·host bind mount를 사용하지 않는다. platform도 호스트 포트를 게시하지 않고 컨테이너 내부에서 health를 확인한다. 장비 콘솔·SSH·Wazuh agent·평가 수집은 장비 이미지에 포함하지 않는다.
 
 ## 자동 설치
 
