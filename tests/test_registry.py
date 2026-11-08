@@ -9,6 +9,7 @@ from xocrange.planner import plan
 from xocrange.registry import registrations, build_registry, observe
 from xocrange.content import bundle
 from test_platform_security import application, app, login, send
+from test_entitlements import issuer, IDENTITY
 
 ROOT=Path(__file__).resolve().parents[1]
 INSTALLATION='976d736b-0ab6-48ef-bc9f-2b1b4c04231a'
@@ -114,6 +115,42 @@ def test_removed_features_leave_no_navigation_or_content(app,registry_files):
     assert app.get('/core/api/noc').status_code==404
     assert app.get('/core/api/library').status_code==404
     assert app.get('/core/api/library/getting-started').status_code==404
+
+
+def test_module_status_removed_route_and_invalid_entitlement(app,registry_files):
+    data,files,_=registry_files
+    login(app)
+    assert app.get('/core/api/modules/platform').status_code == 200
+    assert app.get('/core/api/modules/missing').status_code == 404
+    data['components'].append({'id':'M7','title':'Paid fixture','version':'1.2.0','commercial':True,'minimum_tier':'live-fire'})
+    data['panels'].append({'id':'paid-test','component_id':'M7','route':'/core/#module/M7','title':'Paid fixture','permission':'registry.read','floor':None,'order':900})
+    files['REGISTRY_FILE'].write_text(json.dumps(data))
+    assert app.get('/core/api/modules/M7').status_code == 403
+    assert not any(p['component_id']=='M7' for p in app.get('/core/api/session').json()['navigation'])
+    data['components']=[c for c in data['components'] if c['id']!='M7']
+    files['REGISTRY_FILE'].write_text(json.dumps(data))
+    assert app.get('/core/api/modules/M7').status_code == 404
+
+
+def test_paid_routes_revalidate_signature_and_expiry_for_each_request(app,registry_files,issuer,tmp_path,monkeypatch):
+    from django.conf import settings
+    data,files,_=registry_files;sign,keys=issuer
+    directory=tmp_path/'license';(directory/'trust').mkdir(parents=True)
+    (directory/'identity.json').write_text(json.dumps(IDENTITY))
+    (directory/'trust/ephemeral-test.pem').write_text(keys['ephemeral-test'])
+    token=directory/'license.json';token.write_text(json.dumps(sign()))
+    monkeypatch.setattr(settings,'ENTITLEMENT_DIR',str(directory),raising=False)
+    data['components'].append({'id':'M7','title':'Paid fixture','version':'1.2.0','commercial':True,'minimum_tier':'live-fire'})
+    data['panels'].append({'id':'paid-test','component_id':'M7','route':'/core/#module/M7','title':'Paid fixture','permission':'registry.read','floor':None,'order':900})
+    files['REGISTRY_FILE'].write_text(json.dumps(data));login(app)
+    assert app.get('/core/api/modules/M7').json()['access']['mode']=='licensed'
+    assert any(p['component_id']=='M7' for p in app.get('/core/api/session').json()['navigation'])
+    token.write_text(json.dumps(sign(expires_at='2021-01-01T00:00:00Z')))
+    assert app.get('/core/api/modules/M7').json()['access']['mode']=='read-only'
+    assert not any(p['component_id']=='M7' for p in app.get('/core/api/session').json()['navigation'])
+    damaged=sign();damaged['payload']['tier']='joint-force';token.write_text(json.dumps(damaged))
+    assert app.get('/core/api/modules/M7').status_code==403
+    assert app.get('/core/api/modules/platform').status_code==200
 
 
 def test_force_password_change_blocks_inventory_and_revoked_session(app,registry_files):

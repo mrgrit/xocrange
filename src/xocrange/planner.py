@@ -86,7 +86,8 @@ def reject_interpolation(value):
             reject_interpolation(child)
 
 
-def plan(root: Path, *, preset="bootstrap", include=(), without=(), allow_fixtures=False, allow_experimental=False):
+def plan(root: Path, *, preset="bootstrap", include=(), without=(), allow_fixtures=False, allow_experimental=False,
+         entitlement_dir=None, entitlement_action='install'):
     root = root.resolve()
     if not re.fullmatch(r"[a-z][a-z0-9-]{0,63}", preset):
         raise XocError("invalid_preset", "Preset must be a simple identifier.")
@@ -115,8 +116,8 @@ def plan(root: Path, *, preset="bootstrap", include=(), without=(), allow_fixtur
     config_owners = {}
     for identifier in selected:
         manifest = entries[identifier]["manifest"]
-        if manifest["commercial"] or manifest["minimum_tier"] != "community" or re.fullmatch(r"M(?:[1-9]|1[0-9])", identifier):
-            raise XocError("commercial_unavailable", "Commercial modules require the future C7 entitlement implementation.")
+        from .entitlements import authorize, DEFAULT
+        authorize(root, manifest, entitlement_action, entitlement_dir or DEFAULT)
         if not compatible(manifest["core"]):
             raise XocError("core_incompatible", f"Component is incompatible with this Core version: {identifier}")
         if set(manifest["conflicts"]) & set(selected):
@@ -251,7 +252,7 @@ def plan(root: Path, *, preset="bootstrap", include=(), without=(), allow_fixtur
         if "build" in service:
             service["build"]["context"] = str(Path(service["build"]["context"]).relative_to(root))
     manifests = [entries[key]['manifest'] for key in selected]
-    registry = {'components': [{k: m[k] for k in ('id','title','version','provides','requires')} for m in manifests],
+    registry = {'components': [{k: m[k] for k in ('id','title','version','provides','requires','commercial','minimum_tier')} for m in manifests],
                 'panels': registrations(manifests), 'service_owners': owners,
                 'targets': [dict(t, component_id=m['id']) for m in manifests for t in m.get('http_targets', [])]}
     lock = {"schema_version": "xoc.plan/0.1.0", "core_version": __version__, "preset": preset,
@@ -263,7 +264,7 @@ def plan(root: Path, *, preset="bootstrap", include=(), without=(), allow_fixtur
     lock["plan_id"] = hashlib.sha256(canonical(lock)).hexdigest()
     return {"lock": lock, "compose": compose, "registry": registry, "limitations": [
         "Offline plan only; no images built, containers started, or host resources checked.",
-        "Image tags are not digest-locked; this is not a reproducible release lock.",
+        "Offline plans do not resolve images; the installer records and enforces images.lock.json after building.",
         "Bootstrap is a health endpoint, not the completed Community platform.",
         *(["Security-path is experimental; run packet-path acceptance on each dedicated Ubuntu 26.04 VM."] if "security-path" in selected else []),
     ]}

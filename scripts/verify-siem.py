@@ -21,13 +21,15 @@ deadline = time.monotonic() + 180
 expected = set(SOURCES)
 while True:
     report = store.status()
-    available = {row[0] for row in store.db.execute("SELECT DISTINCT producer FROM events WHERE observed>=? AND confirmed IS NOT NULL AND julianday(json_extract(event, '$.timestamp'))>=julianday(?) AND (producer!='sysmon' OR json_extract(event, '$.event.type')='observation') AND (producer!='auditd' OR json_extract(event, '$.audit.key')='xoc_probe')", (cutoff,cutoff))}
+    # Seek the recent interval for each producer. DISTINCT over the whole
+    # multi-GiB evidence table makes acceptance itself starve live collection.
+    available = {source for source in SOURCES if store.db.execute("SELECT 1 FROM events WHERE producer=? AND observed>=? AND confirmed IS NOT NULL AND julianday(json_extract(event, '$.timestamp'))>=julianday(?) AND (producer!='sysmon' OR json_extract(event, '$.event.type')='observation') AND (producer!='auditd' OR json_extract(event, '$.audit.key')='xoc_probe') ORDER BY observed DESC LIMIT 1", (source,cutoff,cutoff)).fetchone()}
     sources_ready = {row['source']: row['status'] for row in report['sources']}
-    native = {row[0] for row in store.db.execute("""SELECT DISTINCT n.source FROM native_inputs n
-        JOIN events e ON e.id=n.event_id WHERE n.observed>=? AND n.confirmed IS NOT NULL
+    native = {source for source in SOURCES if store.db.execute("""SELECT 1 FROM native_inputs n INDEXED BY native_inputs_source_observed
+        JOIN events e ON e.id=n.event_id WHERE n.source=? AND n.observed>=? AND n.confirmed IS NOT NULL
         AND n.error IS NULL AND n.decoder!='sensor-diagnostic'
         AND julianday(json_extract(e.event,'$.timestamp'))>=julianday(?)
-        AND (n.source!='auditd' OR json_extract(e.event,'$.audit.key')='xoc_probe')""", (cutoff,cutoff))}
+        AND (n.source!='auditd' OR json_extract(e.event,'$.audit.key')='xoc_probe') ORDER BY n.observed DESC LIMIT 1""", (source,cutoff,cutoff)).fetchone()}
     passed = expected <= available and expected <= native and all(sources_ready.get(name) == 'ready' for name in ('wazuh','wazuh-native'))
     if passed or time.monotonic() >= deadline:
         result = {'status': 'passed' if passed else 'failed',

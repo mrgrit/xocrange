@@ -24,6 +24,7 @@ Portal, NOC 2F and bundled guides are included; the complete Community release r
                     Default: /var/lib/xocrange/data
   --ref COMMIT       Download an exact 40-character Git commit instead of local source
   --public-host HOST IPv4 address or DNS name for HTTPS (default: host's route IP)
+  --restore PATH     Install prerequisites, then restore a verified private backup
   --dry-run          Describe operations without installing or accessing the network
   --help            Show this help
 
@@ -32,8 +33,34 @@ An existing unrelated Docker/containerd installation is never removed or migrate
 EOF
 }
 
+# Ubuntu's automatic package maintenance may hold the lists lock even when
+# DPkg::Lock::Timeout is set. Retry only lock contention, with a bounded wait.
+apt_retry() {
+    local output attempt rc=100
+    output=$(mktemp)
+    for ((attempt=1; attempt<=30; attempt++)); do
+        if LC_ALL=C apt-get "$@" >"$output" 2>&1; then
+            cat "$output"; rm -f "$output"; return 0
+        else rc=$?; fi
+        cat "$output"
+        if ! grep -Eq 'Could not get lock|Unable to acquire the dpkg|Unable to lock directory|is another process using it' "$output"; then
+            rm -f "$output"; return "$rc"
+        fi
+        if ((attempt<30)); then printf 'APT maintenance is running; waiting for its lock.\n'; sleep 10; fi
+    done
+    rm -f "$output"; return "$rc"
+}
+export -f apt_retry
+
 fail() { printf 'xOC install failed: %s\n' "$*" >&2; exit 2; }
-stage() { current_stage=$1; printf '\n[xOC] %s\n' "$current_stage"; }
+stage() {
+    current_stage=$1; printf '\n[xOC] %s\n' "$current_stage"
+    if [[ -n ${checkpoint:-} && -f $checkpoint/manifest.json ]]; then
+        printf '{"status":"in-progress","stage":"%s","checkpoint":"%s","candidate":"%s"}\n' \
+            "$current_stage" "$checkpoint" "$release" > "$state/install-operation.tmp"
+        mv "$state/install-operation.tmp" "$state/install-operation.json"
+    fi
+}
 need_value() { [[ $# -ge 2 && -n $2 && $2 != --* ]] || fail "Missing value for $1"; }
 selection=()
 siem_selection=(--include siem)
@@ -43,6 +70,8 @@ optional_selection=()
 public_host=
 data_directory=/var/lib/xocrange/data
 source_ref=
+restore_path=
+expected_install=
 dry_run=false
 while (($#)); do
     case "$1" in
@@ -52,6 +81,11 @@ while (($#)); do
             selection+=("$1" "$2"); shift 2 ;;
         --data-dir) need_value "$@"; data_directory=$2; shift 2 ;;
         --public-host) need_value "$@"; public_host=$2; shift 2 ;;
+        --restore) need_value "$@"; restore_path=$2; shift 2 ;;
+        --expected-install)
+            need_value "$@"
+            [[ $2 =~ ^[a-f0-9]{64}:[a-f0-9]{64}$ ]] || fail 'Invalid expected installation identity'
+            expected_install=$2; shift 2 ;;
         --ref)
             need_value "$@"
             [[ $2 =~ ^[0-9a-f]{40}$ ]] || fail '--ref requires a full Git commit hash'
@@ -101,6 +135,10 @@ fi
 [[ $(nproc) -ge 2 ]] || fail 'At least 2 vCPUs are needed for this profile'
 exec 9>/run/lock/xocrange-install.lock
 flock -n 9 || fail 'Another xOC installation is in progress'
+if [[ -n $expected_install ]]; then
+    actual_install=$(python3 -c 'import json,pathlib; s=json.load(open("/var/lib/xocrange/last-install.json")); print(pathlib.Path(s["release"]).name+":"+s["plan"].removeprefix("install-"))')
+    [[ $actual_install == "$expected_install" ]] || fail 'The installed selection changed; preview the operation again'
+fi
 
 state=/var/lib/xocrange
 prefix=/opt/xocrange
@@ -110,12 +148,23 @@ run_id=$(date -u +%Y%m%dT%H%M%S)-$$
 log=/var/log/xocrange/install-$run_id.log
 exec > >(tee -a "$log") 2>&1
 current_stage=preflight
+checkpoint=
 on_exit() {
     code=$?
     if ((code)); then
         printf '{"status":"failed","stage":"%s","exit_code":%s,"log":"%s"}\n' \
-            "$current_stage" "$code" "$log" > "$state/last-install.json"
+            "$current_stage" "$code" "$log" > "$state/last-attempt.json"
         printf '\nInstallation did not complete. Stage: %s. Log: %s\n' "$current_stage" "$log" >&2
+        if [[ -n $checkpoint && -f $checkpoint/manifest.json ]]; then
+            trap - EXIT
+            printf 'Restoring the last verified installation: %s\n' "$checkpoint"
+            if "$runtime/bin/python" "$release/scripts/appliance-ops.py" rollback "$checkpoint"; then
+                printf '{"status":"rolled-back","checkpoint":"%s"}\n' "$checkpoint" > "$state/install-operation.json"
+            else
+                printf '{"status":"recovery-required","checkpoint":"%s"}\n' "$checkpoint" > "$state/install-operation.json"
+                printf 'Automatic rollback needs recovery. Backup: %s\n' "$checkpoint" >&2
+            fi
+        fi
     fi
 }
 trap on_exit EXIT
@@ -155,8 +204,14 @@ printf 'xocrange installer v1\n' > "$state/installer-owned"
 
 stage base-packages
 apt_options=(-o DPkg::Lock::Timeout=120 -o Acquire::Retries=3 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30)
-apt-get "${apt_options[@]}" update
-apt-get "${apt_options[@]}" install -y --no-install-recommends ca-certificates curl git python3 python3-venv iproute2 kmod openssl
+apt_retry "${apt_options[@]}" update
+base_missing=()
+for package in ca-certificates curl git python3 python3-venv iproute2 kmod openssl; do
+    if [[ $(dpkg-query -W -f='${Status}' "$package" 2>/dev/null || true) != 'install ok installed' ]]; then
+        base_missing+=("$package")
+    fi
+done
+if ((${#base_missing[@]})); then apt_retry "${apt_options[@]}" install -y --no-install-recommends "${base_missing[@]}"; fi
 
 stage source-snapshot
 source_directory=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
@@ -171,7 +226,8 @@ fi
 release=$(python3 "$source_directory/scripts/install-support.py" snapshot "$source_directory" "$prefix/releases")
 runtime=$prefix/venvs/$(basename "$release")
 [[ -x $runtime/bin/python ]] || python3 -m venv "$runtime"
-"$runtime/bin/python" -m pip install "$release"
+"$runtime/bin/python" -m pip install --require-hashes -r "$release/requirements.lock"
+"$runtime/bin/python" -m pip install --no-deps "$release"
 xoc=("$runtime/bin/xoc" --root "$release")
 
 stage module-plan
@@ -207,7 +263,7 @@ Components: stable
 Architectures: amd64
 Signed-By: /etc/apt/keyrings/xocrange-docker.asc
 EOF
-    apt-get "${apt_options[@]}" update
+    apt_retry "${apt_options[@]}" update
 fi
 missing_packages=()
 for package in docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin; do
@@ -216,7 +272,7 @@ for package in docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker
     fi
 done
 if ((${#missing_packages[@]})); then
-    apt-get "${apt_options[@]}" install -y --no-install-recommends "${missing_packages[@]}"
+    apt_retry "${apt_options[@]}" install -y --no-install-recommends "${missing_packages[@]}"
 fi
 docker --context default compose version
 systemctl start containerd.service docker.service
@@ -265,7 +321,18 @@ sysctl -w net.bridge.bridge-nf-call-iptables=0
 "${xoc[@]}" lab check --plan "$plan_name"
 
 stage image-build
+if [[ -f $state/last-install.json ]]; then
+    checkpoint=$state/backups/before-install-$run_id
+    "$runtime/bin/python" "$release/scripts/appliance-ops.py" checkpoint "$checkpoint"
+    stage update-transaction
+fi
 "$runtime/bin/python" "$release/scripts/setup-siem-manager.py" "$release" "$plan_name"
+if "$runtime/bin/python" -c 'import json,sys; sys.exit("siem" not in json.load(open(sys.argv[1]))["lock"]["selected"])' "$plan_json"; then
+    stage evidence-store
+    # Schema/index migrations on a large evidence DB finish before collector
+    # and acceptance readers race for the same SQLite schema write lock.
+    "$runtime/bin/python" -c 'from xocrange.event_store import Store; store=Store("/var/lib/xocrange/siem"); store.db.close()'
+fi
 if "$runtime/bin/python" -c 'import json,sys; sys.exit("siem-ui" not in json.load(open(sys.argv[1]))["lock"]["selected"])' "$plan_json"; then
     stage siem-ui-identities
     "$runtime/bin/python" "$release/scripts/setup-siem-ui.py" prepare "$release" "$plan_name" "$public_host"
@@ -275,7 +342,11 @@ fi
 stage platform-identities
 systemctl stop xocrange-observer.timer xocrange-observer.service 2>/dev/null || true
 "$runtime/bin/python" "$release/scripts/setup-platform.py" "$release" "$plan_name" "$public_host"
-"${compose[@]}" build
+if [[ ! -f $release/.local/plans/$plan_name/images.lock.json ]]; then
+    "${compose[@]}" pull --ignore-buildable
+    "${compose[@]}" build
+    "$runtime/bin/python" "$release/scripts/lock-images.py" "$release/.local/plans/$plan_name"
+fi
 stage start-services
 systemctl disable --now xocrange-collector.service 2>/dev/null || true
 if systemctl is-active --quiet xocrange-core.service; then
@@ -302,7 +373,7 @@ Environment=PYTHONDONTWRITEBYTECODE=1
 WorkingDirectory=$release
 ExecStartPre=/usr/sbin/modprobe -a br_netfilter nfnetlink_queue nfnetlink_log
 ExecStartPre=/usr/sbin/sysctl -w net.bridge.bridge-nf-call-iptables=0
-ExecStart=$runtime/bin/xoc --root $release lab start --plan $plan_name --isolated-vm
+ExecStart=$runtime/bin/xoc --root $release lab resume --plan $plan_name --isolated-vm
 ExecStartPost=$runtime/bin/xoc --root $release lab verify --plan $plan_name --isolated-vm
 ExecStartPost=$runtime/bin/python $release/scripts/setup-siem-manager.py $release $plan_name check
 ExecStartPost=$runtime/bin/python $release/scripts/setup-siem-ui.py initialize $release $plan_name
@@ -364,6 +435,17 @@ if 'siem-ui' in selected:
     result.update(scope='experimental-security-path-and-siem-ui',siem_ui_acceptance=ui)
 Path(sys.argv[1]).write_text(json.dumps(result, indent=2) + '\n')
 PY
+cp "$state/last-install.json" "$state/last-attempt.json"
+stage operational-maintenance
+bash "$release/scripts/install-operations.sh" "$release" "$runtime"
+stage release-inventory
+"$runtime/bin/python" "$release/scripts/release-inventory.py" "$release" "$plan_name"
+printf '{"status":"complete","release":"%s","checkpoint":"%s"}\n' "$release" "$checkpoint" > "$state/install-operation.json"
+checkpoint=
+if [[ -n $restore_path ]]; then
+    stage backup-restore
+    "$runtime/bin/python" "$release/scripts/appliance-ops.py" restore "$restore_path"
+fi
 printf '\nInstalled and verified: experimental platform + fw + IPS + WAF.\n'
 printf 'State: %s/last-install.json\nLogs: %s\n' "$state" "$log"
 printf 'Optional workspaces follow the selected plan. The complete Community release remains under development.\n'

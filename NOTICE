@@ -1,0 +1,33 @@
+xOC Range Core — third-party and source provenance notice
+
+This notice records attribution and distribution boundaries. It does not replace
+or relicense upstream software. The Core distribution license remains an explicit
+release decision, as recorded in docs/adr/0001-core-boundaries.md. The roadmap's
+PolyForm Noncommercial proposal has not been silently applied to third-party code.
+
+Adapted project sources
+  mrgrit/kt66: architectural SVG floor/rack geometry, selected native SIEM rules.
+  Local nft_edu_gui, suricata_edu_gui, modsec_edu_gui: selected rule generators.
+  Exact source hashes and adaptation records: docs/provenance/console-source.json,
+  datacenter-source.json, floor-design-source.json and wazuh-native-sources.json.
+  The xOC logo is supplied by the project owner through xocrange_plan/README.md;
+  its original location and unchanged file hash are in assets/branding/provenance.json.
+  These project-specific assets still require an explicit distribution grant at RC.
+
+Runtime dependencies retain their upstream copyright and license notices:
+  Linux, nftables, Suricata, Wazuh Manager and related GPL components.
+  Apache HTTP Server, ModSecurity, OWASP CRS, Wazuh Indexer/Dashboard components,
+  osquery, Sysmon for Linux, HAProxy, Python, Django, Gunicorn and Python libraries.
+  Package-specific license files are retained in the installed images/packages.
+  Wazuh includes components under different licenses; it is not relicensed as a unit.
+  Detailed sources, licenses and bundle boundaries: docs/development/DEPENDENCIES.md.
+  Exact runtime package versions, image IDs/digests and source hashes are generated
+  in /var/lib/xocrange/release-inventory.json by the installer.
+
+Bundled Core reading material consists of project-authored operating guides in
+components/academy-reader/bundle.json. It excludes purchased academy content,
+commercial scenarios, AI/agent execution code, Windows images/evaluation media,
+private signing keys and registry passwords. tw2 was a functional reference only.
+
+An operational backup is private: it may contain credentials, device settings,
+logs, index data and installed images. It is not a public redistribution package.

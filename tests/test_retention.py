@@ -8,6 +8,22 @@ from xocrange.event_store import Store
 from xocrange.errors import XocError
 from xocrange.retention import retained_manager_paths, usage
 
+
+def test_device_history_never_removes_unread_open_or_recent_logs(tmp_path):
+    from xocrange.log_maintenance import history, removable
+    import time
+    path=tmp_path/'events.log.xoc-01700000000000000000';path.write_bytes(b'line\n')
+    os.utime(path,(time.time()-90000,time.time()-90000));info=path.stat()
+    key=f'fw:{info.st_dev}:{info.st_ino}'
+    assert history(tmp_path/'events.log')==[path]
+    assert not removable(path,{},set())
+    assert not removable(path,{key:{'offset':3,'buffer':''}},set())
+    assert not removable(path,{key:{'offset':5,'buffer':'partial'}},set())
+    assert not removable(path,{key:{'offset':5,'buffer':''}},{(info.st_dev,info.st_ino)})
+    assert removable(path,{key:{'offset':5,'buffer':''}},set())
+    os.utime(path,None)
+    assert not removable(path,{key:{'offset':5,'buffer':''}},set())
+
 FIXTURES = Path(__file__).parent/'fixtures/events'
 
 

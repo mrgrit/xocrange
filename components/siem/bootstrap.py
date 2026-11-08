@@ -4,6 +4,7 @@ from pathlib import Path
 import shutil
 import os
 import sys
+import re
 
 root=Path('/var/ossec')
 seed=Path('/opt/xoc-manager-seed')
@@ -22,6 +23,13 @@ for source,destination in [('ossec.conf','etc/ossec.conf'),('c1-decoder.xml','et
     path=root/destination;path.parent.mkdir(parents=True,exist_ok=True)
     shutil.copyfile('/opt/xoc-config/'+source,path)
     os.chown(path,0,999);path.chmod(0o640)
+# analysisd.c's legacy firewall writer discards portless ICMP before JSON
+# archive/alert processing when log_fw=1. JSON remains the authoritative log.
+options=root/'etc/local_internal_options.conf'
+text=options.read_text() if options.exists() else ''
+text=re.sub(r'(?m)^\s*analysisd\.log_fw\s*=.*\n?', '', text)
+options.write_text(text.rstrip()+'\nanalysisd.log_fw=0\n')
+os.chown(options,0,999);options.chmod(0o640)
 shutil.copyfile('/run/xoc-manager/api.yaml',root/'api/configuration/api.yaml')
 os.chown(root/'api/configuration/api.yaml',999,999)
 for name in ('siem.pem','siem-key.pem'):

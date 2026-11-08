@@ -60,6 +60,24 @@ def test_boot_start_uses_validated_local_images_without_build_or_pull(lab_checko
     assert calls == [["up", "--detach", "--no-build", "--pull", "never", "--remove-orphans"]]
 
 
+def test_boot_resume_keeps_core_when_paid_module_and_dependency_are_denied(lab_checkout, monkeypatch):
+    from test_planner import module
+    module(lab_checkout,'paid',commercial=True,minimum_tier='live-fire')
+    module(lab_checkout,'dependent',requires={'components':['paid'],'capabilities':[]})
+    result=plan(lab_checkout,preset='security-path',include=['dependent'],allow_experimental=True,entitlement_action='stop')
+    write_plan(lab_checkout,'paid-boot',result)
+    monkeypatch.setattr(lab,'host_check',lambda *_:{'status':'ready','checks':{}})
+    calls=[];monkeypatch.setattr(lab.Docker,'run',lambda self,args,**kwargs:calls.append(args))
+    report=lab.run_lab(lab_checkout,'paid-boot','resume',True)
+    assert report['blocked_modules']=={'paid':'commercial_unavailable','dependent':'entitlement_dependency'}
+    assert calls[0]==['stop','dependent','paid']
+    assert '--no-deps' in calls[1]
+    assert 'platform' in calls[1] and 'fw' in calls[1]
+    assert 'paid' not in calls[1] and 'dependent' not in calls[1]
+    with pytest.raises(XocError) as exc:lab.run_lab(lab_checkout,'paid-boot','start',True)
+    assert exc.value.code=='commercial_unavailable'
+
+
 def test_cleanup_works_after_bridge_configuration_changes(lab_checkout, monkeypatch):
     checks = {key: True for key in ("ubuntu_26_04", "virtual_machine", "local_daemon", "linux_daemon", "rootful_daemon", "dedicated_daemon")}
     checks["bridge_netfilter_disabled"] = False

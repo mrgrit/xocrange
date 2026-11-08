@@ -1,0 +1,128 @@
+{
+  "module_lifecycle": {
+    "checks": {
+      "added_container": true,
+      "added_identities_and_policies": true,
+      "added_navigation": true,
+      "added_selected": true,
+      "added_status_route": true,
+      "before_container": true,
+      "before_identities_and_policies": true,
+      "before_navigation": true,
+      "before_selected": true,
+      "before_status_route": true,
+      "exercise_completed": true,
+      "failed_update_restored_accounts_policies": true,
+      "failed_update_restored_plan": true,
+      "failed_update_restored_release": true,
+      "failure_recorded": true,
+      "final_container": true,
+      "final_identities_and_policies": true,
+      "final_navigation": true,
+      "final_selected": true,
+      "final_status_route": true,
+      "fixture_status_api_and_c1_event": true,
+      "management_after_rollback": true,
+      "reinstalled_container": true,
+      "reinstalled_identities_and_policies": true,
+      "reinstalled_navigation": true,
+      "reinstalled_selected": true,
+      "reinstalled_status_route": true,
+      "removed_container": true,
+      "removed_identities_and_policies": true,
+      "removed_navigation": true,
+      "removed_selected": true,
+      "removed_status_route": true,
+      "rollback_recorded": true
+    },
+    "finished_at": "2026-11-08T06:01:07.628839+00:00",
+    "source_release": "/opt/xocrange/releases/9ad911c22b76639abe79f69380415710bddb178a259d4eb257bda060fc459496",
+    "status": "passed",
+    "steps": [
+      {
+        "returncode": 0,
+        "step": "add"
+      },
+      {
+        "returncode": 0,
+        "step": "up"
+      },
+      {
+        "returncode": 0,
+        "step": "remove"
+      },
+      {
+        "returncode": 0,
+        "step": "up-after-remove"
+      },
+      {
+        "returncode": 0,
+        "step": "re-add"
+      },
+      {
+        "returncode": 0,
+        "step": "final-remove"
+      },
+      {
+        "returncode": 2,
+        "step": "failed-update"
+      }
+    ]
+  },
+  "backup_restore": {
+    "checks": {
+      "accounts_and_policy_db_restored": true,
+      "actual_database_change": true,
+      "core_acceptance_after_restore": true,
+      "corruption_does_not_change_state": true,
+      "corruption_does_not_stop_core": true,
+      "exact_images_restored": true,
+      "exercise_completed": true,
+      "portable_images_saved": true,
+      "pre_restore_recovery_retained": true,
+      "release_restored": true,
+      "settings_restored": true
+    },
+    "source_release": "/opt/xocrange/releases/9ad911c22b76639abe79f69380415710bddb178a259d4eb257bda060fc459496",
+    "status": "passed"
+  },
+  "fresh_restore": {
+    "status": "passed",
+    "checks": {
+      "different_machine": true,
+      "release_preserved": true,
+      "selected_modules_preserved": true,
+      "core_active": true,
+      "accounts_roles_policy_preserved": true,
+      "fw-logs_original_bytes_preserved": true,
+      "ips-logs_original_bytes_preserved": true,
+      "web-logs_original_bytes_preserved": true,
+      "exact_images": true,
+      "credentials_preserved": true,
+      "restored_login_https": true
+    },
+    "source_release": "9ad911c22b76639abe79f69380415710bddb178a259d4eb257bda060fc459496",
+    "backup_bytes": 232009328,
+    "fresh_install_command": "install.sh --without siem --public-host 10.0.2.15 --restore BACKUP",
+    "fresh_os": "Ubuntu 26.04.1 LTS",
+    "guest_memory_gib": 4,
+    "guest_vcpus": 2
+  },
+  "minimal_resources": {
+    "status": "complete",
+    "duration_seconds": 120,
+    "vcpus": 2,
+    "memory_peak_bytes": 945106944,
+    "cpu_peak_percent": 3.0,
+    "disk_growth_bytes": 217088,
+    "requests": {
+      "ok": 240,
+      "failed": 0
+    }
+  },
+  "unit_tests": {
+    "suite_passed": 388,
+    "apt_retry_and_installer_passed": 18,
+    "date": "2026-11-08"
+  }
+}

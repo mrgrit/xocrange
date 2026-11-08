@@ -42,13 +42,31 @@ def parser():
         converting.add_argument(f"--{name}", required=True)
     platform = commands.add_parser('platform', help='Local platform administrator access')
     platform.add_argument('action', choices=['credentials'])
+    licensing = commands.add_parser('license', help='Offline C7 verification and public trust keys')
+    licensing.add_argument('action', choices=['status', 'trust', 'activate'])
+    licensing.add_argument('--file', type=Path)
+    licensing.add_argument('--key-id')
+    licensing.add_argument('--institution')
+    licensing.add_argument('--range', dest='range_id')
+    modules = commands.add_parser('module', help='Install/remove selected modules; preserve settings and evidence')
+    modules.add_argument('action', choices=['list','add','remove'])
+    modules.add_argument('identifier', nargs='?')
+    modules.add_argument('--package', type=Path)
+    modules.add_argument('--preview', action='store_true')
+    backup = commands.add_parser('backup', help='Consistent private backup, verification and transactional restore')
+    backup.add_argument('action', choices=['create','verify','restore'])
+    backup.add_argument('path', type=Path)
+    update = commands.add_parser('update', help='Validate and install a local release with automatic rollback')
+    update.add_argument('--source', required=True, type=Path)
+    update.add_argument('--preview', action='store_true')
+    commands.add_parser('recover', help='Restore the durable checkpoint after an interrupted operation')
     agents = commands.add_parser('agents', help='Local privileged Wazuh agent enrollment and status')
     agents.add_argument('action', choices=['list', 'enroll'])
     agents.add_argument('--plan', required=True)
     agents.add_argument('--name')
     agents.add_argument('--output', type=Path)
     lab = commands.add_parser("lab", help="run packet-path checks on a dedicated Ubuntu 26.04 VM")
-    lab.add_argument("action", choices=("check", "up", "start", "verify", "down"))
+    lab.add_argument("action", choices=("check", "up", "start", "resume", "verify", "down"))
     lab.add_argument("--plan", required=True, help="plan directory name beneath .local/plans")
     lab.add_argument("--isolated-vm", action="store_true", help="confirm this is the dedicated lab VM")
     siem = commands.add_parser("siem", help="local evidence, Wazuh decoding and search")
@@ -63,6 +81,34 @@ def parser():
 
 
 def run(args):
+    if args.command == 'recover':
+        from .operations import operation_lock, recover
+        with operation_lock():
+            return recover()
+    if args.command == 'backup':
+        from . import operations as ops
+        if args.action == 'verify':
+            value = ops.verify_backup(args.path)
+            return {'status':'verified', 'archives':len(value['files']), 'created_at':value['created_at'], 'portable':value['portable']}
+        with ops.operation_lock():
+            return ops.create(args.path) if args.action == 'create' else ops.restore(args.path)
+    if args.command in ('module','update'):
+        from . import lifecycle, operations as ops
+        if args.command == 'update':
+            return lifecycle.change(args.root, 'update', source=args.source, preview=args.preview)
+        if args.action == 'list':
+            state = ops.installed()
+            return {'selected':state['selected'], 'release':state['release']}
+        return lifecycle.change(args.root, args.action, args.identifier, args.package, preview=args.preview)
+    if args.command == 'license':
+        from .entitlements import manage
+        if args.action != 'status' and not args.file:
+            raise XocError('missing_arguments', 'A public key or signed entitlement --file is required.')
+        if args.action == 'status':
+            return manage(args.root, args.action)
+        from .operations import operation_lock
+        with operation_lock():
+            return manage(args.root, args.action, file=args.file, key_id=args.key_id, institution=args.institution, range_id=args.range_id)
     if args.command == 'platform':
         from .platform_setup import STATE
         from .ui_setup import private_json

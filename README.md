@@ -42,7 +42,7 @@ sudo xoc siem credentials
 | 설치 계획 | manifest 검증, 의존성·충돌·포트 검사, Compose·입력 해시 생성 |
 | 구성 진단 | `xoc doctor`: 로컬 구성과 Docker CLI 존재 확인 |
 | 구성요소 목록 | 필수 platform + 선택 기능; 준비된 기능과 계획 단계 구분 |
-| 확장 경계 | 명시적으로 선택한 테스트 fixture 조합; C7 구현 전 상용 모듈 거부 |
+| 확장 경계 | Ed25519 C7 서명·기관·티어·모듈·구매 권한 검증, 키 없는 Community |
 | 보안 경로 실험 | fw DNAT·Suricata NFQUEUE·WAF, 선택 타깃 등록, 전용 VM 검사·기동·검증 명령 |
 | 단일 실행 설치기 | OS 검사 → 의존성 설치 → 모듈 구성 → 빌드·기동 → 통신 검사 → 부팅 서비스 등록; 실제 VM에서 실행 완료 |
 
@@ -56,7 +56,7 @@ Ubuntu Server 26.04 LTS amd64 전용 VM에서 저장소 또는 별도로 받은 
 sudo bash install.sh
 ```
 
-**현재 개발 버전의 설치 범위는 공통 관리 화면 + 데이터센터·운영 개요·NOC 2층·자료실 + 장비 콘솔 3종 + platform + 방화벽 + IPS + WAF + SIEM 백엔드·웹 관제 + 호스트 관측 도구 + 통신 검증용 타깃이다.** 웹 관제를 포함하면 최소 8 GiB RAM을 요구하며 실제 검증 VM은 16 GiB다. `--without siem-ui`로 웹 관제만 제외하거나 `--without siem`으로 SIEM 전체를 제외할 수 있다. `--without portal`, `--without noc`, `--without academy-reader`로 각 화면을 제외할 수 있다. 실제 입문 타깃·전체 모듈 수명주기·백업/복구가 남아 있으며 Core 전체 출시 완료를 뜻하지 않는다. [운영 개요·NOC·자료실](docs/development/WORKSPACES.md) [웹 관제 구성·WAF 예외·검증](docs/development/SIEM-WEB.md)
+**현재 개발 버전의 설치 범위는 공통 관리 화면 + 데이터센터·운영 개요·NOC 2층·자료실 + 장비 콘솔 3종 + platform + 방화벽 + IPS + WAF + SIEM 백엔드·웹 관제 + 호스트 관측 도구 + 통신 검증용 타깃이다.** 웹 관제를 포함하면 최소 8 GiB RAM을 요구하며 실제 검증 VM은 16 GiB다. `--without siem-ui`로 웹 관제만 제외하거나 `--without siem`으로 SIEM 전체를 제외할 수 있다. `--without portal`, `--without noc`, `--without academy-reader`로 각 화면을 제외할 수 있다. 모듈 설치·제거와 백업·업데이트·복구 명령을 제공한다. 실제 입문 타깃과 전체 출시 검증은 후속 단계다. [운영 개요·NOC·자료실](docs/development/WORKSPACES.md) [웹 관제 구성·WAF 예외·검증](docs/development/SIEM-WEB.md)
 
 설치 후 `sudo xoc platform credentials`로 `https://VM주소/core/`의 초기 관리자 계정을 확인하고 첫 로그인에서 비밀번호를 변경한다. 이 관리 화면은 SIEM 제외 시에도 유지된다. SIEM은 자체 Wazuh 계정을 사용하며, Core 역할을 SIEM에 자동 적용하는 SSO는 포함하지 않는다. [공통 보안과 권한](docs/development/COMMON-SECURITY.md)
 
@@ -135,6 +135,19 @@ sudo xoc siem retry --source auditd
 ```
 
 `--confirmed`는 실제 Wazuh 분석 결과를 확인한 이벤트만 조회한다. 원본은 관리자 전용 저장소에 보관하며 `evidence.ref`로 연결된다. 정상 HTTP 403을 보안 장비 차단으로 오인하지 않으며, ModSecurity 요청과 탐지 메시지는 별도 이벤트로 구분한다. [8종 매핑·수집·운영 제한](docs/development/SIEM.md)
+
+## 구성 변경과 백업
+
+```bash
+sudo xoc module list
+sudo xoc module add noc
+sudo xoc module remove noc
+sudo xoc backup create /var/lib/xocrange/backups/manual-001
+sudo xoc backup verify /var/lib/xocrange/backups/manual-001
+sudo xoc update --source /절대경로/새소스
+```
+
+변경 중에는 서비스를 정지해 복구 지점을 만들고, 새 구성 검증에 실패하면 이전 설치로 복원한다. 백업에는 비밀번호·계정·실습 로그가 포함되므로 비공개로 보관한다. [복원·중단 복구·운영 명령](docs/development/OPERATIONS.md) · [C7 상용 권한 계약](docs/contracts/C7-ENTITLEMENTS.md) · [의존성·배포 경계](docs/development/DEPENDENCIES.md)
 
 ## 개발 문서
 

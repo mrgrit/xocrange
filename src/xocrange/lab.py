@@ -19,6 +19,10 @@ class Docker:
     def __init__(self, compose_path, project):
         self.base = ["docker", "--context", "default"]
         self.compose = self.base + ["compose", "--project-name", project, "-f", str(compose_path)]
+        from .image_lock import checked
+        locked = checked(Path(compose_path).parent)
+        if locked:
+            self.compose += ['-f', str(locked)]
 
     def run(self, args, *, compose=False, timeout=60):
         try:
@@ -31,12 +35,15 @@ class Docker:
         return result.stdout
 
 
-def checked_plan(root, name):
+def checked_plan(root, name, *, entitlement_action='stop'):
+    # Structural/source validation is independent of paid grants. Start paths
+    # authorize explicitly; stopped/expired extensions cannot disable Core reads.
     directory = within(root, f".local/plans/{name}", require_file=False)
     lock = json_document(read_bytes(directory / "plan.lock.json"))
     try:
         expected = plan(root, preset=lock["preset"], include=lock["requested"], without=lock["excluded"],
-                        allow_fixtures=lock["fixtures_allowed"], allow_experimental=lock["experimental_allowed"])
+                        allow_fixtures=lock["fixtures_allowed"], allow_experimental=lock["experimental_allowed"],
+                        entitlement_action=entitlement_action)
         if lock != expected["lock"] or "security-path" not in lock["selected"]:
             raise XocError("stale_plan", "Regenerate the security-path plan from the current source inputs.")
         if yaml_document(directory / "compose.yaml") != expected["compose"]:
@@ -195,7 +202,7 @@ def verify(engine):
 
 
 def run_lab(root, name, action, isolated_vm=False):
-    directory, result = checked_plan(root, name)
+    directory, result = checked_plan(root, name, entitlement_action='start' if action in ('up', 'start') else 'stop')
     project = result["compose"]["name"]
     engine = Docker(directory / "compose.yaml", project)
     if action != "check" and not isolated_vm:
@@ -208,10 +215,37 @@ def run_lab(root, name, action, isolated_vm=False):
         return {"status": "stopped", "project": project}
     if action == "check" or report["status"] != "ready":
         return report
-    if action in ("up", "start"):
+    if action in ("up", "start", "resume"):
+        if action == 'up' and (directory/'images.lock.json').exists():
+            action = 'start'
         options = ["up", "--build", "--detach"] if action == "up" else ["up", "--detach", "--no-build", "--pull", "never"]
-        engine.run(options + ["--remove-orphans"], compose=True, timeout=1800 if action == "up" else 120)
-        return {"status": "started", "project": project, "acceptance": "not-yet-verified"}
+        blocked = {}
+        extra = []
+        if action == 'resume':
+            from .entitlements import authorize
+            from .planner import catalog
+            entries = catalog(root, allow_fixtures=result['lock']['fixtures_allowed'])
+            for identifier in result['lock']['selected']:
+                try:
+                    authorize(root, entries[identifier]['manifest'], 'start')
+                except XocError as exc:
+                    blocked[identifier] = exc.code
+            changed = True
+            while changed:
+                changed = False
+                for identifier in result['lock']['selected']:
+                    if identifier not in blocked and set(entries[identifier]['manifest']['requires']['components']) & set(blocked):
+                        blocked[identifier] = 'entitlement_dependency'; changed = True
+            denied = {service for service, owner in result['registry']['service_owners'].items() if owner in blocked}
+            while True:
+                more = {name for name, definition in result['compose']['services'].items() if set(definition.get('depends_on', [])) & denied}
+                if more <= denied: break
+                denied |= more
+            if denied:
+                engine.run(['stop', *sorted(denied)], compose=True, timeout=120)
+                extra = ['--no-deps', *sorted(set(result['compose']['services'])-denied)]
+        engine.run(options + ["--remove-orphans", *extra], compose=True, timeout=1800 if action == "up" else 120)
+        return {"status": "started", "project": project, "acceptance": "not-yet-verified", 'blocked_modules':blocked}
     if "fixture-security-probe" not in result["lock"]["selected"]:
         raise XocError("probe_missing", "lab verify requires the explicit fixture-security-probe selection.")
     try:

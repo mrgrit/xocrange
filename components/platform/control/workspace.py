@@ -6,6 +6,15 @@ from django.conf import settings
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET
 from .security import protected, ROLES
+from . import entitlements
+
+
+def access(component, action='register', **resource):
+    if not entitlements.paid(component) and not resource:
+        return entitlements.authorize(None, component, action)
+    directory = getattr(settings, 'ENTITLEMENT_DIR', '/run/xoc-platform/entitlements')
+    grant = entitlements.load(directory, '0.1.0')
+    return entitlements.authorize(grant, component, action, **resource)
 
 
 def document(name, default):
@@ -26,7 +35,32 @@ def registry():
 
 def panels(data, role):
     selected = {c['id'] for c in data['components']}
-    return [p for p in data['panels'] if p['component_id'] in selected and p['permission'] in ROLES.get(role, set())]
+    allowed = set()
+    for component in data['components']:
+        try:
+            access(component)
+            allowed.add(component['id'])
+        except (OSError, ValueError, KeyError, TypeError):
+            pass
+    return [p for p in data['panels'] if p['component_id'] in selected & allowed and p['permission'] in ROLES.get(role, set())]
+
+
+@require_GET
+@protected('registry.read')
+def module_status(request, identifier):
+    """Owned status route disappears with the selected module's registration."""
+    try:
+        data = registry()
+        component = next((c for c in data['components'] if c['id'] == identifier), None)
+        if component is None:
+            return JsonResponse({'error': 'component_not_installed'}, status=404)
+        permission = access(component, 'read')
+        return JsonResponse({'component': component, 'access': permission,
+                             'assets': [a for a in snapshot(data)['assets'] if a['component_id'] == identifier]})
+    except entitlements.Denied as exc:
+        return JsonResponse({'error': exc.code}, status=403)
+    except (OSError, ValueError, KeyError, TypeError):
+        return JsonResponse({'error': 'registry_unavailable'}, status=503)
 
 
 def session_navigation(role):

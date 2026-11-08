@@ -21,6 +21,7 @@ compose: compose.yaml
 build_inputs:
 - .dockerignore
 - Dockerfile
+- requirements.lock
 - control/__init__.py
 - control/app.js
 - control/console.py
@@ -42,6 +43,7 @@ build_inputs:
 - control/datacenter-workspaces.js
 - control/brand.css
 - control/workspace.py
+- control/entitlements.py
 - control/workspace.js
 - control/workspace.css
 - health.py

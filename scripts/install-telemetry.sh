@@ -22,8 +22,12 @@ if ! dpkg-query -W -f='${Status}' osquery 2>/dev/null | grep -qx 'install ok ins
     printf '%s\n' 'deb [arch=amd64 signed-by=/etc/apt/keyrings/xocrange-osquery.asc] https://pkg.osquery.io/deb deb main' \
         > /etc/apt/sources.list.d/xocrange-osquery.list
 fi
-apt-get "${apt_options[@]}" update
-apt-get "${apt_options[@]}" install -y --no-install-recommends auditd osquery sysmonforlinux
+apt_retry "${apt_options[@]}" update
+missing=()
+for package in auditd osquery sysmonforlinux; do
+    if [[ $(dpkg-query -W -f='${Status}' "$package" 2>/dev/null || true) != 'install ok installed' ]]; then missing+=("$package"); fi
+done
+if ((${#missing[@]})); then apt_retry "${apt_options[@]}" install -y --no-install-recommends "${missing[@]}"; fi
 install -m 0600 "$release/components/siem/osquery.conf" /etc/xocrange/osquery.conf
 install -m 0600 "$release/components/siem/sysmon.xml" /etc/xocrange/sysmon.xml
 cat > /etc/systemd/system/xocrange-osquery.service <<'EOF'

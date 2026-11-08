@@ -46,6 +46,11 @@ class Store:
           observed TEXT NOT NULL, event TEXT NOT NULL, sent TEXT, confirmed TEXT, rule_id TEXT);
         CREATE INDEX IF NOT EXISTS events_producer_time ON events(producer, observed);
         CREATE INDEX IF NOT EXISTS events_pending ON events(confirmed, sent);
+        CREATE INDEX IF NOT EXISTS events_status ON events(producer, confirmed);
+        CREATE INDEX IF NOT EXISTS records_quarantined ON records(error) WHERE error IS NOT NULL;
+        CREATE INDEX IF NOT EXISTS records_observed ON records(observed);
+        CREATE INDEX IF NOT EXISTS events_observed ON events(observed);
+        CREATE INDEX IF NOT EXISTS events_ref ON events(ref);
         CREATE TABLE IF NOT EXISTS cursors (name TEXT PRIMARY KEY, value TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS health (source TEXT PRIMARY KEY, checked TEXT NOT NULL, status TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS processing_errors (
@@ -55,6 +60,7 @@ class Store:
           id TEXT PRIMARY KEY, observed TEXT NOT NULL, raw BLOB NOT NULL, sha256 TEXT NOT NULL,
           document TEXT NOT NULL, event_id TEXT, indexed TEXT);
         CREATE INDEX IF NOT EXISTS native_alerts_pending ON wazuh_alerts(indexed,observed);
+        CREATE INDEX IF NOT EXISTS native_alerts_observed ON wazuh_alerts(observed);
         CREATE TABLE IF NOT EXISTS native_inputs (
           id TEXT PRIMARY KEY, ref TEXT NOT NULL REFERENCES records(ref) ON DELETE CASCADE,
           source TEXT NOT NULL, ordinal INTEGER NOT NULL, observed TEXT NOT NULL,
@@ -62,6 +68,7 @@ class Store:
         CREATE INDEX IF NOT EXISTS native_inputs_pending ON native_inputs(confirmed,sent,observed);
         CREATE INDEX IF NOT EXISTS native_inputs_ref ON native_inputs(ref);
         CREATE INDEX IF NOT EXISTS native_inputs_source_pending ON native_inputs(source,confirmed,observed);
+        CREATE INDEX IF NOT EXISTS native_inputs_source_observed ON native_inputs(source,observed);
         CREATE INDEX IF NOT EXISTS native_alerts_event ON wazuh_alerts(event_id,indexed);
         CREATE INDEX IF NOT EXISTS native_alerts_unlinked_pending ON wazuh_alerts(indexed,event_id,observed);
         ''')

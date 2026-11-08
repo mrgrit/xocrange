@@ -49,9 +49,10 @@ def receive(group, message, data, opaque):
         sport, dport = struct.unpack('!HH', packet[offset:offset+4])
         fields += f' SPT={sport} DPT={dport}'
     stamp = datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
-    # Rename rotation, leaving one previous generation for the collector.
+    # Retain generations until the host confirms collection, even during outages.
     if path.exists() and path.stat().st_size > 8 * 1024 * 1024:
-        path.replace(path.with_suffix('.log.1'))
+        import time
+        path.rename(path.with_name(path.name+'.xoc-'+str(time.time_ns()).zfill(20)))
     with path.open('a') as stream:
         stream.write(stamp + ' fw kernel: ' + prefix.decode() + fields + '\n')
     return 0

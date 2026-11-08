@@ -34,7 +34,7 @@ def read_snapshots(path, owner, states, limit=262144, history=()):
     result = []
     seen = set()
     remaining = limit
-    for name in (*history, path + '.2', path + '.1', path):
+    for name in (*history, path + '.3', path + '.2', path + '.1', path):
         try:
             fd = os.open(name, os.O_RDONLY | os.O_NOFOLLOW)
         except FileNotFoundError:
@@ -177,7 +177,8 @@ class Collector:
             owner = source_id + ':host'
         states = {row[0]: json.loads(row[1]) for row in self.store.db.execute('SELECT name,value FROM cursors WHERE name LIKE ?', (owner + ':%',))}
         from .retention import retained_manager_paths
-        history = retained_manager_paths(path) if service == 'siem' else ()
+        from .log_maintenance import history as source_history
+        history = retained_manager_paths(path) if service == 'siem' else source_history(path)
         if service == 'siem':
             live = read_snapshots(path, owner, states, 8*MAX_BYTES)
             live_keys = {chunk['key'] for chunk in live}
@@ -185,7 +186,7 @@ class Collector:
             # Preserve low latency for current input while draining rotated files.
             older = read_snapshots(path, owner, states, 24*MAX_BYTES, history)
             return live + [chunk for chunk in older if chunk['key'] not in live_keys]
-        return read_snapshots(path, owner, states, 262144)
+        return read_snapshots(path, owner, states, 262144, history)
 
     def accept_audit_line(self, source_id, position, raw):
         try:
@@ -258,7 +259,8 @@ class Collector:
         state = self.store.cursor('sysmon-journal')
         # Without --all, journald replaces fields over 4096 bytes with null.
         args = ['journalctl', '-t', 'sysmon', '--output=json', '--all', '--no-pager']
-        args += ['--after-cursor', state['cursor']] if state else ['--since', '-1 hour']
+        resume = self.store.cursor('sysmon-journal-resume')
+        args += ['--after-cursor', state['cursor']] if state else ['--since', '@'+str(resume['since']) if resume else '-1 hour']
         process = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
         limited = False
         deadline = time.monotonic() + 5
@@ -289,6 +291,8 @@ class Collector:
                     self.store.ingest('sysmon', 'host-sysmon', cursor, raw_message)
                     latest = int(record['__REALTIME_TIMESTAMP']) / 1000000
                     self.store.set_cursor('sysmon-journal', {'cursor': cursor, 'source_time': latest})
+                    if resume:
+                        self.store.db.execute('DELETE FROM cursors WHERE name=?', ('sysmon-journal-resume',))
             else:
                 limited = True
             if not limited and process.wait(timeout=5) != 0:
