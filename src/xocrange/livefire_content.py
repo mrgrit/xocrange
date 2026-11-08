@@ -6,17 +6,28 @@ import re
 import yaml
 from .errors import XocError
 
-SUBJECTS = [
-    {'id':'xoc-web-defense','title':'웹 침해 대응','subtitle':'요청 분석 · WAF · 애플리케이션 방어'},
-    {'id':'xoc-host-defense','title':'리눅스·네트워크 침해 대응','subtitle':'인증 · 권한 · 지속성 · 증거 보존'},
-]
 REFERENCE = '324d91fb22fee2c76051d5e73b58aa7f82de3e4c'
+
+
+def subjects(root):
+    from .documents import json_document, read_bytes
+    items=json_document(read_bytes(Path(root)/'contents/catalog/subjects.json'))
+    if not isinstance(items,list) or not 1<=len(items)<=200:
+        raise XocError('scenario_subjects','Invalid subject catalog.')
+    seen=set()
+    for item in items:
+        if (set(item)!={'id','title','subtitle'} or not re.fullmatch(r'[a-z][a-z0-9-]{0,63}',item['id'])
+                or item['id'] in seen or any(not isinstance(item[k],str) or not 1<=len(item[k])<=300 for k in ('title','subtitle'))):
+            raise XocError('scenario_subjects','Invalid subject identity or title.')
+        seen.add(item['id'])
+    return items
 
 
 def scenarios(root):
     root=Path(root)
     course=json.loads((root/'contents/academy/wazuh-threat-hunting/course.json').read_text())
     lessons={l['id']:l for l in course['lessons']}
+    subject_ids={x['id'] for x in subjects(root)}
     result=[]; covered=[]; ids=set()
     for path in sorted((root/'contents/battle-scenarios').glob('xoc-*.yaml')):
         if path.is_symlink() or path.stat().st_size>256*1024:
@@ -25,7 +36,7 @@ def scenarios(root):
         def require(value, message):
             if not value:raise XocError('scenario_contract',path.name+': '+message)
         require(s['id']==path.stem and s['id'] not in ids,'unique slug required');ids.add(s['id'])
-        require(s['category'] in {x['id'] for x in SUBJECTS},'unknown subject')
+        require(s['category'] in subject_ids,'unknown subject')
         linked=s['academy']['lessons'];require(linked and set(linked)<=set(lessons),'unknown lesson')
         covered.extend(linked)
         pages=sorted({p for lid in linked for p in range(lessons[lid]['source_pages'][0],lessons[lid]['source_pages'][1]+1)})
@@ -72,4 +83,4 @@ def public_catalog(root):
         items.append({k:s[k] for k in ('id','category','title','description','difficulty','time_limit','briefing','academy')}|{
             'missions':missions,'total_points':100,'source_sha256':hashlib.sha256(path.read_bytes()).hexdigest(),
             'execution_available':False,'minimum_tier':'live-fire'})
-    return {'schema_version':'xoc.livefire-preview/0.1.0','subjects':SUBJECTS,'scenarios':items}
+    return {'schema_version':'xoc.livefire-preview/0.1.0','subjects':subjects(root),'scenarios':items}

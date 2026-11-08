@@ -146,6 +146,13 @@ def plan(root: Path, *, preset="bootstrap", include=(), without=(), allow_fixtur
     record(preset_path)
     if 'academy-reader' in selected:
         from .academy_content import catalog as academy_catalog
+        from .content_module import read_lock, verify
+        try:
+            verify(root/'contents', read_lock(root/'content-lock.json'))
+        except (ValueError, OSError) as exc:
+            raise XocError('content_module', 'Pinned content is unavailable; run scripts/fetch-contents.py: '+str(exc)) from exc
+        for relative in ('content-lock.json','contents/module.json','contents/.content-source.json','contents/guides/core-introduction.json','contents/catalog/academy.json','contents/catalog/subjects.json'):
+            record(root/relative)
         _, content_files = academy_catalog(root)
         for path in content_files:
             # The catalog bounds/verifies binary screenshots separately from

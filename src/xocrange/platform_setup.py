@@ -51,6 +51,9 @@ def prepare(engine, project, root, selected, host=None, state=STATE, tls=TLS_STA
     if 'academy-reader' in selected:
         from .content import bundle
         write(config_volume/'bundle.json', json.dumps(bundle(root)), 65532)
+        (config_volume/'catalog').mkdir(mode=0o700, exist_ok=True)
+        os.chown(config_volume/'catalog', 65532, 65532)
+        write(config_volume/'catalog/academy.json', (root/'contents/catalog/academy.json').read_bytes(), 65532)
         from .academy_content import catalog
         import shutil
         import tempfile
@@ -70,6 +73,7 @@ def prepare(engine, project, root, selected, host=None, state=STATE, tls=TLS_STA
             if staged.exists(): shutil.rmtree(staged)
     else:
         (config_volume/'bundle.json').unlink(missing_ok=True)
+        (config_volume/'catalog/academy.json').unlink(missing_ok=True)
         import shutil
         shutil.rmtree(config_volume/'academy',ignore_errors=True)
     volume('platform-data', 65532)

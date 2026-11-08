@@ -119,7 +119,7 @@ def catalog(request):
     # The library lists titles only; an installed free package is required to open content.
     installed={c['id']:c for c in result}
     offerings=[{'id':c['id'],'title':c['title'],'category':'보안 운영','source':'Core 번들','mark':'SIEM','available':True,'route':'#academy/course/'+c['id']} for c in result]
-    for item in read(Path(__file__).with_name('academy-catalog.json'))['items']:
+    for item in read(content_root().parent/'catalog/academy.json')['items']:
         if item['id'] not in installed:offerings.append(item|{'available':False,'route':None})
     return JsonResponse({'courses':result,'offerings':offerings,'history_count':MissionRecord.objects.filter(user=request.user).count(),
                          'learning_status':learning,'subjects':training['subjects'],'scenarios':[{k:s[k] for k in ('id','title','category','academy','total_points')}|{'missions':len(s['missions'])} for s in training['scenarios']]})

@@ -29,7 +29,7 @@ def catalog(root):
             public_path=within(package,'scenarios.json');expected.add(public_path)
             from .livefire_content import public_catalog
             if json_document(read_bytes(public_path)) != public_catalog(root):
-                raise XocError('academy_catalog','Run scripts/sync-livefire-catalog.py after editing scenarios.')
+                raise XocError('academy_catalog','Regenerate the public preview in xocrange_contents after editing scenarios.')
         source = json_document(read_bytes(within(package,'source-map.json')))
         last = course.get('public_pages')
         if type(last) is not int or source.get('approved_slide_range') != [1,last] or not 1 <= last <= 2000:

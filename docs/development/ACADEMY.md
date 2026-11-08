@@ -73,7 +73,7 @@ PPT 340쪽 이후, 전체 원본, 발표자 노트, 매핑하지 않은 원고·
 
 교재·미션 패널은 같은 화면에 배치한다. 설명/실습 탭은 제거했으며 교재 페이지를 넘겨도 입력 내용을 유지한다. 36개 차시와 기존 96개 기록 미션의 ID는 유지했다. 신규 공방전 105개 미션은 별도 콘텐츠이며 기존 Core 기록을 임의로 AI 점수로 변환하지 않는다.
 
-[Live Fire 규격·15개 목록](../../contents/battle-scenarios/README.md), [참조 엔진 호환 검증](../provenance/livefire-compatibility.json), [v0.2 배포 수락 기록](../provenance/academy-unified-acceptance.json). 위의 최초 배포 검증 수치는 v0.1의 기록이다.
+[Live Fire 규격·15개 목록](https://github.com/mrgrit/xocrange_contents/tree/main/battle-scenarios), [참조 엔진 호환 검증](../provenance/livefire-compatibility.json), [v0.2 배포 수락 기록](../provenance/academy-unified-acceptance.json). 위의 최초 배포 검증 수치는 v0.1의 기록이다.
 
 ## v0.3 차시 노트와 독서 공간
 
@@ -100,3 +100,7 @@ PPT 340쪽 이후, 전체 원본, 발표자 노트, 매핑하지 않은 원고·
 ![6층 콘텐츠 카탈로그](../images/academy-catalog.png)
 
 ![6층 공간 안의 실제 콘텐츠와 개인 현황](../images/academy-catalog-space.png)
+
+## 독립 콘텐츠 저장소
+
+교재·이미지·미션·정답·과목·카탈로그는 [xocrange_contents](https://github.com/mrgrit/xocrange_contents)에서 관리한다. Core는 지정 커밋을 검증해 설치하며 기존 학습 기록의 ID와 저장 위치를 유지한다. [설치·버전 관리](CONTENT-MODULES.md), [분리 배포 검증](../provenance/content-module-acceptance.json).

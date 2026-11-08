@@ -4,7 +4,7 @@ from .errors import XocError
 
 
 def bundle(root):
-    data = json_document(read_bytes(root/'components/academy-reader/bundle.json'))
+    data = json_document(read_bytes(root/'contents/guides/core-introduction.json'))
     if set(data) != {'schema_version','id','version','title','articles'} or data['schema_version'] != 'xoc.content/0.1.0':
         raise XocError('invalid_content', 'Unsupported content bundle')
     if not isinstance(data['articles'], list) or not 1 <= len(data['articles']) <= 32:

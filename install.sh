@@ -223,6 +223,20 @@ if [[ -n $source_ref || ! -f $source_directory/src/xocrange/planner.py ]]; then
     git -C "$downloaded" checkout -q --detach FETCH_HEAD
     source_directory=$downloaded
 fi
+content_selected=false
+for ((i=0; i<${#optional_selection[@]}; i+=2)); do
+    if [[ ${optional_selection[i+1]} == academy-reader ]]; then content_selected=true; fi
+done
+for ((i=0; i<${#selection[@]}; i+=2)); do
+    if [[ ${selection[i+1]} == academy-reader ]]; then
+        if [[ ${selection[i]} == --include ]]; then content_selected=true; else content_selected=false; fi
+    fi
+done
+if $content_selected; then
+    stage content-module
+    python3 "$source_directory/scripts/fetch-contents.py" --root "$source_directory"
+fi
+stage source-snapshot
 release=$(python3 "$source_directory/scripts/install-support.py" snapshot "$source_directory" "$prefix/releases")
 runtime=$prefix/venvs/$(basename "$release")
 [[ -x $runtime/bin/python ]] || python3 -m venv "$runtime"

@@ -18,8 +18,7 @@ networks: []
 config_keys: []
 contracts:
   C4: 0.1.0
-build_inputs:
-- bundle.json
+build_inputs: []
 ui:
 - id: academy
   title: 아카데미

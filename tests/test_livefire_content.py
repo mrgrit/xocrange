@@ -23,6 +23,7 @@ def test_livefire_covers_courses_and_has_single_input_and_scored_answers():
 
 @pytest.mark.parametrize('mutation',['points','purple','pages','grader','target'])
 def test_invalid_grading_or_mapping_fails_before_publication(tmp_path,mutation):
+    shutil.copytree(ROOT/'contents/catalog',tmp_path/'contents/catalog')
     shutil.copytree(ROOT/'contents/battle-scenarios',tmp_path/'contents/battle-scenarios')
     dest=tmp_path/'contents/academy/wazuh-threat-hunting';dest.mkdir(parents=True)
     shutil.copy2(ROOT/'contents/academy/wazuh-threat-hunting/course.json',dest/'course.json')
