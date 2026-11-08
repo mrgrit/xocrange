@@ -1,0 +1,14 @@
+{
+  "source": "mrgrit/kt66",
+  "head": "b179231073b25fb797b9c6443da393d02cc12340",
+  "reference_only": true,
+  "copied_runtime_code": false,
+  "purpose": "Reviewed inventory, second-floor NOC and component dependencies; implemented independent Core contracts and UI. No original files modified.",
+  "observed_files": {
+    "portal/main.py": "3caaf4c9a809aad6a18abeff3e02013ab026a34a85d534a2c60a25036f6d5be0",
+    "noc/app.py": "dc59697d7c20cd56e81f452f890e2c63e3b99ebffb7f922f3af93d68297508cb",
+    "noc/static/app.js": "66d131d631828ca72a2477476a2d484712d5f6638cea075c27d463dcede341e2",
+    "noc/static/scene.js": "b8aef2cd718188209e8549244d05599781c2dbc7364ac92bde4fd40822e65924",
+    "noc/static/dashboard.js": "892dcdd63bbe7be9646d17fb80e54e610ba86c791e493a9eee73e2f05c30daac"
+  }
+}

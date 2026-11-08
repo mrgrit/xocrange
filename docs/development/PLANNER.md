@@ -26,7 +26,7 @@ xoc plan --output my-first-plan
 | `presets/<name>.yaml` | 선택할 구성요소 목록 |
 | `.local/plans/` | 생성 산출물, Git 제외 |
 
-[platform 예제](../../components/platform/component.yaml)와 [manifest 스키마](../../src/xocrange/contracts/manifest.json)가 기준이다. schema version, ID, 버전, Core 범위, 준비 상태, 티어, 의존성·capability·충돌, 네트워크, 설정 키, C1 버전, Compose 경로, build 입력을 선언한다.
+[platform 예제](../../components/platform/component.yaml)와 [manifest 스키마](../../src/xocrange/contracts/manifest.json)가 기준이다. schema version, ID, 버전, Core 범위, 준비 상태, 티어, 의존성·capability·충돌, 네트워크, 설정 키, C1/C4/C5 버전, 선택적 UI 등록, Compose 경로, build 입력을 선언한다.
 
 Core 버전 범위는 `>=0.1.0 <0.2.0` 같은 공백으로 구분한 비교식이며 prerelease·caret·OR 문법은 지원하지 않는다. `requires.components`는 자동 포함하고 위상 정렬한다. `requires.capabilities`는 선택 집합 안에서 충족되어야 하며 제공자를 임의 선택하지 않는다.
 
@@ -46,7 +46,7 @@ Core의 `security-path`에만 [별도 실험 스키마](../../src/xocrange/contr
 
 ## 계획 파일의 의미
 
-lock에는 Core 버전, 선택·제외·fixture 허용 여부, 사용한 입력 파일 SHA-256, Compose 해시, plan ID가 들어간다. Compose 해시를 계산할 때 build context를 저장소 상대 경로로 바꾸므로 같은 소스를 다른 디렉토리에 옮겨도 lock은 같다. 실제 생성한 Compose에는 실행을 위한 절대 build context를 쓴다. 생성 후 체크아웃을 옮기면 계획을 다시 만든다.
+lock에는 Core 버전, 선택·제외·fixture 허용 여부, 사용한 입력 파일 SHA-256, Compose·등록부 해시, plan ID가 들어간다. Compose 해시를 계산할 때 build context를 저장소 상대 경로로 바꾸므로 같은 소스를 다른 디렉토리에 옮겨도 lock은 같다. 실제 생성한 Compose에는 실행을 위한 절대 build context를 쓴다. 생성 후 체크아웃을 옮기면 계획을 다시 만든다.
 
 이미지 digest, Python 의존성, 호스트 자원, 실제 build 결과는 고정하지 않는다. 현재 lock은 입력 추적 자료이며 재현 가능한 릴리스나 서명 검증 자료가 아니다. apply 시 입력 재검증과 이미지 digest 고정은 후속 작업이다.
 
@@ -68,3 +68,7 @@ YAML은 SafeLoader 기반이며 중복 키·별칭·임의 객체 태그를 거�
 선택 가능한 `siem`은 experimental이며 `--allow-experimental --include siem`으로 계획한다. 일반 모듈은 volume/추가 capability 권한을 얻지 않는다. 내장 security-path의 장비별 로그 볼륨과 내장 siem의 자체 로그 볼륨·큐 tmpfs만 별도 스키마와 역할 검사로 허용한다. Compose 기동은 검증된 전용 프로젝트에서 제거된 서비스의 orphan을 정리하되 볼륨을 삭제하지 않는다. [결정 근거](../adr/0005-core-telemetry.md)
 
 선택 가능한 `siem-ui`는 `siem`과 `security-path`를 요구한다. [전용 고정 스키마](../../src/xocrange/contracts/siem-ui-compose-fragment.json)는 검토한 Indexer·Dashboard·HAProxy 구성과 여섯 전용 볼륨만 허용한다. 외부 포트는 ingress의 80/443뿐이며, web에는 공개 CA·로고·호스트 예외 설정을 읽기 전용으로 연결한다. 일반 확장 모듈의 권한은 늘리지 않는다. 구성·인증·Rule 예외는 [SIEM 웹 관제](SIEM-WEB.md)에 기록한다.
+
+## K09 선택 화면과 등록부
+
+`portal`, `noc`, `academy-reader`는 검토된 빈 Compose 조각으로 공통 관리 런타임의 선택 기능을 활성화한다. C4 패널 ID·소유 route·권한·층과 C5 서비스 소유권을 계획에 포함하고 해시로 묶는다. 계정·상태·자료 API는 같은 관리 경계를 사용한다. [운영 화면과 관측 범위](WORKSPACES.md)를 참고한다.

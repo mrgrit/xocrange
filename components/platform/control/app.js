@@ -2,8 +2,8 @@
 const $ = id => document.getElementById(id);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const icon = name => `<svg aria-hidden="true"><use href="#i-${name}"/></svg>`;
-const labels = {fw:'방화벽',ips:'침입 방지',waf:'웹 방화벽',access:'접근 제어',users:'계정',audit:'감사 기록'};
-const descriptions = {fw:'통과 트래픽의 허용·차단 정책을 순서대로 관리합니다.',ips:'트래픽 검사 조건과 탐지·차단 규칙을 관리합니다.',waf:'웹 요청의 검사 대상과 차단 조건을 관리합니다.',access:'장비별 변경 권한과 쓰기 잠금을 관리합니다.',users:'관리 계정의 역할과 접근 권한을 관리합니다.',audit:'계정·권한·장비 설정의 변경 기록을 확인합니다.'};
+const labels = {portal:'운영 개요',module:'구성요소',noc:'NOC · 2F',academy:'실습 자료',fw:'방화벽',ips:'침입 방지',waf:'웹 방화벽',access:'접근 제어',users:'계정',audit:'감사 기록'};
+const descriptions = {portal:'설치한 서비스의 실행 상태와 관리 화면을 한곳에서 확인합니다.',module:'선택한 구성요소의 등록 정보와 서비스 상태를 확인합니다.',noc:'보안 검사 경로와 서비스 상태를 2층 관제 화면에서 확인합니다.',academy:'현재 설치한 기능의 사용 방법과 실습 흐름을 살펴봅니다.',fw:'통과 트래픽의 허용·차단 정책을 순서대로 관리합니다.',ips:'트래픽 검사 조건과 탐지·차단 규칙을 관리합니다.',waf:'웹 요청의 검사 대상과 차단 조건을 관리합니다.',access:'장비별 변경 권한과 쓰기 잠금을 관리합니다.',users:'관리 계정의 역할과 접근 권한을 관리합니다.',audit:'계정·권한·장비 설정의 변경 기록을 확인합니다.'};
 const tabLabels = {policies:'정책',objects:'주소·서비스 객체',nat:'NAT',ruleset:'전체 규칙',events:'이벤트',history:'변경 이력'};
 const errors = {invalid_credentials:'계정과 비밀번호를 확인해 주세요.',invalid_input:'입력 형식을 확인해 주세요.',permission_denied:'이 작업을 실행할 권한이 없습니다.',device_write_locked:'장비 쓰기가 잠겨 있습니다. 접근 제어에서 변경을 허용해 주세요.',device_unavailable:'장비와 연결하지 못했습니다. 잠시 후 새로고침해 주세요.',try_later:'로그인 시도 제한에 도달했습니다. 15분 뒤 다시 시도해 주세요.',csrf_failed:'세션을 새로 불러온 뒤 다시 시도해 주세요.',stale_version:'다른 변경이 적용되었습니다. 새로고침 후 다시 검토해 주세요.'};
 let csrf='',session={},view='fw',tab='policies',current=null,edit=null,review=null,search='',actionFilter='',loadSequence=0,busy=false,noticeTimer;
@@ -22,12 +22,12 @@ function empty(title,description,button=''){return `<div class="empty">${icon('l
 function field(name,label,value='',placeholder='',type='text'){return `<label>${label}<input name="${name}" value="${esc(value)}" placeholder="${esc(placeholder)}" type="${type}" maxlength="300"></label>`;}
 function select(name,label,options,value){return `<label>${label}<select name="${name}">${options.map(o=>{const [v,t]=Array.isArray(o)?o:[o,o];return `<option value="${esc(v)}" ${String(value)===String(v)?'selected':''}>${esc(t)}</option>`;}).join('')}</select></label>`;}
 function check(name,label,value){return `<label class="checkbox"><input type="checkbox" name="${name}" ${value?'checked':''}>${esc(label)}</label>`;}
-function route(){const parts=location.hash.slice(1).split('/');view=labels[parts[0]]?parts[0]:(session.consoles?.[0]||'access');tab=tabLabels[parts[1]]?parts[1]:'policies';search='';actionFilter='';act(load);}
+function route(){const parts=location.hash.slice(1).split('/');view=labels[parts[0]]?parts[0]:(session.navigation?.some(p=>p.id==='portal')?'portal':session.consoles?.[0]||'access');tab=['academy','module'].includes(view)&&/^(?:[a-z][a-z0-9-]{0,63}|M(?:[1-9]|1[0-9]))$/.test(parts[1]||'')?parts[1]:tabLabels[parts[1]]?parts[1]:'policies';search='';actionFilter='';act(load);}
 async function refreshSession(){
  session=await api('session');$('login').hidden=session.authenticated;$('account').hidden=!session.authenticated;
  if(!session.authenticated)return;
  $('identity').textContent=session.username+' · '+({admin:'관리자',operator:'운영자',viewer:'조회자'}[session.role]||session.role);
- $('siem-link').hidden=!session.siem_available;
+ $('siem-link').hidden=!session.siem_available;workspaceNavigation();
  for(const el of document.querySelectorAll('.admin-nav'))el.hidden=session.role!=='admin';
  if(session.must_change_password){$('device-view').hidden=true;$('system-view').hidden=true;if(!$('password-panel').open)$('password-panel').showModal();notice('초기 비밀번호를 변경해 주세요.');return;}
  route();
@@ -39,7 +39,7 @@ async function load(){
  $('crumb').textContent=labels[view];$('page-title').textContent=labels[view]+(['fw','ips','waf'].includes(view)?' 정책':'');$('page-description').textContent=descriptions[view];$('eyebrow').textContent=view==='fw'?'NETWORK SECURITY':view==='ips'?'THREAT PREVENTION':view==='waf'?'APPLICATION SECURITY':'SYSTEM MANAGEMENT';
  const device=['fw','ips','waf'].includes(view);$('device-view').hidden=!device;$('system-view').hidden=device;$('sync-status').textContent='상태를 불러오는 중…';$('refresh').disabled=true;
  try{
-  if(!device){await systemView(sequence);return;}
+  if(!device){if(['portal','noc','academy','module'].includes(view)){try{await workspaceView(sequence);}catch(e){if(sequence===loadSequence){$('system-view').innerHTML='<div class="panel">'+empty('정보를 불러오지 못했습니다','연결 상태를 확인한 뒤 다시 새로고침해 주세요.')+'</div>';$('sync-status').textContent='조회 실패';}throw e;}}else await systemView(sequence);return;}
   $('device-content').innerHTML='<div class="panel">'+empty('장비 상태를 불러오는 중','현재 설정과 실행 상태를 확인하고 있습니다.')+'</div>';$('device-summary').replaceChildren();$('tabs').replaceChildren();
   if(!session.consoles?.includes(view)){$('device-content').innerHTML='<div class="panel">'+empty('설치되지 않은 콘솔','이 장비 콘솔을 선택 설치하면 정책을 관리할 수 있습니다.')+'</div>';return;}
   const d=await api('console/'+view);if(sequence!==loadSequence)return;current=d;drawSummary();drawTabs();drawPanel();$('sync-status').textContent='마지막 확인 '+date(d.observed_at);

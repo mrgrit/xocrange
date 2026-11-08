@@ -68,7 +68,7 @@ def page(request):
 
 @require_GET
 def asset(request, name):
-    if name not in ('app.js', 'style.css'):
+    if name not in ('app.js', 'style.css', 'workspace.js', 'workspace.css'):
         return JsonResponse({'error': 'not_found'}, status=404)
     return HttpResponse((Path(__file__).parent/name).read_text(), content_type='text/javascript' if name.endswith('.js') else 'text/css')
 
@@ -87,6 +87,8 @@ def session_data(request):
             request.session.flush()
             return result
         result.update(authenticated=True, username=request.user.username, role=p.role, must_change_password=p.must_change_password)
+        from .workspace import session_navigation
+        result['navigation'] = session_navigation(p.role) if not p.must_change_password else []
     return result
 
 

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>xOC Range · Security Console</title><link rel="stylesheet" href="/core/assets/style.css"><script src="/core/assets/app.js" defer></script></head>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>xOC Range · Security Console</title><link rel="stylesheet" href="/core/assets/style.css"><link rel="stylesheet" href="/core/assets/workspace.css"><script src="/core/assets/workspace.js" defer></script><script src="/core/assets/app.js" defer></script></head>
 <body>
 <svg class="icon-defs" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><defs>
 <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3 3 7v5c0 5 9 9 9 9s9-4 9-9V7Z"/><path d="m8 12 3 3 5-6"/></symbol>
@@ -20,7 +20,7 @@
 </div>
 <div id="account" class="shell" hidden>
  <aside class="sidebar"><a class="brand" href="#fw/policies"><img src="/assets/xoc-range-logo.png" alt="xOC Range"><span>SECURITY CONSOLE</span></a><div class="workspace"><span class="workspace-dot"></span><div>Core 환경<small>Community Edition</small></div><span class="workspace-id">01</span></div>
- <span class="nav-caption">보안 정책</span><nav aria-label="주 메뉴">
+ <span class="nav-caption">작업 공간</span><nav aria-label="주 메뉴"><div id="workspace-nav" hidden></div><span class="nav-caption">보안 정책</span>
  <button data-nav="fw"><svg><use href="#i-shield"/></svg><span>방화벽</span><small>FW</small></button>
  <button data-nav="ips"><svg><use href="#i-wave"/></svg><span>침입 방지</span><small>IPS</small></button>
  <button data-nav="waf"><svg><use href="#i-globe"/></svg><span>웹 방화벽</span><small>WAF</small></button>

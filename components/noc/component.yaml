@@ -3,16 +3,27 @@ id: noc
 kind: component
 title: NOC second-floor shell
 version: 0.1.0
-core: ">=0.1.0 <0.2.0"
-status: planned
+core: '>=0.1.0 <0.2.0'
+status: experimental
 commercial: false
 minimum_tier: community
 requires:
-  components: ["platform"]
+  components:
+  - management
   capabilities: []
-provides: ["ui.noc"]
+provides:
+- ui.noc
 conflicts: []
-networks: ["int"]
+networks: []
 config_keys: []
-contracts: {}
+contracts:
+  C4: 0.1.0
 build_inputs: []
+ui:
+- id: noc
+  title: NOC · 2F
+  route: /core/#noc
+  order: 20
+  permission: registry.read
+  floor: 2F
+compose: compose.yaml

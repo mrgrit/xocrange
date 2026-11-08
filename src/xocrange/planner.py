@@ -14,6 +14,7 @@ from . import __version__
 from .documents import canonical, read_bytes, validate, within, yaml_document
 from .errors import XocError
 from .network_policy import attach_http_targets, check_addresses, security_role_policy
+from .registry import registrations
 
 
 def compatible(requirement: str, version=__version__):
@@ -162,7 +163,7 @@ def plan(root: Path, *, preset="bootstrap", include=(), without=(), allow_fixtur
             raise XocError("experimental_component", "The security-path runtime requires explicit experimental selection.")
         siem = identifier == "siem" and manifest["kind"] == "component"
         siem_ui = identifier == "siem-ui" and manifest["kind"] == "component"
-        schema = "security-compose-fragment" if security_path else "siem-compose-fragment" if siem else "siem-ui-compose-fragment" if siem_ui else "management-compose-fragment" if identifier == "management" else "console-compose-fragment" if identifier in ("console-fw","console-ips","console-waf") else "compose-fragment"
+        schema = "security-compose-fragment" if security_path else "siem-compose-fragment" if siem else "siem-ui-compose-fragment" if siem_ui else "management-compose-fragment" if identifier == "management" else "console-compose-fragment" if identifier in ("console-fw","console-ips","console-waf","portal","noc","academy-reader") else "compose-fragment"
         fragment = validate(yaml_document(fragment_path), schema)
         if siem:
             service = fragment["services"]["siem"]
@@ -211,6 +212,8 @@ def plan(root: Path, *, preset="bootstrap", include=(), without=(), allow_fixtur
         compose['services']['web']['volumes'] += ['web-tls:/run/xoc-tls:ro', 'platform-socket:/run/xoc-platform-socket:ro']
         compose['services']['web']['environment']['XOC_MANAGEMENT'] = '1'
         compose['services']['platform'].update(user='65532:33', volumes=['platform-config:/run/xoc-platform:ro', 'platform-data:/var/lib/xoc-platform', 'platform-socket:/run/xoc-platform-socket'], tmpfs=['/tmp:size=32m,mode=1777'])
+        compose.setdefault('volumes', {})['platform-observation'] = {}
+        compose['services']['platform']['volumes'].append('platform-observation:/run/xoc-observation:ro')
     if 'management' in selected:
         for device, service in (('fw','fw'), ('ips','ips'), ('waf','web')):
             # Keep persistent device policy even when its optional GUI is unselected.
@@ -247,13 +250,18 @@ def plan(root: Path, *, preset="bootstrap", include=(), without=(), allow_fixtur
     for service in portable["services"].values():
         if "build" in service:
             service["build"]["context"] = str(Path(service["build"]["context"]).relative_to(root))
+    manifests = [entries[key]['manifest'] for key in selected]
+    registry = {'components': [{k: m[k] for k in ('id','title','version','provides','requires')} for m in manifests],
+                'panels': registrations(manifests), 'service_owners': owners,
+                'targets': [dict(t, component_id=m['id']) for m in manifests for t in m.get('http_targets', [])]}
     lock = {"schema_version": "xoc.plan/0.1.0", "core_version": __version__, "preset": preset,
             "selected": selected, "requested": sorted(requested), "excluded": sorted(excluded),
             "fixtures_allowed": allow_fixtures, "experimental_allowed": allow_experimental,
             "input_sha256": dict(sorted(inputs.items())),
-            "compose_sha256": hashlib.sha256(canonical(portable)).hexdigest()}
+            "compose_sha256": hashlib.sha256(canonical(portable)).hexdigest(),
+            "registry_sha256": hashlib.sha256(canonical(registry)).hexdigest()}
     lock["plan_id"] = hashlib.sha256(canonical(lock)).hexdigest()
-    return {"lock": lock, "compose": compose, "limitations": [
+    return {"lock": lock, "compose": compose, "registry": registry, "limitations": [
         "Offline plan only; no images built, containers started, or host resources checked.",
         "Image tags are not digest-locked; this is not a reproducible release lock.",
         "Bootstrap is a health endpoint, not the completed Community platform.",

@@ -16,6 +16,14 @@ provides:
 conflicts: []
 networks: []
 config_keys: []
-contracts: {}
+contracts:
+  C4: 0.1.0
 build_inputs: []
 compose: compose.yaml
+ui:
+- id: fw
+  title: 방화벽
+  route: /core/#fw/policies
+  order: 40
+  permission: devices.read
+  floor: 2F

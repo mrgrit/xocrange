@@ -120,6 +120,12 @@
             "0.1.0",
             "0.2.0"
           ]
+        },
+        "C4": {
+          "const": "0.1.0"
+        },
+        "C5": {
+          "const": "0.1.0"
         }
       }
     },
@@ -161,6 +167,55 @@
             "type": "integer",
             "minimum": 1,
             "maximum": 65535
+          }
+        }
+      }
+    },
+    "ui": {
+      "type": "array",
+      "maxItems": 16,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "title",
+          "route",
+          "permission",
+          "floor",
+          "order"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{0,63}$"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "route": {
+            "type": "string",
+            "pattern": "^(?:/core/#[a-z][a-z0-9-]{0,63}(?:/(?:[a-z][a-z0-9-]{0,63}|M(?:[1-9]|1[0-9])))?|/siem/)$"
+          },
+          "permission": {
+            "enum": [
+              "registry.read",
+              "content.read",
+              "devices.read"
+            ]
+          },
+          "floor": {
+            "enum": [
+              "2F",
+              null
+            ]
+          },
+          "order": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 999
           }
         }
       }

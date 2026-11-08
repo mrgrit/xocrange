@@ -67,7 +67,7 @@ def test_module_dependencies_auto_selected_and_exclusions_obeyed(checkout):
 
 def test_planned_components_cannot_generate_fake_deployment():
     assert catalog(ROOT)["security-path"]["manifest"]["status"] == "experimental"
-    expect("component_not_ready", lambda: plan(ROOT, preset="community-security"))
+    expect("component_not_ready", lambda: plan(ROOT, preset="community-security", allow_experimental=True))
 
 
 @pytest.mark.parametrize("changes,code", [

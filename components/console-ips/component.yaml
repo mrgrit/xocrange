@@ -16,6 +16,14 @@ provides:
 conflicts: []
 networks: []
 config_keys: []
-contracts: {}
+contracts:
+  C4: 0.1.0
 build_inputs: []
 compose: compose.yaml
+ui:
+- id: ips
+  title: 침입 방지
+  route: /core/#ips/policies
+  order: 50
+  permission: devices.read
+  floor: 2F

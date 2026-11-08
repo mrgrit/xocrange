@@ -5,6 +5,8 @@ from .models import Audit, DevicePolicy, Profile
 
 ROLES = {'viewer': {'devices.read'}, 'operator': {'devices.read', 'devices.preview'},
          'admin': {'devices.read', 'devices.preview', 'devices.policy', 'users.manage', 'audit.read'}}
+for permissions in ROLES.values():
+    permissions.update({'registry.read', 'content.read'})
 
 
 def audit(request, action, outcome, target='', before=None, after=None):

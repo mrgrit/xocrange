@@ -16,12 +16,14 @@ provides:
 - platform.management
 - platform.auth
 - platform.audit
+- platform.registry
 conflicts: []
 networks:
 - user
 - ext
 config_keys: []
-contracts: {}
+contracts:
+  C5: 0.1.0
 compose: compose.yaml
 build_inputs:
 - .dockerignore

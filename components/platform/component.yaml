@@ -33,6 +33,9 @@ build_inputs:
 - control/style.css
 - control/urls.py
 - control/views.py
+- control/workspace.py
+- control/workspace.js
+- control/workspace.css
 - health.py
 - settings.py
 - start.py

@@ -4,13 +4,15 @@ import os
 from pathlib import Path
 import secrets
 import subprocess
+import uuid
+from .registry import build_registry
 from .ui_setup import STATE as TLS_STATE, certificate, host_rule, ingress_config, owned_volume, private_json, public_host, write
 from .errors import XocError
 
 STATE = Path('/var/lib/xocrange/platform')
 
 
-def prepare(engine, project, root, selected, host=None, state=STATE, tls=TLS_STATE):
+def prepare(engine, project, root, selected, host=None, state=STATE, tls=TLS_STATE, planned=None):
     if os.geteuid() != 0:
         raise XocError('root_required', 'Platform provisioning requires the installer.')
     for directory in (state, tls):
@@ -24,6 +26,7 @@ def prepare(engine, project, root, selected, host=None, state=STATE, tls=TLS_STA
     previous = private_json(tls/'credentials.json').get('public_host') if (tls/'credentials.json').exists() else None
     host = public_host(host or config.get('public_host') or previous or json.loads(subprocess.check_output(['ip','-j','-4','route','get','1.1.1.1'],text=True))[0]['prefsrc'])
     config.update(public_host=host, siem_available='siem-ui' in selected, consoles=[d for d in ('fw','ips','waf') if 'console-'+d in selected])
+    config.setdefault('installation_id', str(uuid.uuid4()))
     write(path, json.dumps(config))
     if not (tls/'ca.pem').exists():
         subprocess.run(['openssl','req','-x509','-newkey','rsa:3072','-nodes','-days','3650','-sha256','-keyout',str(tls/'ca-key.pem'),'-out',str(tls/'ca.pem'),'-subj','/CN=xOC Range local CA','-addext','basicConstraints=critical,CA:TRUE','-addext','keyUsage=critical,keyCertSign,cRLSign'],check=True,capture_output=True)
@@ -35,6 +38,14 @@ def prepare(engine, project, root, selected, host=None, state=STATE, tls=TLS_STA
         return base
     config_volume = volume('platform-config', 65532)
     write(config_volume/'config.json', json.dumps({k:config[k] for k in ('secret_key','bootstrap_password','public_host','siem_available','consoles')}), 65532)
+    if planned is not None:
+        write(config_volume/'registry.json', json.dumps(build_registry(planned, config['installation_id'])), 65532)
+    volume('platform-observation', 0, 33, 0o750)
+    if 'academy-reader' in selected:
+        from .content import bundle
+        write(config_volume/'bundle.json', json.dumps(bundle(root)), 65532)
+    else:
+        (config_volume/'bundle.json').unlink(missing_ok=True)
     volume('platform-data', 65532)
     volume('platform-socket', 65532, 33, 0o770)
     for device in ('fw','ips','waf'):

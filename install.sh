@@ -15,7 +15,8 @@ Common management authentication, SIEM collection, eight decoders and HTTPS dash
 Common HTTPS management remains available with either option.
 FW, IPS and WAF consoles are included; --without console-fw (or console-ips/console-waf)
 omits its management UI while preserving existing device policy.
-Portals and the complete Community release remain under development.
+--without portal, --without noc and --without academy-reader omit each workspace independently.
+Portal, NOC 2F and bundled guides are included; the complete Community release remains under development.
 
   --include ID       Add an implemented module (repeatable)
   --without ID       Exclude an optional module (repeatable)
@@ -38,7 +39,7 @@ selection=()
 siem_selection=(--include siem)
 ui_selection=(--include siem-ui)
 management_selection=(--include management)
-console_selection=()
+optional_selection=()
 public_host=
 data_directory=/var/lib/xocrange/data
 source_ref=
@@ -64,12 +65,12 @@ for ((i=0; i<${#selection[@]}; i++)); do
     if [[ ${selection[i]} == --without && ${selection[i+1]:-} == siem ]]; then siem_selection=(); ui_selection=(); fi
     if [[ ${selection[i]} == --without && ${selection[i+1]:-} == siem-ui ]]; then ui_selection=(); fi
 done
-for console_id in console-fw console-ips console-waf; do
+for console_id in console-fw console-ips console-waf portal noc academy-reader; do
     console_excluded=false
     for ((i=0; i<${#selection[@]}; i++)); do
         if [[ ${selection[i]} == --without && ${selection[i+1]:-} == "$console_id" ]]; then console_excluded=true; fi
     done
-    if ! $console_excluded; then console_selection+=(--include "$console_id"); fi
+    if ! $console_excluded; then optional_selection+=(--include "$console_id"); fi
 done
 [[ $data_directory =~ ^/[A-Za-z0-9_/-]+$ && $data_directory != / ]] || fail 'Invalid data directory'
 [[ -z $public_host || $public_host =~ ^[A-Za-z0-9][A-Za-z0-9.-]{0,252}$ ]] || fail 'Invalid public hostname'
@@ -176,11 +177,11 @@ xoc=("$runtime/bin/xoc" --root "$release")
 stage module-plan
 plan_json=$state/plan-$run_id.json
 "${xoc[@]}" plan --preset security-path --allow-experimental --allow-fixtures \
-    --include fixture-security-probe "${siem_selection[@]}" "${ui_selection[@]}" "${management_selection[@]}" "${console_selection[@]}" "${selection[@]}" > "$plan_json"
+    --include fixture-security-probe "${siem_selection[@]}" "${ui_selection[@]}" "${management_selection[@]}" "${optional_selection[@]}" "${selection[@]}" > "$plan_json"
 plan_name=install-$("$runtime/bin/python" -c 'import json,sys; print(json.load(open(sys.argv[1]))["lock"]["plan_id"])' "$plan_json")
 if [[ ! -d $release/.local/plans/$plan_name ]]; then
     "${xoc[@]}" plan --preset security-path --allow-experimental --allow-fixtures \
-        --include fixture-security-probe "${siem_selection[@]}" "${ui_selection[@]}" "${management_selection[@]}" "${console_selection[@]}" "${selection[@]}" --output "$plan_name" > "$plan_json"
+        --include fixture-security-probe "${siem_selection[@]}" "${ui_selection[@]}" "${management_selection[@]}" "${optional_selection[@]}" "${selection[@]}" --output "$plan_name" > "$plan_json"
 fi
 # Prevent exclusion of a required acceptance service, before any Docker installation.
 "$runtime/bin/python" - "$release" "$plan_name" <<'PY'
@@ -272,6 +273,7 @@ if "$runtime/bin/python" -c 'import json,sys; sys.exit("siem-ui" not in json.loa
     if [[ $(sysctl -n vm.max_map_count) -lt 262144 ]]; then sysctl -w vm.max_map_count=262144; fi
 fi
 stage platform-identities
+systemctl stop xocrange-observer.timer xocrange-observer.service 2>/dev/null || true
 "$runtime/bin/python" "$release/scripts/setup-platform.py" "$release" "$plan_name" "$public_host"
 "${compose[@]}" build
 stage start-services
@@ -314,6 +316,8 @@ WantedBy=multi-user.target
 EOF
 systemctl daemon-reload
 systemctl enable --now xocrange-core.service
+stage registry-observer
+bash "$release/scripts/install-registry.sh" "$release" "$runtime" "$plan_name"
 stage management-acceptance
 "$runtime/bin/python" "$release/scripts/verify-management.py" "$release"
 if "$runtime/bin/python" -c 'import json,sys; sys.exit("siem" not in json.load(open(sys.argv[1]))["lock"]["selected"])' "$plan_json"; then
@@ -362,7 +366,7 @@ Path(sys.argv[1]).write_text(json.dumps(result, indent=2) + '\n')
 PY
 printf '\nInstalled and verified: experimental platform + fw + IPS + WAF.\n'
 printf 'State: %s/last-install.json\nLogs: %s\n' "$state" "$log"
-printf 'Portals and the complete Community release remain under development.\n'
+printf 'Optional workspaces follow the selected plan. The complete Community release remains under development.\n'
 printf 'Core login details: sudo xoc platform credentials\n'
 if ((${#ui_selection[@]})); then
     printf 'SIEM login details: sudo xoc siem credentials\nLocal CA certificate: /etc/xocrange/ca.crt\n'

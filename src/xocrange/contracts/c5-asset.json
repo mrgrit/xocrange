@@ -1,0 +1,77 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "C5 installed service asset v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "asset_id",
+    "component_id",
+    "service",
+    "title",
+    "kind",
+    "floor",
+    "zones",
+    "tenant_id",
+    "range_id"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "xoc.asset/0.1.0"
+    },
+    "asset_id": {
+      "type": "string",
+      "pattern": "^asset-[0-9a-f]{32}$"
+    },
+    "component_id": {
+      "type": "string",
+      "pattern": "^(?:[a-z][a-z0-9-]{0,63}|M(?:[1-9]|1[0-9]))$"
+    },
+    "service": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{0,62}$"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 120
+    },
+    "kind": {
+      "enum": [
+        "platform",
+        "gateway",
+        "firewall",
+        "ips",
+        "waf",
+        "siem",
+        "target",
+        "client",
+        "service"
+      ]
+    },
+    "floor": {
+      "const": "2F"
+    },
+    "zones": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "user",
+          "ext",
+          "pipe",
+          "dmz",
+          "int",
+          "app",
+          "ot"
+        ]
+      }
+    },
+    "tenant_id": {
+      "const": "community"
+    },
+    "range_id": {
+      "const": "local"
+    }
+  }
+}

@@ -10,7 +10,7 @@
 sudo bash install.sh
 ```
 
-현재는 개발 버전이라 위 실행이 experimental security-path를 선택한다. platform·fw·IPS·WAF, Wazuh Manager/API, osquery·Sysmon·auditd와 무해한 검증용 client/backend를 설치한다. `management`가 공통 HTTPS·로그인·역할·감사·장비 쓰기 정책을 제공한다. 기본 선택인 `siem-ui`는 같은 버전의 Wazuh Indexer·전용 Dashboard를 추가한다. `--without siem-ui`는 웹 관제만, `--without siem`은 웹 관제와 SIEM·xOC 호스트 수집을 함께 제외한다. SIEM 제외 시에도 `/core/` 관리와 계정은 유지한다. FW·IPS·WAF 구성 콘솔 초안을 포함한다. 사용자 포털과 전체 Community 배포는 개발 중이며 전체 완성본으로 성공을 표시하지 않는다. [8종 수집·검증](SIEM.md)을 함께 참고한다.
+현재는 개발 버전이라 위 실행이 experimental security-path를 선택한다. platform·fw·IPS·WAF, Wazuh Manager/API, osquery·Sysmon·auditd와 무해한 검증용 client/backend를 설치한다. `management`가 공통 HTTPS·로그인·역할·감사·장비 쓰기 정책을 제공한다. 기본 선택인 `siem-ui`는 같은 버전의 Wazuh Indexer·전용 Dashboard를 추가한다. `--without siem-ui`는 웹 관제만, `--without siem`은 웹 관제와 SIEM·xOC 호스트 수집을 함께 제외한다. SIEM 제외 시에도 `/core/` 관리와 계정은 유지한다. FW·IPS·WAF 구성 콘솔 초안을 포함한다. 운영 개요·NOC 2층·자료실도 기본 포함한다. `--without portal`, `--without noc`, `--without academy-reader`로 각각 제외한다. 전체 Community 출시 완료로 표시하지 않는다. [K09 운영 화면](WORKSPACES.md)을 참고한다. [8종 수집·검증](SIEM.md)을 함께 참고한다.
 
 현재 프로필의 실행 전 검사는 2 vCPU, 웹 관제 포함 시 RAM 약 8GB(제외 시 약 4GB), 데이터 경로 여유 20GB 이상이다. 이번 웹 관제 검증 VM은 8 vCPU·16GB RAM이다. 이는 전체 Core 최소 사양을 실측한 값이 아니다. 전체 개발을 위한 권장 예산은 8 vCPU·32GB RAM·OS 80GB + 데이터 300GB다.
 
@@ -84,7 +84,7 @@ sudo journalctl -u xocrange-core.service --no-pager
 sudo xoc catalog
 ```
 
-웹 관제 선택 시 HTTPS 443과 HTTPS로 리다이렉트하는 HTTP 80만 게시한다. Indexer 9200·Dashboard 5601은 게시하지 않는다. `sudo xoc siem credentials`로 URL과 초기 로그인 정보를 확인한다. 브라우저 PC에는 설치별 CA를 한 번 신뢰 등록한다. 상세 경로와 Rule 예외는 [SIEM 웹 관제](SIEM-WEB.md)를 따른다. 외부 사용자 포털은 아직 없다. platform health는 컨테이너 내부의 `127.0.0.1:8080/healthz`에서 확인하고, 실습 경로는 내부 probe로 검증한다. 서비스 등록 성공은 실제 재부팅 검증과 구분하며 결과의 `reboot_verified`는 별도 검증 전까지 false다.
+웹 관제 선택 시 HTTPS 443과 HTTPS로 리다이렉트하는 HTTP 80만 게시한다. Indexer 9200·Dashboard 5601은 게시하지 않는다. `sudo xoc siem credentials`로 URL과 초기 로그인 정보를 확인한다. 브라우저 PC에는 설치별 CA를 한 번 신뢰 등록한다. 상세 경로와 Rule 예외는 [SIEM 웹 관제](SIEM-WEB.md)를 따른다. 로그인한 사용자는 `/core/#portal`에서 설치 서비스와 관리 링크를 확인한다. 상태 관측용 호스트 타이머는 15초마다 갱신하며 웹 프로세스에 Docker 소켓을 노출하지 않는다. platform health는 컨테이너 내부의 `127.0.0.1:8080/healthz`에서 확인하고, 실습 경로는 내부 probe로 검증한다. 서비스 등록 성공은 실제 재부팅 검증과 구분하며 결과의 `reboot_verified`는 별도 검증 전까지 false다.
 
 부팅 시 검증된 계획·로컬 이미지로 `lab start`를 실행하고 `lab verify`와 선택한 웹 관제 초기화까지 통과해야 서비스 성공으로 표시한다. `lab start`는 `--no-build --pull never`를 사용한다. 종료는 해당 프로젝트의 `lab down`만 호출한다.
 
