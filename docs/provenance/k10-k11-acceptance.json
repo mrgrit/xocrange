@@ -123,6 +123,164 @@
   "unit_tests": {
     "suite_passed": 388,
     "apt_retry_and_installer_passed": 18,
-    "date": "2026-11-08"
+    "date": "2026-11-08",
+    "integrated_suite_passed": 403
+  },
+  "main_appliance": {
+    "packet_path": {
+      "status": "passed",
+      "checks": {
+        "platform_health": true,
+        "landing_available": true,
+        "selected_target_available": true,
+        "source_ip_and_forwarded_header": true,
+        "fw_on_packet_path": true,
+        "ips_on_packet_path": true,
+        "fw_denies_other_port": true,
+        "no_direct_waf_bypass": true,
+        "no_direct_backend_bypass": true,
+        "waf_marker_blocked": true,
+        "ips_marker_blocked": true,
+        "ips_c1_block_evidence": true,
+        "waf_c1_block_evidence": true,
+        "ips_unavailable_blocks_path": true,
+        "path_recovers_after_ips_restart": true
+      },
+      "recorded_at": "2026-11-08T07:17:03.823537+00:00"
+    },
+    "management": {
+      "status": "passed",
+      "checks": {
+        "anonymous_session": true,
+        "login_page": true,
+        "javascript": true,
+        "anonymous_devices_denied": true,
+        "anonymous_users_denied": true,
+        "anonymous_audit_denied": true
+      },
+      "recorded_at": "2026-11-08T07:17:25.911719+00:00"
+    },
+    "siem": {
+      "status": "passed",
+      "checks": {
+        "nftables": true,
+        "suricata": true,
+        "modsecurity": true,
+        "osquery": true,
+        "sysmon": true,
+        "auditd": true,
+        "apache-access": true,
+        "apache-error": true
+      },
+      "native_checks": {
+        "nftables": true,
+        "suricata": true,
+        "modsecurity": true,
+        "osquery": true,
+        "sysmon": true,
+        "auditd": true,
+        "apache-access": true,
+        "apache-error": true
+      },
+      "since": "2026-11-08T07:22:52.379654Z",
+      "scope": "Fresh local records: C1 alerts and independently decoded raw inputs with Manager archive receipts; dashboard/indexer acceptance is separate.",
+      "recorded_at": "2026-11-08T07:23:15.662068+00:00",
+      "store": {
+        "status": "ready",
+        "quarantined": 0,
+        "native_input_errors": 0,
+        "analysis_quarantined": 0,
+        "sysmon_source_lag_seconds": 1,
+        "oldest_pending_seconds": 1,
+        "oldest_native_input_pending_seconds": 1,
+        "index_pending": 0,
+        "native_alerts_pending": 0
+      }
+    },
+    "siem_web": {
+      "status": "passed",
+      "checks": {
+        "http_redirect_preserves_path_query": true,
+        "anonymous_api_requires_login": true,
+        "rule_exception_preserves_authentication": true,
+        "wrong_password_rejected": true,
+        "login_through_waf": true,
+        "secure_httponly_session_cookie": true,
+        "authenticated_api": true,
+        "native_manager_version": true,
+        "native_manager_daemons": true,
+        "manager_anonymous_rejected": true,
+        "manager_default_password_rejected": true,
+        "manager_wrong_hostname_rejected": true,
+        "manager_wrong_ca_rejected": true,
+        "native_plugin_manager_connection": true,
+        "native_plugin_hides_service_password": true,
+        "native_plugin_session": true,
+        "native_plugin_manager_info": true,
+        "native_plugin_agents": true,
+        "native_plugin_xss_still_blocked": true,
+        "dashboard_html": true,
+        "static_javascript": true,
+        "discover_highlight_rule_exception": true,
+        "other_search_field_still_inspected": true,
+        "other_path_still_inspected": true,
+        "unrelated_put_still_blocked": true,
+        "xss_still_blocked": true,
+        "file_path_investigation_allowed": true,
+        "unrelated_field_keeps_lfi_detection": true,
+        "oversized_request_rejected": true,
+        "malformed_json_rejected": true,
+        "truncated_json_fails_closed_in_waf": true,
+        "waf_marker_blocks_siem": true,
+        "forwarded_client_header_cannot_be_spoofed": true,
+        "ips_inspects_decrypted_https": true,
+        "ui_recovers_after_block": true,
+        "create_index_pattern": true,
+        "field_definition_rule_exceptions": true,
+        "wrong_method_gets_no_field_exception": true,
+        "other_attribute_still_inspected": true,
+        "large_field_list_allowed": true,
+        "temporary_object_deleted": true,
+        "all_eight_fresh_sources_indexed": true,
+        "native_alerts_contain_all_eight_c1_links": true,
+        "raw_suricata_alert_indexed_with_evidence": true,
+        "raw_modsecurity_alert_indexed_with_evidence": true,
+        "raw_sysmon_alert_indexed_with_evidence": true,
+        "raw_apache-error_alert_indexed_with_evidence": true,
+        "stock_sshd_rule_indexes_original_alert": true,
+        "writer_cannot_read_events": true,
+        "writer_cannot_read_native_alerts": true,
+        "logout": true,
+        "logout_revokes_browser_session": true
+      },
+      "scope": "Real HTTPS ingress -> fw -> IPS -> ModSecurity CRS -> authenticated Dashboards; C1 in Indexer.",
+      "known_limitations": [
+        "ModSecurity 2.x #2807 rejects truncated JSON with HTTP 500 before phase 2; ordinary malformed JSON returns 400."
+      ],
+      "recorded_at": "2026-11-08T07:24:23.016917+00:00"
+    },
+    "release": "589341e6a6700535cc2524ff5c889a8614cbeb1078b9b4e3a27fdd59eb17d55a",
+    "installation_status": "installed"
+  },
+  "main_resources": {
+    "status": "complete",
+    "duration_seconds": 600,
+    "vcpus": 8,
+    "memory_peak_bytes": 4449857536,
+    "cpu_peak_percent": 8.32,
+    "disk_growth_bytes": 1063710720,
+    "requests": {
+      "ok": 1199,
+      "failed": 0
+    },
+    "started_at": "2026-11-08T07:24:46.291440+00:00",
+    "finished_at": "2026-11-08T07:34:46.292177+00:00",
+    "sample_count": 41,
+    "analysis_errors_max": 0,
+    "all_sampled_sources_ready": true,
+    "services_active_after_sampling": true,
+    "scope": "Single Ubuntu 26.04.1 VM, 8 vCPU / 16 GiB; SIEM and Academy enabled. Two harmless HTTP requests per second through the private security path. Short observation, not a capacity benchmark.",
+    "native_input_lag_peak_seconds": 8,
+    "native_input_lag_final_seconds": 7
   }
 }

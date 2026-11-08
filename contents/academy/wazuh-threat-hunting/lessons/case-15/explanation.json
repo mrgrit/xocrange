@@ -1,0 +1,53 @@
+{
+  "title": "6.4  긴 URL",
+  "kind": "body",
+  "blocks": [
+    {
+      "type": "p",
+      "text": "매우 긴 URL은 버퍼 처리 오류나 요청 크기 제한을 노리는 요청에서 나타난다. 문자 A 8,000개를 쿼리 값으로 한 번 보낸다. Apache의 LimitRequestLine은 요청 줄의 크기를 제한하며 기본값은 8,190바이트이다. [10]"
+    },
+    {
+      "type": "code",
+      "text": "location.href = '/?book06-long=' + 'A'.repeat(8000);"
+    },
+    {
+      "type": "p",
+      "text": "login.php 탭의 Console에 입력한다(B06-11-long.txt). location.href는 현재 탭이 이동할 주소이고, 'A'.repeat(8000)은 A를 8,000번 반복한 문자열, +는 두 문자열을 잇는다."
+    },
+    {
+      "type": "query",
+      "id": "Q06-06",
+      "where": "Windows · Discover · wazuh-alerts-*",
+      "purpose": "긴 URL 경보를 찾는다.",
+      "text": "agent.name: \"web\" AND rule.id: \"31115\"\nAND data.url: *book06-long*",
+      "syntax": "31115는 로그 이벤트의 크기 조건(maxsize)으로 일치하는 규칙이다.",
+      "result": "검증 환경에서 data.id 200, rule.id 31115(URL too long…)였다."
+    },
+    {
+      "type": "image",
+      "path": "assets/screens/chapter06/long-rule.png",
+      "caption": "화면 6-8. 긴 로그 이벤트의 경보.",
+      "width_mm": 127,
+      "asset": "935ebc6aee1be0088463ee6a6223de8ce9b473dc295c696fb429dc953d97d0a0.png"
+    },
+    {
+      "type": "image",
+      "path": "assets/figures/chapter06/length.png",
+      "caption": "도식 6-5. HTTP 요청 줄과 접속 로그의 길이.",
+      "width_mm": 127,
+      "asset": "9732793837c2cc34b6bf3b4ad366a0e6ce4360e785e7d3be77bc905010ab8d73.png"
+    },
+    {
+      "type": "p",
+      "text": "검증 기록에서 요청 줄은 8,027바이트, 접속 로그 원문은 8,228바이트였다. 31115의 maxsize=\"7900\"은 URL 길이가 아니라 로그 이벤트 전체의 크기를 비교한다. 이 요청은 200으로 처리되었으므로 WAF에서 멈추지 않았고, 응답 본문은 일반 로그인 화면이다. 경보 수준이 13으로 높아도 도달 지점(5.9)과 결과는 따로 판단한다."
+    }
+  ],
+  "break": false,
+  "level": "section",
+  "source": {
+    "file": "volume01-chapter06.json",
+    "section_index": 4,
+    "revision": "REV01",
+    "mapping_status": "pending-review"
+  }
+}

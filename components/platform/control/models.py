@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db import models
+import uuid
 
 
 class Profile(models.Model):
@@ -30,3 +31,46 @@ class DevicePolicy(models.Model):
     device = models.CharField(max_length=12, primary_key=True)
     write_enabled = models.BooleanField(default=False)
     version = models.PositiveIntegerField(default=1)
+
+
+class MissionRecord(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    course = models.CharField(max_length=64)
+    lesson = models.CharField(max_length=64)
+    mission = models.CharField(max_length=96)
+    content_version = models.CharField(max_length=24)
+    title = models.CharField(max_length=200)
+    input = models.TextField(default='')
+    output = models.TextField(default='')
+    interpretation = models.TextField(default='')
+    status = models.CharField(max_length=12, default='draft')
+    revision = models.PositiveIntegerField(default=1)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        indexes = [models.Index(fields=['user','course','lesson','mission'], name='mission_owner_lookup')]
+
+
+class MissionRevision(models.Model):
+    record = models.ForeignKey(MissionRecord, on_delete=models.CASCADE, related_name='revisions')
+    number = models.PositiveIntegerField()
+    snapshot = models.JSONField()
+    bytes = models.PositiveIntegerField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['record','number'], name='unique_mission_revision')]
+
+
+class MissionEvidence(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    record = models.ForeignKey(MissionRecord, on_delete=models.CASCADE, related_name='images')
+    image = models.BinaryField()
+    sha256 = models.CharField(max_length=64)
+    bytes = models.PositiveIntegerField()
+    width = models.PositiveIntegerField()
+    height = models.PositiveIntegerField()
+    caption = models.CharField(max_length=200, default='')
+    created_at = models.DateTimeField(auto_now_add=True)

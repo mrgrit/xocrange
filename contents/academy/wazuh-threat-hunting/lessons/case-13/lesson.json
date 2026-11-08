@@ -1,0 +1,278 @@
+{
+  "id": "case-13",
+  "title": "13 · 비정상 HTTP 메서드",
+  "source_pages": [
+    175,
+    182
+  ],
+  "slides": [
+    {
+      "page": 175,
+      "title": "웹 위협 · 13 / 61",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "웹 위협 · 13 / 61"
+        },
+        {
+          "type": "text",
+          "text": "13 비정상 HTTP 메서드"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  웹 위협 · 13"
+        },
+        {
+          "type": "text",
+          "text": "공격"
+        },
+        {
+          "type": "text",
+          "text": "PUT으로 파일 업로드, TRACE로 헤더 탈취, PROPFIND로 WebDAV 탐색"
+        },
+        {
+          "type": "text",
+          "text": "탐지 포인트"
+        },
+        {
+          "type": "text",
+          "text": "일반 서비스는 GET/POST/HEAD만 씀"
+        },
+        {
+          "type": "text",
+          "text": "검색 원리"
+        },
+        {
+          "type": "text",
+          "text": "허용 메서드를 제외하는 방식이 누락이 적음"
+        },
+        {
+          "type": "text",
+          "text": "주요 필드"
+        },
+        {
+          "type": "text",
+          "text": "data.protocol · data.id"
+        },
+        {
+          "type": "text",
+          "text": "결과 해석"
+        },
+        {
+          "type": "text",
+          "text": "data.protocol:PUT AND data.id:201은 파일 업로드 성공. 즉시 웹 루트 FIM 결과와 대조"
+        },
+        {
+          "type": "text",
+          "text": "원본 교재 검증 기록 · 원본 DQL 그대로 동작"
+        }
+      ]
+    },
+    {
+      "page": 176,
+      "title": "13 실습 ① 공격 실행 — 비정상 HTTP 메서드",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "13 실습 ① 공격 실행 — 비정상 HTTP 메서드"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  웹 위협 · 13"
+        },
+        {
+          "type": "image",
+          "asset": "1dcedbc495d6678805c886ca67e39234401b57ea7952b9b8d8a874899f225f73.png",
+          "alt": "교재 176페이지 예시 화면"
+        },
+        {
+          "type": "text",
+          "text": "공격자 VM 에서 학생이 직접 입력하는 명령과 실제 결과. # 줄은 설명, 노란색은 확인할 결과"
+        }
+      ]
+    },
+    {
+      "page": 177,
+      "title": "13 구문 풀이 — 비정상 HTTP 메서드",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "13 구문 풀이 — 비정상 HTTP 메서드"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  웹 위협 · 13"
+        },
+        {
+          "type": "text",
+          "text": "curl -X PUT|TRACE|PROPFIND|DELETE"
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "-X 로 HTTP 메서드를 바꿔 보낸다. PUT 파일 올리기, TRACE 요청 반사(헤더 탈취), PROPFIND WebDAV 탐색"
+        }
+      ]
+    },
+    {
+      "page": 178,
+      "title": "13 실습 ② 검색 준비 — 비정상 HTTP 메서드",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "13 실습 ② 검색 준비 — 비정상 HTTP 메서드"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  웹 위협 · 13"
+        },
+        {
+          "type": "text",
+          "text": "인덱스 패턴"
+        },
+        {
+          "type": "text",
+          "text": "wazuh-alerts-*"
+        },
+        {
+          "type": "text",
+          "text": "시간 범위"
+        },
+        {
+          "type": "text",
+          "text": "Last 15 minutes (실습 직후)"
+        },
+        {
+          "type": "text",
+          "text": "DQL — 검색창에 직접 입력 → Enter"
+        },
+        {
+          "type": "text",
+          "text": "data.protocol:* AND NOT data.protocol:(GET or POST or HEAD or OPTIONS)"
+        },
+        {
+          "type": "text",
+          "text": "추가할 컬럼"
+        },
+        {
+          "type": "text",
+          "text": "agent.name  ·  rule.id  ·  rule.description  ·  data.srcip  ·  data.protocol  ·  data.id  ·  data.url"
+        },
+        {
+          "type": "text",
+          "text": "xOC Range 결과"
+        },
+        {
+          "type": "text",
+          "text": "1 hits"
+        }
+      ]
+    },
+    {
+      "page": 179,
+      "title": "13 결과 화면 ① — 결과 수와 시간 분포",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "13 결과 화면 ① — 결과 수와 시간 분포"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  웹 위협 · 13"
+        },
+        {
+          "type": "image",
+          "asset": "d851681d73d4944c6bd94f06929ebca867bf92439d8c2cd49c7acf38718e2c48.png",
+          "alt": "교재 179페이지 예시 화면"
+        },
+        {
+          "type": "text",
+          "text": "1 hits"
+        },
+        {
+          "type": "text",
+          "text": "검색창 아래 hits = 찾은 건수, 막대 = 시간대별 건수. 실습 직후라 막대가 한곳에 몰려 있다"
+        }
+      ]
+    },
+    {
+      "page": 180,
+      "title": "13 결과 화면 ② — 결과 표",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "13 결과 화면 ② — 결과 표"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  웹 위협 · 13"
+        },
+        {
+          "type": "image",
+          "asset": "7b115e6d6eb5cbc5fc322a4fc7370899e757dbef00c8fdbb05aa41828e463103.png",
+          "alt": "교재 180페이지 예시 화면"
+        },
+        {
+          "type": "text",
+          "text": "결과 표 — 위: 시간 · 에이전트 · 룰 / 아래: 같은 행의 나머지 열 (한 행 = 로그 한 건)"
+        }
+      ]
+    },
+    {
+      "page": 181,
+      "title": "13 결과 화면 ③ — 문서 펼치기 (Table)",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "13 결과 화면 ③ — 문서 펼치기 (Table)"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  웹 위협 · 13"
+        },
+        {
+          "type": "image",
+          "asset": "8c8fb033bdf88435ddc53e7fa8704de6055d04c17f2a5ab03d2731957388e6b2.png",
+          "alt": "교재 181페이지 예시 화면"
+        },
+        {
+          "type": "text",
+          "text": "행 왼쪽 > 를 눌러 펼친 화면. 노란색 = 검색 조건과 맞은 부분"
+        }
+      ]
+    },
+    {
+      "page": 182,
+      "title": "13 결과 읽는 법 — 비정상 HTTP 메서드",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "13 결과 읽는 법 — 비정상 HTTP 메서드"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  웹 위협 · 13"
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "일반 웹사이트는 GET·POST·HEAD(·OPTIONS)만 쓴다 → 그 외 메서드는 탐색·공격 신호"
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "PUT + 201 이면 파일 업로드 성공 → 바로 FIM(554) 결과와 맞춰 본다"
+        }
+      ]
+    }
+  ]
+}

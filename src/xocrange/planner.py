@@ -144,6 +144,13 @@ def plan(root: Path, *, preset="bootstrap", include=(), without=(), allow_fixtur
         inputs[relative] = hashlib.sha256(read_bytes(path)).hexdigest()
 
     record(preset_path)
+    if 'academy-reader' in selected:
+        from .academy_content import catalog as academy_catalog
+        _, content_files = academy_catalog(root)
+        for path in content_files:
+            # The catalog bounds/verifies binary screenshots separately from
+            # the 1 MiB JSON/manifest limit; hash their exact installed bytes.
+            inputs[str(path.relative_to(root))] = hashlib.sha256(path.read_bytes()).hexdigest()
     for identifier in selected:
         entry = entries[identifier]
         manifest, manifest_path = entry["manifest"], entry["path"]

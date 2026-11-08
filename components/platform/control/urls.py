@@ -1,7 +1,18 @@
 from django.urls import path
-from . import views, console, workspace, datacenter
+from . import views, console, workspace, datacenter, academy
 
 urlpatterns = [path('core/api/datacenter', datacenter.endpoint),
+               path('core/api/academy', academy.catalog),
+               path('core/api/academy/courses/<slug:cid>', academy.course_view),
+               path('core/api/academy/lessons/<slug:cid>/<slug:lid>', academy.lesson_view),
+               path('core/api/academy/assets/<slug:cid>/<str:name>', academy.asset),
+               path('core/api/academy/history', academy.history),
+               path('core/api/academy/history/<int:page>', academy.history),
+               path('core/api/academy/records', academy.record),
+               path('core/api/academy/records/<uuid:rid>', academy.record),
+               path('core/api/academy/records/<uuid:rid>/revisions/<int:number>', academy.revision),
+               path('core/api/academy/records/<uuid:rid>/images', academy.attach),
+               path('core/api/academy/images/<uuid:iid>', academy.image),
                path('core/api/modules/<str:identifier>', workspace.module_status),
                path('core/api/datacenter/design/<str:floor>', datacenter.design),
                path('core/api/datacenter/floors/<str:floor>', datacenter.endpoint),

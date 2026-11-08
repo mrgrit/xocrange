@@ -1,5 +1,6 @@
 import secrets
 import time
+import re
 from django.db import DatabaseError, transaction
 from django.http import JsonResponse
 from .security import audit
@@ -14,7 +15,10 @@ class Boundary:
         try:
             if request.method not in ('GET', 'POST'):
                 return JsonResponse({'error': 'method_not_allowed'}, status=405)
-            if request.META.get('CONTENT_LENGTH', '0').isdigit() and int(request.META.get('CONTENT_LENGTH', '0')) > 16384:
+            limit = 16384
+            if re.fullmatch(r'/core/api/academy/records(?:/[0-9a-f-]{36})?',request.path): limit=163840
+            if re.fullmatch(r'/core/api/academy/records/[0-9a-f-]{36}/images',request.path): limit=750000
+            if request.META.get('CONTENT_LENGTH', '0').isdigit() and int(request.META.get('CONTENT_LENGTH', '0')) > limit:
                 return JsonResponse({'error': 'body_too_large'}, status=413)
             if request.GET or request.META.get('HTTP_AUTHORIZATION'):
                 return JsonResponse({'error': 'unsupported_credentials_or_query'}, status=400)
@@ -22,6 +26,8 @@ class Boundary:
                 request.session.flush()
                 return JsonResponse({'error': 'session_expired'}, status=401)
             if request.method == 'POST':
+                if len(request.body)>limit:
+                    return JsonResponse({'error':'body_too_large'},status=413)
                 # Login too: same-origin, non-simple JSON, plus Django's CSRF token.
                 from django.conf import settings
                 if request.headers.get('Origin') not in settings.CSRF_TRUSTED_ORIGINS or request.content_type != 'application/json':

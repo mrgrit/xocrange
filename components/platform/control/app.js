@@ -2,8 +2,8 @@
 const $ = id => document.getElementById(id);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const icon = name => `<svg aria-hidden="true"><use href="#i-${name}"/></svg>`;
-const labels = {datacenter:'데이터센터',portal:'운영 개요',module:'구성요소',noc:'NOC · 2F',academy:'실습 자료',fw:'방화벽',ips:'침입 방지',waf:'웹 방화벽',access:'접근 제어',users:'계정',audit:'감사 기록'};
-const descriptions = {datacenter:'xOC Range · 층별 데이터센터와 보안 인프라',portal:'설치한 서비스의 실행 상태와 관리 화면을 한곳에서 확인합니다.',module:'선택한 구성요소의 등록 정보와 서비스 상태를 확인합니다.',noc:'보안 검사 경로와 서비스 상태를 2층 관제 화면에서 확인합니다.',academy:'현재 설치한 기능의 사용 방법과 실습 흐름을 살펴봅니다.',fw:'통과 트래픽의 허용·차단 정책을 순서대로 관리합니다.',ips:'트래픽 검사 조건과 탐지·차단 규칙을 관리합니다.',waf:'웹 요청의 검사 대상과 차단 조건을 관리합니다.',access:'장비별 변경 권한과 쓰기 잠금을 관리합니다.',users:'관리 계정의 역할과 접근 권한을 관리합니다.',audit:'계정·권한·장비 설정의 변경 기록을 확인합니다.'};
+const labels = {datacenter:'데이터센터',portal:'운영 개요',module:'구성요소',noc:'NOC · 2F',academy:'아카데미',fw:'방화벽',ips:'침입 방지',waf:'웹 방화벽',access:'접근 제어',users:'계정',audit:'감사 기록'};
+const descriptions = {datacenter:'xOC Range · 층별 데이터센터와 보안 인프라',portal:'설치한 서비스의 실행 상태와 관리 화면을 한곳에서 확인합니다.',module:'선택한 구성요소의 등록 정보와 서비스 상태를 확인합니다.',noc:'보안 검사 경로와 서비스 상태를 2층 관제 화면에서 확인합니다.',academy:'교재를 읽고, 실습의 입력과 결과를 나의 분석으로 기록합니다.',fw:'통과 트래픽의 허용·차단 정책을 순서대로 관리합니다.',ips:'트래픽 검사 조건과 탐지·차단 규칙을 관리합니다.',waf:'웹 요청의 검사 대상과 차단 조건을 관리합니다.',access:'장비별 변경 권한과 쓰기 잠금을 관리합니다.',users:'관리 계정의 역할과 접근 권한을 관리합니다.',audit:'계정·권한·장비 설정의 변경 기록을 확인합니다.'};
 const tabLabels = {policies:'정책',objects:'주소·서비스 객체',nat:'NAT',ruleset:'전체 규칙',events:'이벤트',history:'변경 이력'};
 const errors = {invalid_credentials:'계정과 비밀번호를 확인해 주세요.',invalid_input:'입력 형식을 확인해 주세요.',permission_denied:'이 작업을 실행할 권한이 없습니다.',device_write_locked:'장비 쓰기가 잠겨 있습니다. 접근 제어에서 변경을 허용해 주세요.',device_unavailable:'장비와 연결하지 못했습니다. 잠시 후 새로고침해 주세요.',try_later:'로그인 시도 제한에 도달했습니다. 15분 뒤 다시 시도해 주세요.',csrf_failed:'세션을 새로 불러온 뒤 다시 시도해 주세요.',stale_version:'다른 변경이 적용되었습니다. 새로고침 후 다시 검토해 주세요.'};
 let csrf='',session={},view='fw',tab='policies',current=null,edit=null,review=null,search='',actionFilter='',loadSequence=0,busy=false,noticeTimer;
@@ -11,7 +11,7 @@ async function api(path,body){
  const response=await fetch('/core/api/'+path,{method:body?'POST':'GET',credentials:'same-origin',headers:body?{'Content-Type':'application/json','X-CSRFToken':csrf}:{},body:body?JSON.stringify(body):undefined});
  let data;try{data=await response.json();}catch{throw new Error(`요청이 거부되었습니다 (HTTP ${response.status}). 입력과 WAF 이벤트를 확인해 주세요.`);}
  if(data.csrf_token)csrf=data.csrf_token;
- if(!response.ok){if(response.status===401&&path!=='login'){session={};$('account').hidden=true;$('login').hidden=false;for(const d of document.querySelectorAll('dialog[open]'))d.close();}throw new Error(data.detail||errors[data.error]||'요청을 처리하지 못했습니다: '+data.error);}
+ if(!response.ok){if(response.status===401&&path!=='login'){session={};Academy.clear();$('account').hidden=true;$('login').hidden=false;for(const d of document.querySelectorAll('dialog[open]'))d.close();}throw new Error(data.detail||errors[data.error]||'요청을 처리하지 못했습니다: '+data.error);}
  return data;
 }
 function notice(text,error=false){clearTimeout(noticeTimer);$('notice').textContent=text;$('notice').classList.toggle('error',error);$('notice').hidden=false;noticeTimer=setTimeout(()=>$('notice').hidden=true,error?12000:5000);}
@@ -24,8 +24,8 @@ function select(name,label,options,value){return `<label>${label}<select name="$
 function check(name,label,value){return `<label class="checkbox"><input type="checkbox" name="${name}" ${value?'checked':''}>${esc(label)}</label>`;}
 function route(){const parts=location.hash.slice(1).split('/');view=labels[parts[0]]?parts[0]:(session.navigation?.some(p=>p.id==='datacenter')?'datacenter':session.navigation?.some(p=>p.id==='portal')?'portal':session.consoles?.[0]||'access');tab=['academy','module'].includes(view)&&/^(?:[a-z][a-z0-9-]{0,63}|M(?:[1-9]|1[0-9]))$/.test(parts[1]||'')?parts[1]:tabLabels[parts[1]]?parts[1]:'policies';search='';actionFilter='';act(load);}
 async function refreshSession(){
- session=await api('session');$('login').hidden=session.authenticated;$('account').hidden=!session.authenticated;
- if(!session.authenticated)return;
+ try{session=await api('session');}finally{$('login-form').querySelector('button').disabled=false;}$('login').hidden=session.authenticated;$('account').hidden=!session.authenticated;
+ if(!session.authenticated){Academy.clear();return;}
  $('identity').textContent=session.username+' · '+({admin:'관리자',operator:'운영자',viewer:'조회자'}[session.role]||session.role);
  $('siem-link').hidden=!session.siem_available;workspaceNavigation();
  for(const el of document.querySelectorAll('.admin-nav'))el.hidden=session.role!=='admin';
@@ -34,7 +34,7 @@ async function refreshSession(){
 }
 async function load(){
  if(!session.authenticated||session.must_change_password)return;
- const sequence=++loadSequence;current=null;document.body.classList.toggle('datacenter-view',view==='datacenter');
+ const sequence=++loadSequence;current=null;document.body.classList.toggle('datacenter-view',view==='datacenter');document.body.classList.toggle('academy-view',view==='academy');
  for(const b of document.querySelectorAll('[data-nav]')){b.classList.toggle('active',b.dataset.nav===view);b.setAttribute('aria-label',labels[b.dataset.nav]);b.title=labels[b.dataset.nav];}
  $('crumb').textContent=labels[view];$('page-title').textContent=labels[view]+(['fw','ips','waf'].includes(view)?' 정책':'');$('page-description').textContent=descriptions[view];$('eyebrow').textContent=view==='fw'?'NETWORK SECURITY':view==='ips'?'THREAT PREVENTION':view==='waf'?'APPLICATION SECURITY':'SYSTEM MANAGEMENT';
  const device=['fw','ips','waf'].includes(view);$('device-view').hidden=!device;$('system-view').hidden=device;$('sync-status').textContent='상태를 불러오는 중…';$('refresh').disabled=true;
@@ -139,6 +139,6 @@ async function systemView(sequence){
  }
  $('sync-status').textContent='마지막 확인 '+date(new Date());
 }
-$('login-form').onsubmit=e=>{e.preventDefault();act(async()=>{await api('login',Object.fromEntries(new FormData(e.target)));e.target.reset();await refreshSession();});};
+$('login-form').onsubmit=e=>{e.preventDefault();const button=e.target.querySelector('button');if(button.disabled)return;button.disabled=true;act(async()=>{try{if(!csrf)await refreshSession();button.disabled=true;await api('login',Object.fromEntries(new FormData(e.target)));e.target.reset();await refreshSession();}finally{button.disabled=false;}});};
 $('password-form').onsubmit=e=>{e.preventDefault();act(async()=>{await api('password',Object.fromEntries(new FormData(e.target)));e.target.reset();$('password-panel').close();notice('비밀번호를 변경했습니다.');await refreshSession();});};
 $('password-open').onclick=()=>$('password-panel').showModal();$('logout').onclick=()=>act(async()=>{await api('logout',{});await refreshSession();});$('refresh').onclick=()=>act(load);window.addEventListener('hashchange',route);act(refreshSession);

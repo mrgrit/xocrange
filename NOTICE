@@ -17,15 +17,21 @@ Adapted project sources
 Runtime dependencies retain their upstream copyright and license notices:
   Linux, nftables, Suricata, Wazuh Manager and related GPL components.
   Apache HTTP Server, ModSecurity, OWASP CRS, Wazuh Indexer/Dashboard components,
-  osquery, Sysmon for Linux, HAProxy, Python, Django, Gunicorn and Python libraries.
+  osquery, Sysmon for Linux, HAProxy, Python, Django, Gunicorn, Pillow and Python libraries.
   Package-specific license files are retained in the installed images/packages.
   Wazuh includes components under different licenses; it is not relicensed as a unit.
   Detailed sources, licenses and bundle boundaries: docs/development/DEPENDENCIES.md.
   Exact runtime package versions, image IDs/digests and source hashes are generated
   in /var/lib/xocrange/release-inventory.json by the installer.
 
-Bundled Core reading material consists of project-authored operating guides in
-components/academy-reader/bundle.json. It excludes purchased academy content,
+Bundled Core reading material includes operating guides in components/academy-reader/
+bundle.json and the owner-authorized pages 1–339 of the Wazuh threat-hunting deck,
+with explicitly mapped REV01 manuscript excerpts from mrgrit/hack_ir_with_wazuh_book_1.
+Author: 전두용. Source identifiers, original hashes and approved scope are recorded
+in contents/academy/wazuh-threat-hunting/source-map.json. The full deck, pages after
+339 and unrelated manuscript sections are excluded. Technical concordance review
+is deferred; screenshot pixels retain the original evidence.
+The bundle excludes purchased academy content,
 commercial scenarios, AI/agent execution code, Windows images/evaluation media,
 private signing keys and registry passwords. tw2 was a functional reference only.
 

@@ -1,0 +1,122 @@
+{
+  "status": "passed",
+  "scope": "content layout and personal mission storage; technical concordance deferred",
+  "pages": 339,
+  "lessons": 36,
+  "missions": 96,
+  "unit_suite_passed": 403,
+  "post_fix_focused_tests_passed": 71,
+  "browser": {
+    "checks": {
+      "catalog": true,
+      "course_catalog_36": true,
+      "lesson_and_explanation": true,
+      "ppt_screenshot_loaded": true,
+      "draft_saved": true,
+      "clipboard_image_saved": true,
+      "completed_save_acknowledged": true,
+      "literal_xss_safe": true,
+      "three_fields_reloaded": true,
+      "stored_image_reloaded": true,
+      "revision_history": true,
+      "no_horizontal_overflow_1440": true,
+      "no_horizontal_overflow_1024": true,
+      "no_script_errors": true
+    },
+    "errors": [],
+    "status": "passed"
+  },
+  "api": {
+    "status": "passed",
+    "checks": {
+      "anonymous_read_denied": true,
+      "anonymous_write_denied": true,
+      "admin_login": true,
+      "catalog_339_pages": true,
+      "last_lesson_stops_at_339": true,
+      "unpublished_lesson_denied": true,
+      "csrf_enforced": true,
+      "other_origin_denied": true,
+      "literal_sql_xss_shell_evidence_saved_through_waf": true,
+      "record_text_preserved": true,
+      "waf_still_inspects_mission_id": true,
+      "waf_still_inspects_other_route": true,
+      "waf_marker_still_blocked": true,
+      "image_saved_through_waf": true,
+      "image_loaded_from_db": true,
+      "image_caption_still_inspected": true,
+      "oversized_image_rejected": true,
+      "large_valid_screenshot_saved": true,
+      "record_complete_with_image": true,
+      "stale_revision_rejected": true,
+      "old_revision_preserved": true,
+      "own_history_visible": true,
+      "create_second_learner": true,
+      "second_learner_login": true,
+      "second_learner_password_change": true,
+      "other_record_denied": true,
+      "other_image_denied": true,
+      "other_revision_denied": true,
+      "other_write_denied": true,
+      "other_history_empty": true,
+      "viewer_can_save_own_record": true,
+      "core_ai_disabled": true,
+      "exercise_completed": true
+    },
+    "release": "81e6cfff6bbeb0dae81da927beb054c8d68c515ddfca739a65afd6f83c1d4e21"
+  },
+  "backup_restore": {
+    "status": "passed",
+    "checks": {
+      "database_actually_changed": true,
+      "all_records_revisions_images_restored": true,
+      "core_active": true,
+      "nonempty_learning_data": true
+    },
+    "rows_preserved": 25
+  },
+  "isolated_release": "d86431b50980a6e94d929e04283627b8028fa88b98903ef5be1599abbd7eb987",
+  "main_browser": {
+    "checks": {
+      "catalog": true,
+      "course_catalog_36": true,
+      "lesson_and_explanation": true,
+      "ppt_screenshot_loaded": true,
+      "draft_saved": true,
+      "clipboard_image_saved": true,
+      "completed_save_acknowledged": true,
+      "literal_xss_safe": true,
+      "three_fields_reloaded": true,
+      "stored_image_reloaded": true,
+      "revision_history": true,
+      "history_opens_correct_mission": true,
+      "no_horizontal_overflow_1440": true,
+      "no_horizontal_overflow_1024": true,
+      "no_script_errors": true
+    },
+    "errors": [],
+    "status": "passed",
+    "release": "589341e6a6700535cc2524ff5c889a8614cbeb1078b9b4e3a27fdd59eb17d55a",
+    "test_record_cleaned_up": true
+  },
+  "main_install": {
+    "release": "589341e6a6700535cc2524ff5c889a8614cbeb1078b9b4e3a27fdd59eb17d55a",
+    "status": "installed",
+    "packet_path_checks": 15,
+    "management_checks": 6,
+    "siem_c1_sources": 8,
+    "siem_native_sources": 8,
+    "siem_web_checks": 52
+  },
+  "main_soak": {
+    "status": "complete",
+    "duration_seconds": 600,
+    "requests": {
+      "ok": 1199,
+      "failed": 0
+    },
+    "all_sampled_sources_ready": true,
+    "analysis_errors_max": 0,
+    "services_active_after_sampling": true
+  }
+}

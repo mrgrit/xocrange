@@ -22,7 +22,7 @@ build_inputs:
 - bundle.json
 ui:
 - id: academy
-  title: 실습 자료
+  title: 아카데미
   route: /core/#academy
   order: 30
   permission: content.read

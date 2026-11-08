@@ -1,0 +1,214 @@
+{
+  "title": "8.7  계정 생성과 권한 변경",
+  "kind": "body",
+  "level": "section",
+  "break": false,
+  "blocks": [
+    {
+      "type": "p",
+      "text": "일회용 계정을 만들고 sudo 그룹에 추가한 뒤 삭제한다. 생성된 계정의 재접속 가능 여부는 암호·공개 키와 SSH 허용 정책으로 확인한다. 계정 생성 경위는 승인된 작업 내역과 관련 명령 기록을 대조해 조사한다."
+    },
+    {
+      "type": "image",
+      "path": "assets/figures/chapter08/account.png",
+      "caption": "도식 8-7. 계정 생성과 권한 변경 뒤의 확인 대상",
+      "width_mm": 127,
+      "asset": "2265f1af033fca988da06a0f8ee1af4f674c9087ef8e12bc5fb5d723dd1ac3b7.png"
+    },
+    {
+      "type": "p",
+      "text": "선행 조건은 8.5의 원상복구 완료와 ccc의 sudo 권한이다. 성공 기준은 계정 생성 원문·그룹 변경·삭제 기록을 연결하고 최종적으로 계정과 홈 디렉터리가 사라졌는지 확인하는 것이다."
+    },
+    {
+      "type": "command",
+      "id": "C08-44",
+      "where": "공격자 VM · att 셸",
+      "text": "ssh -p 2204 ccc@192.168.0.107",
+      "result": "hostname과 id로 위치·계정을 확인한다.",
+      "syntax": "공격자 창에서 bastion의 일반 실습 계정으로 들어간다.",
+      "purpose": "계정 변경 실습을 위한 ccc SSH 세션을 연다."
+    },
+    {
+      "type": "command",
+      "id": "C08-45",
+      "where": "xocrange-bastion · SSH로 접속한 ccc 셸",
+      "text": "getent passwd book08-user\ngetent group book08-user\nls -ld /home/book08-user",
+      "result": "계정·그룹 조회는 출력이 없고 홈은 없다는 메시지가 나와야 한다. 하나라도 기존 항목이 있으면 여기서 중단하고 별도 이름을 정한다.",
+      "purpose": "계정·동명 그룹·홈 디렉터리의 사전 존재 여부를 확인한다.",
+      "syntax": "group 데이터베이스는 그룹 번호와 구성원을 보여 준다."
+    },
+    {
+      "type": "h",
+      "text": "계정 생성과 암호 상태"
+    },
+    {
+      "type": "command",
+      "id": "C08-46",
+      "where": "xocrange-bastion · SSH로 접속한 ccc 셸",
+      "text": "sudo useradd -m -s /bin/bash book08-user\ngetent passwd book08-user\nid book08-user\nsudo passwd -S book08-user",
+      "result": "이번 환경은 UID·GID 1001, 홈 /home/book08-user, 셸 /bin/bash로 생성됐다. passwd -S의 L은 암호 잠금이다. 번호는 시스템 상태에 따라 달라진다.",
+      "syntax": "useradd는 로컬 계정을 만든다. -m은 홈 디렉터리 생성, -s는 로그인 셸 지정이다. C08-45로 대상 이름·경로가 없는 것을 확인한 뒤 실행한다.",
+      "purpose": "일회용 계정을 만들고 계정 속성과 암호 상태를 읽는다."
+    },
+    {
+      "type": "p",
+      "text": "getent passwd의 한 줄은 이름, 암호 표기, UID, GID, 설명, 홈, 셸을 콜론으로 구분한다. 두 번째 필드 x는 실제 암호가 아니라 별도 shadow 정보를 사용한다는 표시이다. 실제 인증 가능 여부는 암호 상태·키·계정 만료·SSH 정책까지 확인한다."
+    },
+    {
+      "type": "query",
+      "id": "Q08-09",
+      "where": "Windows · Discover · wazuh-alerts-*",
+      "text": "agent.name: \"bastion\" AND\nrule.id: \"5902\"",
+      "result": "full_log의 new user 문구와 name, UID, GID, home, shell을 getent 결과와 대조한다.",
+      "syntax": "새 사용자 생성 규칙을 조회한다.",
+      "purpose": "계정 생성 경보의 속성을 확인한다."
+    },
+    {
+      "type": "p",
+      "text": "새 계정은 암호 잠금(L) 상태로 두며 공개 키도 등록하지 않는다. 현재 상태 확인은 getent·id·passwd -S로 끝낸다. [9]"
+    },
+    {
+      "type": "h",
+      "text": "생성 필드와 그룹 추가"
+    },
+    {
+      "type": "image",
+      "path": "assets/screens/chapter08/useradd-fields.png",
+      "caption": "화면 8-6. 새 사용자 생성 경보의 계정 속성",
+      "width_mm": 112,
+      "asset": "ccd6d0a646ef933348ee8e56c74c077a3f8e28ed5ac429ff319af09180dd13bb.png"
+    },
+    {
+      "type": "p",
+      "text": "data.dstuser는 new user의 name, data.uid·gid는 숫자 ID, data.home·shell은 홈과 셸에서 나온다. 화면의 data.shell에는 /bin/bash,처럼 쉼표가 포함됐다. 디코더가 구분 문자를 값에 포함한 결과이며 실제 셸 경로는 getent와 원문의 shell 항목으로 대조한다."
+    },
+    {
+      "type": "command",
+      "id": "C08-47",
+      "where": "xocrange-bastion · SSH로 접속한 ccc 셸",
+      "text": "sudo usermod -aG sudo book08-user\nid book08-user\ngetent group sudo",
+      "result": "id에 27(sudo)가 추가되고 sudo 그룹 구성원에 book08-user가 보인다. 그룹 번호는 환경별로 다를 수 있다.",
+      "syntax": "usermod는 기존 계정 속성을 변경한다. -G는 보조 그룹 목록, -a는 기존 보조 그룹에 추가한다는 뜻이다. -a를 빼고 -G만 사용하면 기존 목록을 교체할 수 있다.",
+      "purpose": "기존 보조 그룹을 유지하며 실습 계정을 sudo 그룹에 추가한다."
+    },
+    {
+      "type": "p",
+      "text": "NOPASSWD는 sudoers에서 계정과 명령에 적용하는 태그이다. 이 환경의 ccc 전용 규칙은 새 계정에 자동 적용되지 않는다. sudo 그룹에 추가한 뒤에도 새 계정의 암호 잠금 상태는 유지된다. [10]"
+    },
+    {
+      "type": "h",
+      "text": "실행 요청과 변경 결과 대조"
+    },
+    {
+      "type": "query",
+      "id": "Q08-10",
+      "where": "Windows · Discover · wazuh-alerts-*",
+      "text": "agent.name: \"bastion\" AND\ndata.command: \"/usr/sbin/usermod -aG sudo book08-user\"",
+      "result": "실행 요청의 srcuser는 ccc, dstuser는 root이다. 그룹 변경 결과는 id·getent의 현재 상태와 변경 원문을 대조해 확인한다.",
+      "syntax": "sudo가 기록한 그룹 변경 명령을 찾는다. 명령의 인수까지 포함해 이번 대상 계정으로 좁힌다.",
+      "purpose": "실습 계정을 sudo 그룹에 추가하도록 요청한 명령을 찾는다."
+    },
+    {
+      "type": "command",
+      "id": "C08-48",
+      "where": "xocrange-bastion · SSH로 접속한 ccc 셸",
+      "text": "sudo grep -F 'book08-user' /var/log/auth.log",
+      "result": "useradd의 new user와 usermod의 add 문구를 찾는다. 이 조회 명령 자체도 sudo 기록으로 남으므로 조사자의 활동 시각을 기록한다.",
+      "syntax": "grep -F는 검색어를 정규표현식이 아닌 고정 문자열로 찾는다. 작은따옴표는 하이픈 등을 포함한 이름을 한 인수로 전달한다. auth.log를 읽을 권한 때문에 sudo를 사용한다.",
+      "purpose": "계정 생성과 그룹 변경 원문을 인증 파일에서 찾는다."
+    },
+    {
+      "type": "code",
+      "text": "usermod[2728]: add 'book08-user' to group 'sudo'"
+    },
+    {
+      "type": "p",
+      "text": "사례의 그룹 추가 원문은 auth.log에 남았지만 경보 목록에는 없었다. Q08-10의 sudo COMMAND로 요청자를 찾고, auth.log의 add 문구와 id·getent로 그룹 변경 결과를 확인한다."
+    },
+    {
+      "type": "p",
+      "text": "5904는 changed user 형태의 사용자 정보 변경 원문에 적용한다. usermod 작업은 실제로 남은 원문을 기준으로 규칙을 확인한다. 생성 5902, 삭제 5903, 사용자 정보 변경 5904를 구분한다. [8]"
+    },
+    {
+      "type": "h",
+      "text": "계정 삭제와 원상복구"
+    },
+    {
+      "type": "command",
+      "id": "C08-49",
+      "where": "xocrange-bastion · SSH로 접속한 ccc 셸",
+      "text": "getent passwd book08-user\nid book08-user\nsudo userdel -r book08-user",
+      "result": "계정 삭제가 완료된다. 이번 환경에서는 메일 스풀이 없다는 안내가 나왔으므로 아래 상태 조회로 실제 삭제 결과를 확인했다.",
+      "purpose": "삭제할 대상이 이번 실습 계정인지 다시 확인한다.",
+      "syntax": "userdel은 계정을 삭제하고 -r은 홈과 메일 스풀도 제거한다. 기존 사용자나 기존 자료에 적용하지 않는다."
+    },
+    {
+      "type": "command",
+      "id": "C08-50",
+      "where": "xocrange-bastion · SSH로 접속한 ccc 셸",
+      "text": "getent passwd book08-user\necho $?\ngetent group book08-user\necho $?\nls -ld /home/book08-user\ngetent group sudo",
+      "result": "계정과 동명 그룹 조회는 출력 없음·코드 2, 홈은 없음, sudo 그룹에는 기존 ccc만 남아야 한다. 결과가 다르면 열린 세션·프로세스와 삭제 오류를 확인한다.",
+      "syntax": "getent 조회의 종료 코드 2는 지정한 키를 찾지 못했음을 뜻한다. 홈과 sudo 그룹에서도 잔여 항목을 확인한다.",
+      "purpose": "실습 계정·동명 그룹·홈이 지워지고 sudo 그룹이 처음 구성으로 돌아왔는지 확인한다."
+    },
+    {
+      "type": "p",
+      "text": "userdel -r로 계정과 홈 디렉터리를 삭제한 뒤에도 다른 경로의 소유 파일과 예약 작업은 별도로 조사해야 한다. 실제 침해 대응에서는 삭제 전 UID를 기록하고 관련 파일·실행 중 프로세스·키·예약 작업을 보존·조사한 뒤 접근을 통제한다. [11]"
+    },
+    {
+      "type": "h",
+      "text": "삭제 기록의 계정 필드"
+    },
+    {
+      "type": "query",
+      "id": "Q08-11",
+      "where": "Windows · Discover · wazuh-alerts-*",
+      "text": "agent.name: \"bastion\" AND\nrule.id: \"5903\"",
+      "result": "full_log의 delete user와 삭제된 이름을 확인한다. 관련 그룹 삭제 기록이 함께 잡히는지는 원문별로 확인한다.",
+      "syntax": "사용자 또는 그룹 삭제 규칙을 조회한다.",
+      "purpose": "사용자·그룹 삭제 원문을 담은 경보를 찾는다."
+    },
+    {
+      "type": "image",
+      "path": "assets/screens/chapter08/userdel-fields.png",
+      "caption": "화면 8-7. 계정 삭제 경보의 이름과 디코더",
+      "width_mm": 112,
+      "asset": "63dba5e6ce3696ec4984acc754cbffd1f13391e99dcb1ad437969734364af838.png"
+    },
+    {
+      "type": "p",
+      "text": "이 기록의 프로그램은 userdel이고 decoder.name은 open-userdel이다. data.srcuser의 book08-user는 삭제된 계정 이름이다. 삭제 명령을 요청한 사용자는 앞선 sudo 원문의 실행자에서 확인한다. 같은 srcuser 필드도 로그 형식과 디코더에 따라 가리키는 대상이 달라진다."
+    },
+    {
+      "type": "p",
+      "text": "삭제를 요청한 사람은 앞선 sudo COMMAND=/usr/sbin/userdel -r book08-user 기록의 srcuser=ccc에서 확인한다. 생성의 dstuser, 삭제의 srcuser, sudo의 srcuser·dstuser를 하나의 필드로 뭉뚱그리지 않는다."
+    },
+    {
+      "type": "p",
+      "text": "계정·그룹·홈의 삭제 확인과 Q08-12의 원문 대조를 마치면 exit로 ccc SSH 셸을 닫는다."
+    },
+    {
+      "type": "p",
+      "text": "계정 생성·그룹 변경·삭제의 요청 주체를 조사하려면 wazuh-archives-*로 바꾸고 해당 작업 전체의 시작·종료 시각을 지정한다."
+    },
+    {
+      "type": "query",
+      "id": "Q08-12",
+      "where": "Windows · Discover · wazuh-archives-*",
+      "text": "agent.name: \"bastion\"\nAND location: \"/var/log/auth.log\"\nAND full_log: \"book08-user\"",
+      "result": "useradd·usermod·userdel 원문과 sudo의 COMMAND를 시간순으로 읽는다. sudo의 요청 계정과 변경 대상 book08-user를 구분하고, id·getent 결과를 대조한다.",
+      "syntax": "계정 이름이 들어 있는 인증 원문을 규칙 번호로 제한하지 않고 모은다.",
+      "purpose": "실습 계정 이름이 포함된 인증 원문을 모두 모은다."
+    },
+    {
+      "type": "p",
+      "text": "계정 원상복구가 끝나면 Q08-12의 기간을 삭제 이후까지 넓혀 userdel 및 sudo 원문을 확인한다. 이미 수집한 생성 경보는 그대로 보존하고, 현재 계정의 부재는 getent·id 결과로 기록한다."
+    }
+  ],
+  "source": {
+    "file": "volume01-chapter08.json",
+    "section_index": 7,
+    "revision": "REV01",
+    "mapping_status": "pending-review"
+  }
+}

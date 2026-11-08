@@ -1,0 +1,502 @@
+{
+  "id": "dql",
+  "title": "DQL 문법과 검색 필드",
+  "source_pages": [
+    20,
+    33
+  ],
+  "slides": [
+    {
+      "page": 20,
+      "title": "DQL 문법 8가지 (1/2)",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "DQL 문법 8가지 (1/2)"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  DQL 읽는 법"
+        },
+        {
+          "type": "text",
+          "text": "DQL(Dashboards Query Language) = Discover 검색창에 쓰는 검색 언어. '필드:값' 조건을 AND · OR · NOT 으로 엮는다."
+        },
+        {
+          "type": "table",
+          "rows": [
+            [
+              "문법",
+              "예시",
+              "뜻"
+            ],
+            [
+              "필드:값",
+              "rule.id:5712",
+              "정확히 일치"
+            ],
+            [
+              "AND / OR / NOT",
+              "rule.level >= 10 AND NOT agent.name:test",
+              "조건 결합"
+            ],
+            [
+              "괄호 묶음",
+              "rule.id:(5710 or 5712 or 5720)",
+              "여러 값 중 하나"
+            ],
+            [
+              "와일드카드",
+              "data.url:*union*",
+              "부분 일치 (keyword 는 대소문자 구분)"
+            ],
+            [
+              "범위",
+              "rule.level >= 12",
+              "숫자 필드만 가능"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "page": 21,
+      "title": "DQL 문법 8가지 (2/2)",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "DQL 문법 8가지 (2/2)"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  DQL 읽는 법"
+        },
+        {
+          "type": "table",
+          "rows": [
+            [
+              "문법",
+              "예시",
+              "뜻"
+            ],
+            [
+              "구문",
+              "rule.description:\"authentication failed\"",
+              "공백 포함 값은 따옴표"
+            ],
+            [
+              "존재 여부",
+              "data.srcip:*",
+              "그 필드가 있는 문서만"
+            ],
+            [
+              "백슬래시",
+              "*CurrentVersion\\\\\\\\Run*",
+              "\\ 는 \\\\ 로 이스케이프 (Windows 경로는 두 겹)"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "page": 22,
+      "title": "DQL 읽는 법 — 검증으로 찾은 함정",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "DQL 읽는 법 — 검증으로 찾은 함정"
+        },
+        {
+          "type": "text",
+          "text": "DQL 특수문자 · 필드 종류 — 그대로 붙이면 안 되는 것들 (1/3)"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  DQL 읽는 법 — 검증으로 찾은 함정"
+        },
+        {
+          "type": "text",
+          "text": "특수문자는 \\ 로 이스케이프"
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "값 안의 ( ) : < > \" * \\ { } 는 DQL 문법 기호다 — 그대로 쓰면 'Expected …' 오류로 검색 자체가 안 된다"
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "*sleep(* → *sleep\\(*   ·   *php://* → *php\\://*   ·   *<script* → *\\<script*   ·   *${* → *$\\{*"
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "원본 61개 중 6개(01·02·03·07·08·45)가 이 이유로 실행되지 않았다"
+        },
+        {
+          "type": "text",
+          "text": "Windows 경로는 역슬래시가 두 겹으로 저장된다"
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 는 C:\\Windows\\Temp 를 C:\\\\Windows\\\\Temp 로 저장 → DQL 에서는 \\\\\\\\ (두 겹을 각각 이스케이프)"
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "*CurrentVersion\\\\Run* (0건) → *CurrentVersion\\\\\\\\Run* (검색됨)"
+        }
+      ]
+    },
+    {
+      "page": 23,
+      "title": "DQL 읽는 법 — 검증으로 찾은 함정",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "DQL 읽는 법 — 검증으로 찾은 함정"
+        },
+        {
+          "type": "text",
+          "text": "DQL 특수문자 · 필드 종류 — 그대로 붙이면 안 되는 것들 (2/3)"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  DQL 읽는 법 — 검증으로 찾은 함정"
+        },
+        {
+          "type": "text",
+          "text": "keyword · text · 숫자 — 필드 종류가 검색 방식을 정한다"
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "keyword(정확히 일치): rule.id, rule.description, data.url, data.id, data.srcip, data.win.*, syscheck.path → 대소문자 그대로, 부분 일치는 *와일드카드*"
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "text(단어 단위): full_log 정도 — 'sqlmap' 같은 단어 검색은 되지만 기호(() { 등)는 분석기가 지운다"
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "숫자(>= 가능): rule.level, data.ip_reputation. logonType·virustotal.positives 는 keyword 라 >= 가 숫자로 동작하지 않는다"
+        }
+      ]
+    },
+    {
+      "page": 24,
+      "title": "DQL 읽는 법 — 검증으로 찾은 함정",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "DQL 읽는 법 — 검증으로 찾은 함정"
+        },
+        {
+          "type": "text",
+          "text": "DQL 특수문자 · 필드 종류 — 그대로 붙이면 안 되는 것들 (3/3)"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  DQL 읽는 법 — 검증으로 찾은 함정"
+        },
+        {
+          "type": "text",
+          "text": "확인하는 법"
+        },
+        {
+          "type": "text",
+          "text": "Discover 왼쪽 필드 목록의 아이콘: t = 문자열(keyword/text), # = 숫자\nIndexer management → Dev Tools:  GET wazuh-alerts-*/_mapping/field/rule.description"
+        }
+      ]
+    },
+    {
+      "page": 25,
+      "title": "공통 필드 10개 (1/2)",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "공통 필드 10개 (1/2)"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  DQL 읽는 법"
+        },
+        {
+          "type": "table",
+          "rows": [
+            [
+              "필드",
+              "내용",
+              "주로 쓰는 곳"
+            ],
+            [
+              "rule.id · rule.level · rule.description · rule.groups · rule.mitre.id",
+              "탐지 룰 정보",
+              "전체"
+            ],
+            [
+              "agent.name · agent.ip",
+              "이벤트가 발생한 호스트",
+              "전체"
+            ],
+            [
+              "data.srcip · data.srcuser · data.dstuser",
+              "출발지 IP, 실행 사용자, 대상 사용자",
+              "SSH, sudo, PAM"
+            ],
+            [
+              "data.protocol · data.url · data.id",
+              "HTTP 메서드, 요청 URL, 응답 코드(문자열)",
+              "Apache/Nginx"
+            ],
+            [
+              "full_log",
+              "원본 로그 한 줄 전체 (text, 단어 단위 검색)",
+              "User-Agent 등"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "page": 26,
+      "title": "공통 필드 10개 (2/2)",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "공통 필드 10개 (2/2)"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  DQL 읽는 법"
+        },
+        {
+          "type": "table",
+          "rows": [
+            [
+              "필드",
+              "내용",
+              "주로 쓰는 곳"
+            ],
+            [
+              "syscheck.path · syscheck.event",
+              "바뀐 파일 경로, added/modified/deleted",
+              "FIM"
+            ],
+            [
+              "data.win.system.eventID · data.win.system.channel",
+              "Windows 이벤트 ID, 채널",
+              "Windows"
+            ],
+            [
+              "data.win.eventdata.*",
+              "로그온 유형, 계정, 프로세스, 명령줄",
+              "Windows / Sysmon"
+            ],
+            [
+              "data.audit.*",
+              "실행 명령, 키, 사용자",
+              "Linux auditd"
+            ],
+            [
+              "GeoLocation.country_name",
+              "출발지 국가",
+              "공인 IP 전체"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "page": 27,
+      "title": "아카이브 인덱스 패턴 만들기 1 — 메뉴",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "아카이브 인덱스 패턴 만들기 1 — 메뉴"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  사용법"
+        },
+        {
+          "type": "image",
+          "asset": "51da5d04eea1007dcdf522bdc8bbf96c0325e8dffdeb00f97b213b9001d2faa8.png",
+          "alt": "교재 27페이지 예시 화면"
+        },
+        {
+          "type": "text",
+          "text": "☰ 메뉴 → Dashboards Management. 4648 · 4104 · Sysmon 10/13 처럼 기본 룰이 없는 이벤트를 보려면 아카이브 인덱스가 필요하다"
+        }
+      ]
+    },
+    {
+      "page": 28,
+      "title": "아카이브 인덱스 패턴 만들기 2 — Dashboards Management",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "아카이브 인덱스 패턴 만들기 2 — Dashboards Management"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  사용법"
+        },
+        {
+          "type": "image",
+          "asset": "92868232246c2051631b81aa343ef2ef3e448a548ce5be33fea528df717ba023.png",
+          "alt": "교재 28페이지 예시 화면"
+        },
+        {
+          "type": "text",
+          "text": "하위 메뉴의 Dashboards Management 를 누른다"
+        }
+      ]
+    },
+    {
+      "page": 29,
+      "title": "아카이브 인덱스 패턴 만들기 3 — Index patterns",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "아카이브 인덱스 패턴 만들기 3 — Index patterns"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  사용법"
+        },
+        {
+          "type": "image",
+          "asset": "d0557de23717f095dbcaa09aabaa01933833d9f6753f8a55c408700aa6b726a5.png",
+          "alt": "교재 29페이지 예시 화면"
+        },
+        {
+          "type": "text",
+          "text": "왼쪽 Index patterns 를 누른다. 지금 쓸 수 있는 인덱스 패턴 목록이 나온다"
+        }
+      ]
+    },
+    {
+      "page": 30,
+      "title": "아카이브 인덱스 패턴 만들기 4 — Create index pattern",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "아카이브 인덱스 패턴 만들기 4 — Create index pattern"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  사용법"
+        },
+        {
+          "type": "image",
+          "asset": "4cd18663e269b4b6e3228a5e2e225255f6042eaa6260fbbc48a9d5a60ed2fa41.png",
+          "alt": "교재 30페이지 예시 화면"
+        },
+        {
+          "type": "text",
+          "text": "오른쪽 위 Create index pattern 버튼을 누른다"
+        }
+      ]
+    },
+    {
+      "page": 31,
+      "title": "아카이브 인덱스 패턴 만들기 5 — 이름 입력",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "아카이브 인덱스 패턴 만들기 5 — 이름 입력"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  사용법"
+        },
+        {
+          "type": "image",
+          "asset": "01fe5d8588bed70854a24d231eb97b608332aff0fdd5eeddb957c4bfaaa22c8d.png",
+          "alt": "교재 31페이지 예시 화면"
+        },
+        {
+          "type": "text",
+          "text": "wazuh-archives- 까지만 입력한다. 끝의 * 는 자동으로 붙는다 → Next step"
+        }
+      ]
+    },
+    {
+      "page": 32,
+      "title": "아카이브 인덱스 패턴 만들기 6 — 시간 필드",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "아카이브 인덱스 패턴 만들기 6 — 시간 필드"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  사용법"
+        },
+        {
+          "type": "image",
+          "asset": "40d6efa2795711a011080fb9fba9616379a6ace18578183f730f7449c9d5a866.png",
+          "alt": "교재 32페이지 예시 화면"
+        },
+        {
+          "type": "text",
+          "text": "Time field 에서 timestamp 를 고르고 Create index pattern. 이제 Discover 의 인덱스 목록에 wazuh-archives-* 가 생긴다"
+        }
+      ]
+    },
+    {
+      "page": 33,
+      "title": "실습 인프라",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "실습 인프라"
+        },
+        {
+          "type": "text",
+          "text": "xOC Range 에서로그가 나오는 곳"
+        },
+        {
+          "type": "text",
+          "text": "공격자 → FW → IPS → WAF → 취약 웹앱 7종 + Wazuh 4.10 매니저를 한 호스트에."
+        },
+        {
+          "type": "text",
+          "text": "61개 전부 xOC Range 에서 실행·검증 (2026-10-31). 공격자 VM 192.168.0.202 + xOC Range 내부 공격 컨테이너."
+        },
+        {
+          "type": "text",
+          "text": "github.com/mrgrit/xOC Range"
+        }
+      ]
+    }
+  ]
+}

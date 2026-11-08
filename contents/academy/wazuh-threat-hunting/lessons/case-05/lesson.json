@@ -1,0 +1,321 @@
+{
+  "id": "case-05",
+  "title": "05 · 스캐너 User-Agent",
+  "source_pages": [
+    98,
+    106
+  ],
+  "slides": [
+    {
+      "page": 98,
+      "title": "웹 위협 · 05 / 61",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "웹 위협 · 05 / 61"
+        },
+        {
+          "type": "text",
+          "text": "05 스캐너 도구 User-Agent"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  웹 위협 · 05"
+        },
+        {
+          "type": "text",
+          "text": "공격"
+        },
+        {
+          "type": "text",
+          "text": "sqlmap, nikto, nmap 등은 기본 User-Agent에 도구 이름을 남김"
+        },
+        {
+          "type": "text",
+          "text": "탐지 포인트"
+        },
+        {
+          "type": "text",
+          "text": "full_log에 도구 이름"
+        },
+        {
+          "type": "text",
+          "text": "검색 원리"
+        },
+        {
+          "type": "text",
+          "text": "full_log는 text 필드라 소문자 단어 단위로 검색됨"
+        },
+        {
+          "type": "text",
+          "text": "주요 필드"
+        },
+        {
+          "type": "text",
+          "text": "full_log 펼친 화면"
+        },
+        {
+          "type": "text",
+          "text": "결과 해석"
+        },
+        {
+          "type": "text",
+          "text": "full_log를 펼치면 User-Agent 문자열과 요청 경로가 함께 보임. 정상 모니터링 도구(curl 헬스체크)는 IP로 제외"
+        },
+        {
+          "type": "text",
+          "text": "원본 교재 검증 기록 · 원본 DQL 그대로 동작"
+        }
+      ]
+    },
+    {
+      "page": 99,
+      "title": "05 실습 ① 공격 실행 — 스캐너 도구 User-Agent",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "05 실습 ① 공격 실행 — 스캐너 도구 User-Agent"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  웹 위협 · 05"
+        },
+        {
+          "type": "image",
+          "asset": "4b12d6f29834345508f89c25744d351b6b297eaf7b49fa867766f6eabcb14c85.png",
+          "alt": "교재 99페이지 예시 화면"
+        },
+        {
+          "type": "text",
+          "text": "공격자 VM 에서 학생이 직접 입력하는 명령과 실제 결과. # 줄은 설명, 노란색은 확인할 결과"
+        }
+      ]
+    },
+    {
+      "page": 100,
+      "title": "05 구문 풀이 — 스캐너 도구 User-Agent",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "05 구문 풀이 — 스캐너 도구 User-Agent"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  웹 위협 · 05"
+        },
+        {
+          "type": "text",
+          "text": "curl -v -A \"sqlmap/1.6.4#stable …\""
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "-A 로 User-Agent 를 도구 기본값과 똑같이 보냄. -v 로 실제 보낸 헤더(> User-Agent:)를 화면에 출력"
+        },
+        {
+          "type": "text",
+          "text": "python3 -c \"import requests; …\""
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "파이썬 requests 라이브러리의 기본 User-Agent(python-requests/x.y)도 자동화 흔적"
+        }
+      ]
+    },
+    {
+      "page": 101,
+      "title": "05 실습 ② 검색 준비 — 스캐너 도구 User-Agent",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "05 실습 ② 검색 준비 — 스캐너 도구 User-Agent"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  웹 위협 · 05"
+        },
+        {
+          "type": "text",
+          "text": "인덱스 패턴"
+        },
+        {
+          "type": "text",
+          "text": "wazuh-alerts-*"
+        },
+        {
+          "type": "text",
+          "text": "시간 범위"
+        },
+        {
+          "type": "text",
+          "text": "Last 15 minutes (실습 직후)"
+        },
+        {
+          "type": "text",
+          "text": "DQL — 검색창에 직접 입력 → Enter"
+        },
+        {
+          "type": "text",
+          "text": "full_log:(sqlmap or nikto or nmap or masscan or zgrab or dirbuster or gobuster or \"python-requests\")"
+        },
+        {
+          "type": "text",
+          "text": "추가할 컬럼"
+        },
+        {
+          "type": "text",
+          "text": "agent.name  ·  rule.id  ·  rule.description  ·  data.srcip  ·  data.id  ·  full_log"
+        },
+        {
+          "type": "text",
+          "text": "xOC Range 결과"
+        },
+        {
+          "type": "text",
+          "text": "233 hits"
+        }
+      ]
+    },
+    {
+      "page": 102,
+      "title": "05 결과 화면 ① — 결과 수와 시간 분포",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "05 결과 화면 ① — 결과 수와 시간 분포"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  웹 위협 · 05"
+        },
+        {
+          "type": "image",
+          "asset": "6c98683ccf9a19766572b607c9707829de1c7ba032c02d1843e5cbee40958532.png",
+          "alt": "교재 102페이지 예시 화면"
+        },
+        {
+          "type": "text",
+          "text": "233 hits"
+        },
+        {
+          "type": "text",
+          "text": "검색창 아래 hits = 찾은 건수, 막대 = 시간대별 건수. 실습 직후라 막대가 한곳에 몰려 있다"
+        }
+      ]
+    },
+    {
+      "page": 103,
+      "title": "05 결과 화면 ② — 결과 표 (왼쪽 열)",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "05 결과 화면 ② — 결과 표 (왼쪽 열)"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  웹 위협 · 05"
+        },
+        {
+          "type": "image",
+          "asset": "84c177991279cc3fad6a3cc91dfdae8220abb96027bc663936a25e72ef695f8a.png",
+          "alt": "교재 103페이지 예시 화면"
+        },
+        {
+          "type": "text",
+          "text": "결과 표 왼쪽 — 시간 · 에이전트 · 룰 (한 행 = 로그 한 건)"
+        }
+      ]
+    },
+    {
+      "page": 104,
+      "title": "05 결과 화면 ② — 결과 표 (오른쪽 열)",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "05 결과 화면 ② — 결과 표 (오른쪽 열)"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  웹 위협 · 05"
+        },
+        {
+          "type": "image",
+          "asset": "863c6f02ea25d98ebb2b66a1ed9032b7125218f9e5a59a838a3bc565f5d64230.png",
+          "alt": "교재 104페이지 예시 화면"
+        },
+        {
+          "type": "text",
+          "text": "결과 표 오른쪽 — 같은 행의 나머지 열"
+        }
+      ]
+    },
+    {
+      "page": 105,
+      "title": "05 결과 화면 ③ — 문서 펼치기 (Table)",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "05 결과 화면 ③ — 문서 펼치기 (Table)"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  웹 위협 · 05"
+        },
+        {
+          "type": "image",
+          "asset": "854fbb1b92dc629b50e72b4d4bced01ec1604b43fcf91d8bb341e92c52cfebd2.png",
+          "alt": "교재 105페이지 예시 화면"
+        },
+        {
+          "type": "text",
+          "text": "행 왼쪽 > 를 눌러 펼친 화면. 노란색 = 검색 조건과 맞은 부분"
+        }
+      ]
+    },
+    {
+      "page": 106,
+      "title": "05 결과 읽는 법 — 스캐너 도구 User-Agent",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "05 결과 읽는 법 — 스캐너 도구 User-Agent"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  웹 위협 · 05"
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "full_log 는 원본 로그 한 줄. 액세스 로그의 마지막 따옴표 안이 User-Agent"
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "full_log 는 text 필드라 sqlmap·nikto 같은 단어 단위로 검색된다 (대소문자 무시)"
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "헬스체크처럼 정상 자동화도 있으니 출발지 IP 로 예외를 둔다"
+        }
+      ]
+    }
+  ]
+}

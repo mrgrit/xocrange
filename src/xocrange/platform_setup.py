@@ -51,8 +51,27 @@ def prepare(engine, project, root, selected, host=None, state=STATE, tls=TLS_STA
     if 'academy-reader' in selected:
         from .content import bundle
         write(config_volume/'bundle.json', json.dumps(bundle(root)), 65532)
+        from .academy_content import catalog
+        import shutil
+        import tempfile
+        _, files = catalog(root)
+        staged = Path(tempfile.mkdtemp(prefix='.academy-',dir=config_volume))
+        try:
+            for file in files:
+                destination = staged/file.relative_to(root/'contents/academy')
+                destination.parent.mkdir(parents=True,exist_ok=True)
+                shutil.copyfile(file,destination)
+            for item in [staged,*staged.rglob('*')]:
+                os.chown(item,65532,65532);item.chmod(0o700 if item.is_dir() else 0o600)
+            target = config_volume/'academy'
+            if target.exists(): shutil.rmtree(target)
+            staged.rename(target)
+        finally:
+            if staged.exists(): shutil.rmtree(staged)
     else:
         (config_volume/'bundle.json').unlink(missing_ok=True)
+        import shutil
+        shutil.rmtree(config_volume/'academy',ignore_errors=True)
     volume('platform-data', 65532)
     volume('platform-socket', 65532, 33, 0o770)
     for device in ('fw','ips','waf'):

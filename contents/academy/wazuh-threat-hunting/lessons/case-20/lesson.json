@@ -1,0 +1,391 @@
+{
+  "id": "case-20",
+  "title": "20 · sudo 권한 사용",
+  "source_pages": [
+    239,
+    248
+  ],
+  "slides": [
+    {
+      "page": 239,
+      "title": "개념 — 20~22 권한 상승·계정",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "개념 — 20~22 권한 상승·계정"
+        },
+        {
+          "type": "text",
+          "text": "sudo · 계정 파일 — 리눅스 권한의 열쇠"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  개념 — 20~22 권한 상승·계정"
+        },
+        {
+          "type": "text",
+          "text": "sudo"
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "일반 계정이 관리자(root) 권한으로 명령 하나를 실행하는 장치. 누가 무엇을 했는지 auth.log 에 남는다"
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "sudo -i: root 셸로 들어감 (이후 명령은 모두 root) · /etc/sudoers, /etc/sudoers.d/: 누가 sudo 를 쓸 수 있는지 — NOPASSWD 는 암호도 안 묻는다"
+        },
+        {
+          "type": "text",
+          "text": "계정 파일"
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "/etc/passwd: 계정 목록(누구나 읽기) — 'ccc:x:1000:1000::/home/ccc:/bin/bash'  UID 0 = root 와 같은 권한"
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "/etc/shadow: 암호 해시(root 만 읽기) · /etc/group: 그룹 — sudo·wheel 그룹 = 관리자"
+        },
+        {
+          "type": "text",
+          "text": "공격자가 하는 일"
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "탈취 계정으로 sudo 시도 → root 셸 → 백도어 계정 생성 → sudo 그룹 추가 → sudoers 에 NOPASSWD 심기"
+        }
+      ]
+    },
+    {
+      "page": 240,
+      "title": "리눅스 · 20 / 61 · MITRE T1548.003",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "리눅스 · 20 / 61 · MITRE T1548.003"
+        },
+        {
+          "type": "text",
+          "text": "20 sudo 권한 상승"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  리눅스 · 20"
+        },
+        {
+          "type": "text",
+          "text": "공격"
+        },
+        {
+          "type": "text",
+          "text": "탈취한 일반 계정으로 sudo를 반복 시도하거나 처음으로 root 명령을 실행"
+        },
+        {
+          "type": "text",
+          "text": "탐지 포인트"
+        },
+        {
+          "type": "text",
+          "text": "룰 5401(암호 3회 실패), 5402(root로 sudo 성공), 5403(처음 sudo를 쓴 사용자)"
+        },
+        {
+          "type": "text",
+          "text": "검색 원리"
+        },
+        {
+          "type": "text",
+          "text": "sudo 디코더가 data.srcuser(실행자), data.command(명령)를 분리"
+        },
+        {
+          "type": "text",
+          "text": "주요 필드"
+        },
+        {
+          "type": "text",
+          "text": "data.srcuser · data.command · data.pwd"
+        },
+        {
+          "type": "text",
+          "text": "결과 해석"
+        },
+        {
+          "type": "text",
+          "text": "data.srcuser, data.command, data.pwd로 누가 어디서 무엇을 root로 실행했는지. data.command:(*bash* or *sh* or *vi*)로 쉘 획득만 추림"
+        },
+        {
+          "type": "text",
+          "text": "원본 교재 검증 기록 · 원본 DQL 그대로 동작"
+        }
+      ]
+    },
+    {
+      "page": 241,
+      "title": "20 실습 ① 공격 실행 — sudo 권한 상승",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "20 실습 ① 공격 실행 — sudo 권한 상승"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  리눅스 · 20"
+        },
+        {
+          "type": "image",
+          "asset": "b0072f869cfd12fcde043bab7de3c4999537d71d9d1d7d684bfe2f9b023301e9.png",
+          "alt": "교재 241페이지 예시 화면"
+        },
+        {
+          "type": "text",
+          "text": "공격자 VM 에서 학생이 직접 입력하는 명령과 실제 결과. # 줄은 설명, 노란색은 확인할 결과"
+        }
+      ]
+    },
+    {
+      "page": 242,
+      "title": "20 구문 풀이 — sudo 권한 상승",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "20 구문 풀이 — sudo 권한 상승"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  리눅스 · 20"
+        },
+        {
+          "type": "text",
+          "text": "sudo -i id"
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "root 셸로 들어가 id 실행"
+        },
+        {
+          "type": "text",
+          "text": "sudo cat /etc/shadow"
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "root 만 읽을 수 있는 암호 해시 파일 열람"
+        }
+      ]
+    },
+    {
+      "page": 243,
+      "title": "20 실습 ② 검색 준비 — sudo 권한 상승",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "20 실습 ② 검색 준비 — sudo 권한 상승"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  리눅스 · 20"
+        },
+        {
+          "type": "text",
+          "text": "인덱스 패턴"
+        },
+        {
+          "type": "text",
+          "text": "wazuh-alerts-*"
+        },
+        {
+          "type": "text",
+          "text": "시간 범위"
+        },
+        {
+          "type": "text",
+          "text": "Last 15 minutes (실습 직후)"
+        },
+        {
+          "type": "text",
+          "text": "DQL — 검색창에 직접 입력 → Enter"
+        },
+        {
+          "type": "text",
+          "text": "rule.groups:sudo AND rule.id:(5401 or 5402 or 5403)"
+        },
+        {
+          "type": "text",
+          "text": "추가할 컬럼"
+        },
+        {
+          "type": "text",
+          "text": "agent.name  ·  rule.id  ·  rule.description  ·  data.srcuser  ·  data.dstuser  ·  data.command"
+        },
+        {
+          "type": "text",
+          "text": "xOC Range 결과"
+        },
+        {
+          "type": "text",
+          "text": "3 hits"
+        }
+      ]
+    },
+    {
+      "page": 244,
+      "title": "20 결과 화면 ① — 결과 수와 시간 분포",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "20 결과 화면 ① — 결과 수와 시간 분포"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  리눅스 · 20"
+        },
+        {
+          "type": "image",
+          "asset": "3e435a8a055c4fd463b39e3772825cf8c1a99f6c3eeb2e9646a024387a838c7f.png",
+          "alt": "교재 244페이지 예시 화면"
+        },
+        {
+          "type": "text",
+          "text": "3 hits"
+        },
+        {
+          "type": "text",
+          "text": "검색창 아래 hits = 찾은 건수, 막대 = 시간대별 건수. 실습 직후라 막대가 한곳에 몰려 있다"
+        }
+      ]
+    },
+    {
+      "page": 245,
+      "title": "20 결과 화면 ② — 결과 표 (왼쪽 열)",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "20 결과 화면 ② — 결과 표 (왼쪽 열)"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  리눅스 · 20"
+        },
+        {
+          "type": "image",
+          "asset": "bbba42f134288028a582cbc0dd21d8f6deb814cd7df960b60c1dc99a032a9176.png",
+          "alt": "교재 245페이지 예시 화면"
+        },
+        {
+          "type": "text",
+          "text": "결과 표 왼쪽 — 시간 · 에이전트 · 룰 (한 행 = 로그 한 건)"
+        }
+      ]
+    },
+    {
+      "page": 246,
+      "title": "20 결과 화면 ② — 결과 표 (오른쪽 열)",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "20 결과 화면 ② — 결과 표 (오른쪽 열)"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  리눅스 · 20"
+        },
+        {
+          "type": "image",
+          "asset": "dde4849151570ed471fde3a54601ac1a9c616835348064de1d96e5b773a0fb98.png",
+          "alt": "교재 246페이지 예시 화면"
+        },
+        {
+          "type": "text",
+          "text": "결과 표 오른쪽 — 같은 행의 나머지 열"
+        }
+      ]
+    },
+    {
+      "page": 247,
+      "title": "20 결과 화면 ③ — 문서 펼치기 (Table)",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "20 결과 화면 ③ — 문서 펼치기 (Table)"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  리눅스 · 20"
+        },
+        {
+          "type": "image",
+          "asset": "c02bf8847630f13c7715a7bd596beb4ecba98e456613fa91468aad9157938c79.png",
+          "alt": "교재 247페이지 예시 화면"
+        },
+        {
+          "type": "text",
+          "text": "행 왼쪽 > 를 눌러 펼친 화면. 노란색 = 검색 조건과 맞은 부분"
+        }
+      ]
+    },
+    {
+      "page": 248,
+      "title": "20 결과 읽는 법 — sudo 권한 상승",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "20 결과 읽는 법 — sudo 권한 상승"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  리눅스 · 20"
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "5402 = root 로 sudo 성공, 5403 = 그 사용자가 sudo 를 처음 씀"
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "data.command 에 실제 실행 명령. bash·sh·vi 같은 셸 획득 명령은 바로 조사"
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "xOC Range bastion 의 ccc 는 비밀번호 없이 sudo(NOPASSWD)라 5401(암호 3회 실패)은 생기지 않는다"
+        }
+      ]
+    }
+  ]
+}

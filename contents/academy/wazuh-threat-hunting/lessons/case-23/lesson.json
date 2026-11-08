@@ -1,0 +1,386 @@
+{
+  "id": "case-23",
+  "title": "23 · SSH 키 지속화",
+  "source_pages": [
+    268,
+    277
+  ],
+  "slides": [
+    {
+      "page": 268,
+      "title": "개념 — 23·24 지속화",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "개념 — 23·24 지속화"
+        },
+        {
+          "type": "text",
+          "text": "지속화 — 재부팅해도, 암호를 바꿔도 다시 들어오기 (1/2)"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  개념 — 23·24 지속화"
+        },
+        {
+          "type": "text",
+          "text": "SSH 키"
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "~/.ssh/authorized_keys 에 공개키가 있으면 짝이 되는 개인키를 가진 사람은 암호 없이 접속"
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "공격자가 자기 공개키를 넣어 두면 피해자가 암호를 바꿔도 계속 들어온다"
+        },
+        {
+          "type": "text",
+          "text": "cron"
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "정해진 시각에 명령을 자동 실행. /etc/cron.d/ 파일 한 줄 = '분 시 일 월 요일 사용자 명령'"
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "* * * * * root curl … | bash → 매분 root 로 원격 스크립트 실행 — 지워도 다시 내려받는 끈질긴 백도어"
+        }
+      ]
+    },
+    {
+      "page": 269,
+      "title": "개념 — 23·24 지속화",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "개념 — 23·24 지속화"
+        },
+        {
+          "type": "text",
+          "text": "지속화 — 재부팅해도, 암호를 바꿔도 다시 들어오기 (2/2)"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  개념 — 23·24 지속화"
+        },
+        {
+          "type": "text",
+          "text": "그 밖의 자리"
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "systemd 서비스·타이머, ~/.bashrc, Windows Run 키(44번)·예약 작업(40번)·서비스(39번)"
+        },
+        {
+          "type": "text",
+          "text": "cron 시간 칸 읽기"
+        },
+        {
+          "type": "text",
+          "text": "┌분(0-59) ┌시(0-23) ┌일(1-31) ┌월(1-12) ┌요일(0-6, 0=일)\n*         *         *         *         *      root  명령     → 매분\n0         3         *         *         1      root  명령     → 매주 월요일 03:00"
+        }
+      ]
+    },
+    {
+      "page": 270,
+      "title": "리눅스 · 23 / 61 · MITRE T1098.004",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "리눅스 · 23 / 61 · MITRE T1098.004"
+        },
+        {
+          "type": "text",
+          "text": "23 SSH 키 지속화"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  리눅스 · 23"
+        },
+        {
+          "type": "text",
+          "text": "공격"
+        },
+        {
+          "type": "text",
+          "text": "~/.ssh/authorized_keys에 공격자 공개키를 넣어 암호 없이 재접속"
+        },
+        {
+          "type": "text",
+          "text": "탐지 포인트"
+        },
+        {
+          "type": "text",
+          "text": "authorized_keys 추가·변경 FIM 이벤트"
+        },
+        {
+          "type": "text",
+          "text": "검색 원리"
+        },
+        {
+          "type": "text",
+          "text": "홈 디렉터리(/home, /root)가 FIM 감시 대상이어야 함"
+        },
+        {
+          "type": "text",
+          "text": "주요 필드"
+        },
+        {
+          "type": "text",
+          "text": "syscheck.uname_after · syscheck.diff"
+        },
+        {
+          "type": "text",
+          "text": "결과 해석"
+        },
+        {
+          "type": "text",
+          "text": "syscheck.uname_after로 누가 바꿨는지, syscheck.diff로 추가된 키 주석(user@host) 확인"
+        },
+        {
+          "type": "text",
+          "text": "원본 교재 검증 기록 · 원본 DQL 그대로 동작"
+        }
+      ]
+    },
+    {
+      "page": 271,
+      "title": "23 실습 ① 공격 실행 — SSH 키 지속화",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "23 실습 ① 공격 실행 — SSH 키 지속화"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  리눅스 · 23"
+        },
+        {
+          "type": "image",
+          "asset": "38f26f20e2f4eecef8fca39b04afb4181d63b078f461e682cf3480b446ed6d67.png",
+          "alt": "교재 271페이지 예시 화면"
+        },
+        {
+          "type": "text",
+          "text": "공격자 VM 에서 학생이 직접 입력하는 명령과 실제 결과. # 줄은 설명, 노란색은 확인할 결과"
+        }
+      ]
+    },
+    {
+      "page": 272,
+      "title": "23 구문 풀이 — SSH 키 지속화",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "23 구문 풀이 — SSH 키 지속화"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  리눅스 · 23"
+        },
+        {
+          "type": "text",
+          "text": "ssh-keygen -t ed25519 -N '' -C 'evil@attacker'"
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "공격자 키쌍 생성(-N '' 암호 없음, -C 주석)"
+        },
+        {
+          "type": "text",
+          "text": "echo '<공개키>' >> ~/.ssh/authorized_keys"
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "피해 계정에 공격자 공개키 등록 → 이후 비밀번호 없이 접속 (지속화)"
+        }
+      ]
+    },
+    {
+      "page": 273,
+      "title": "23 실습 ② 검색 준비 — SSH 키 지속화",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "23 실습 ② 검색 준비 — SSH 키 지속화"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  리눅스 · 23"
+        },
+        {
+          "type": "text",
+          "text": "인덱스 패턴"
+        },
+        {
+          "type": "text",
+          "text": "wazuh-alerts-*"
+        },
+        {
+          "type": "text",
+          "text": "시간 범위"
+        },
+        {
+          "type": "text",
+          "text": "Last 15 minutes (실습 직후)"
+        },
+        {
+          "type": "text",
+          "text": "DQL — 검색창에 직접 입력 → Enter"
+        },
+        {
+          "type": "text",
+          "text": "rule.groups:syscheck AND syscheck.path:*authorized_keys* AND syscheck.event:(added or modified)"
+        },
+        {
+          "type": "text",
+          "text": "추가할 컬럼"
+        },
+        {
+          "type": "text",
+          "text": "agent.name  ·  rule.id  ·  rule.description  ·  syscheck.event  ·  syscheck.path  ·  syscheck.uname_after"
+        },
+        {
+          "type": "text",
+          "text": "xOC Range 결과"
+        },
+        {
+          "type": "text",
+          "text": "1 hits"
+        }
+      ]
+    },
+    {
+      "page": 274,
+      "title": "23 결과 화면 ① — 결과 수와 시간 분포",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "23 결과 화면 ① — 결과 수와 시간 분포"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  리눅스 · 23"
+        },
+        {
+          "type": "image",
+          "asset": "a19ec7e61c17b943ed65f0a78f181a38dd7fa3e4f74a5e97cd7ffca1892a6d38.png",
+          "alt": "교재 274페이지 예시 화면"
+        },
+        {
+          "type": "text",
+          "text": "1 hits"
+        },
+        {
+          "type": "text",
+          "text": "검색창 아래 hits = 찾은 건수, 막대 = 시간대별 건수. 실습 직후라 막대가 한곳에 몰려 있다"
+        }
+      ]
+    },
+    {
+      "page": 275,
+      "title": "23 결과 화면 ② — 결과 표",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "23 결과 화면 ② — 결과 표"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  리눅스 · 23"
+        },
+        {
+          "type": "image",
+          "asset": "682f5478e102067cc9ce4966289c451f261405cf3d2e6c8b78397fa028cb0df0.png",
+          "alt": "교재 275페이지 예시 화면"
+        },
+        {
+          "type": "text",
+          "text": "결과 표 — 위: 시간 · 에이전트 · 룰 / 아래: 같은 행의 나머지 열 (한 행 = 로그 한 건)"
+        }
+      ]
+    },
+    {
+      "page": 276,
+      "title": "23 결과 화면 ③ — 문서 펼치기 (Table)",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "23 결과 화면 ③ — 문서 펼치기 (Table)"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  리눅스 · 23"
+        },
+        {
+          "type": "image",
+          "asset": "a52f2e687d35710d01f7ff2908354a9af2a006f16a2d268c5f73e18275050eee.png",
+          "alt": "교재 276페이지 예시 화면"
+        },
+        {
+          "type": "text",
+          "text": "행 왼쪽 > 를 눌러 펼친 화면. 노란색 = 검색 조건과 맞은 부분"
+        }
+      ]
+    },
+    {
+      "page": 277,
+      "title": "23 결과 읽는 법 — SSH 키 지속화",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "23 결과 읽는 법 — SSH 키 지속화"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  리눅스 · 23"
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "syscheck.path 에 authorized_keys, syscheck.event 에 added/modified"
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "syscheck.diff(설정 시)에서 추가된 키의 주석(evil@attacker)을 확인"
+        }
+      ]
+    }
+  ]
+}

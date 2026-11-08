@@ -1,0 +1,174 @@
+{
+  "title": "6.2  경로 탐색",
+  "kind": "body",
+  "blocks": [
+    {
+      "type": "p",
+      "text": "웹 경로 탐색은 파일·디렉터리 이름을 바꿔 가며 요청하고 응답 코드의 차이로 무엇이 있는지 알아내는 작업이다. 공격자는 관리 화면, 설정 파일, 백업 파일처럼 링크로 드러나지 않은 경로를 찾는다. [1]"
+    },
+    {
+      "type": "image",
+      "path": "assets/figures/chapter06/path-scan.png",
+      "caption": "도식 6-2. 경로 탐색과 반복 요청의 기록.",
+      "width_mm": 127,
+      "asset": "7846741e75c89c90341b2c749e4212284ee399db4b781cf18f184de1525c4ed4.png"
+    },
+    {
+      "type": "h",
+      "text": "브라우저로 하나씩"
+    },
+    {
+      "type": "list",
+      "style": "number",
+      "items": [
+        "주소창에 http://dvwa.xocrange.lab/login.php?book06=known을 입력한다. 로그인 화면과 Network의 200을 확인한다.",
+        "주소를 http://dvwa.xocrange.lab/book06-missing으로 바꾼다. 응답 코드와 본문을 읽는다.",
+        "관리 화면에 흔히 쓰이는 경로 네 개를 하나씩 입력하고 응답 코드를 적는다: /admin/, /phpmyadmin/, /wp-admin/, /manager/html. 보낸 요청을 공격 일지에 적는다."
+      ]
+    },
+    {
+      "type": "image",
+      "path": "assets/screens/chapter06/path-missing.png",
+      "caption": "화면 6-2. 없는 경로의 404 응답.",
+      "width_mm": 100,
+      "asset": "e9a5de22942bab32881b075b424b02c718ca1090809d487677892aab85ac1cba.png"
+    },
+    {
+      "type": "query",
+      "id": "Q06-01",
+      "where": "Windows · Discover · wazuh-alerts-*",
+      "purpose": "관리 경로 후보 네 개의 경보를 찾는다.",
+      "text": "agent.name: \"web\"\nAND data.url: (\"/admin/\" OR \"/phpmyadmin/\"\nOR \"/wp-admin/\" OR \"/manager/html\")",
+      "syntax": "값 자리의 괄호와 OR는 data.url이 넷 중 하나와 일치하는 기록을 고른다. 세 줄을 함께 입력한다.",
+      "result": "검증 환경에서는 네 요청 모두 404, 규칙 31101(Web server 400 error code.)이었다."
+    },
+    {
+      "type": "image",
+      "path": "assets/screens/chapter06/admin-data.png",
+      "caption": "화면 6-3. 관리 경로 후보의 접속 기록.",
+      "width_mm": 127,
+      "asset": "abd84bbc08960e163c07626a23287d852b5559dd01c405770c720c30523e5810.png"
+    },
+    {
+      "type": "p",
+      "text": "31101은 응답 코드가 4로 시작하면 붙는다. 잘못 입력한 주소나 끊어진 링크도 같은 경보를 만든다. 경로 탐색인지는 한 건이 아니라 같은 출발지의 앞뒤 기록을 함께 보고 판단한다(6.7)."
+    },
+    {
+      "type": "h",
+      "text": "Gobuster로 목록 탐색"
+    },
+    {
+      "type": "p",
+      "text": "공격자 VM 홈 디렉터리에 탐색할 경로 목록을 만든다. 처음 세 줄은 실제로 있을 수 있는 경로이고, 나머지 20줄은 없는 경로이다. 복사용 목록은 examples/rev01/chapter06/paths.txt이다."
+    },
+    {
+      "type": "command",
+      "id": "C06-04",
+      "where": "공격자 VM · 터미널",
+      "purpose": "(사전 확인) 같은 이름의 파일이 이미 있는지 확인한다.",
+      "text": "ls -l ~/book06-paths.txt",
+      "syntax": "물결표(~)는 현재 사용자의 홈 디렉터리이다.",
+      "result": "No such file or directory가 나오면 새로 만든다. 파일이 있으면 내용을 확인하고 다른 이름을 정해 이후 명령에서 모두 바꾼다."
+    },
+    {
+      "type": "command",
+      "id": "C06-05",
+      "where": "공격자 VM · 터미널",
+      "purpose": "경로 목록 파일을 만든다.",
+      "text": "nano ~/book06-paths.txt",
+      "syntax": "nano는 터미널 편집기이다. 아래 목록을 한 줄에 하나씩 23줄 입력한다. … 자리에는 book06-scan-02부터 19까지가 차례로 들어간다. **Ctrl+O**, **Enter**로 저장하고 **Ctrl+X**로 닫는다.",
+      "result": "편집기가 닫히고 프롬프트로 돌아온다."
+    },
+    {
+      "type": "code",
+      "text": "login.php\nrobots.txt\nadmin/\nbook06-scan-01\n…\nbook06-scan-20"
+    },
+    {
+      "type": "command",
+      "id": "C06-06",
+      "where": "공격자 VM · 터미널",
+      "purpose": "(사후 확인) 저장된 목록을 확인한다.",
+      "text": "cat ~/book06-paths.txt",
+      "syntax": "cat은 파일 내용을 출력한다.",
+      "result": "23줄이 나온다. URL 전체가 아니라 경로만 들어 있어야 한다."
+    },
+    {
+      "type": "table",
+      "head": [
+        "옵션",
+        "뜻"
+      ],
+      "rows": [
+        [
+          "-m dir",
+          "디렉터리·파일 경로 탐색 모드"
+        ],
+        [
+          "-u URL",
+          "탐색할 사이트의 기본 주소"
+        ],
+        [
+          "-w 파일",
+          "후보 경로를 읽을 단어 목록"
+        ],
+        [
+          "-t 1",
+          "동시에 요청하는 작업 수를 1로 제한"
+        ],
+        [
+          "-a 문자열",
+          "요청의 User-Agent 헤더 값"
+        ]
+      ],
+      "widths": [
+        30,
+        97
+      ],
+      "keep": true
+    },
+    {
+      "type": "command",
+      "id": "C06-07",
+      "where": "공격자 VM · 터미널",
+      "purpose": "목록의 경로를 차례로 요청한다.",
+      "text": "gobuster -m dir \\\n  -u http://dvwa.xocrange.lab/ \\\n  -w ~/book06-paths.txt -t 1 -a book06-scan",
+      "syntax": "옵션은 위 표와 같다. -a로 User-Agent를 book06-scan으로 바꿔 Gobuster의 요청을 원본 로그에서 구분할 수 있게 한다. 줄 끝의 역슬래시(\\)는 명령을 다음 줄로 잇는다.",
+      "result": "검증 환경에서는 /login.php (Status: 200)와 /robots.txt (Status: 200) 두 줄이 출력되었다. 실행 시각을 공격 일지에 적는다."
+    },
+    {
+      "type": "box",
+      "kind": "blind",
+      "text": [
+        "Gobuster는 기본적으로 200·204·301·302·307·403 응답만 화면에 출력한다. 404인 경로는 화면에 나오지 않지만 웹 서버 로그에는 모두 남는다. 반대로 Wazuh 경보에는 404만 남고, 공격자가 찾아낸 200 경로는 경보에 나오지 않는다(6.7)."
+      ]
+    },
+    {
+      "type": "query",
+      "id": "Q06-02",
+      "where": "Windows · Discover · wazuh-alerts-*",
+      "purpose": "같은 출발지의 반복된 4xx 경보를 찾는다.",
+      "text": "agent.name: \"web\" AND rule.id: \"31151\"",
+      "syntax": "31151은 같은 출발지에서 31101이 짧은 시간에 반복되면 붙는 규칙이다. 기간은 Gobuster 실행 시각의 앞뒤 1분으로 지정한다.",
+      "result": "검증 환경에서 한 건이 나왔다. data.srcip가 공격자 VM의 주소이다."
+    },
+    {
+      "type": "image",
+      "path": "assets/screens/chapter06/scan-rule.png",
+      "caption": "화면 6-4. 반복된 4xx 응답 경보.",
+      "width_mm": 127,
+      "asset": "917f46909154ff6e1cfd182f712eb533a5cb8697d860e7b3c07b02cea540e109.png"
+    },
+    {
+      "type": "p",
+      "text": "31151의 조건은 frequency 14, timeframe 90초, same_source_ip이다. 직전 90초의 다른 4xx 요청도 함께 세므로 목록의 몇 번째 요청에서 붙는지는 앞선 요청에 따라 달라진다. 31151은 별도 경보가 추가되는 것이 아니라 조건을 채운 그 404 요청 한 건에 31101 대신 붙는다. 정의는 6.8에서 확인한다. [3]"
+    }
+  ],
+  "break": false,
+  "level": "section",
+  "source": {
+    "file": "volume01-chapter06.json",
+    "section_index": 2,
+    "revision": "REV01",
+    "mapping_status": "pending-review"
+  }
+}

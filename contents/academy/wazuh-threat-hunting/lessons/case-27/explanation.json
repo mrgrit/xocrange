@@ -1,0 +1,74 @@
+{
+  "title": "9.7  실행 파일 변경",
+  "kind": "body",
+  "blocks": [
+    {
+      "type": "p",
+      "text": "실습 27. 공격자는 시스템 프로그램을 자기 코드로 바꿔 관리자가 그 프로그램을 쓸 때 실행되게 할 수 있다. xocrange-web의 FIM은 /usr/bin을 realtime으로 감시한다. web의 /usr/bin/yes 끝에 7바이트를 더했다가 되돌려 경보와 패키지 검사 결과를 비교한다. yes는 문자열을 반복 출력하는 coreutils 프로그램이며 실습 중에는 실행하지 않는다. [1]"
+    },
+    {
+      "type": "command",
+      "id": "C09-28",
+      "where": "xOC Range VM · 터미널",
+      "purpose": "web 관리 셸로 들어간다.",
+      "text": "docker exec -it xocrange-web /bin/bash",
+      "syntax": "xOC Range VM 터미널에서 실행한다. 아래 /usr/bin/yes는 xOC Range VM이 아니라 web 컨테이너의 파일이다.",
+      "result": "프롬프트가 web 컨테이너로 바뀐다."
+    },
+    {
+      "type": "command",
+      "id": "C09-29",
+      "where": "xocrange-web · root 관리 셸",
+      "purpose": "변경 전 크기·권한·해시를 적고 백업한다.",
+      "text": "ls -l /root/book09-yes.before\nstat -c '%s %a %U %n' /usr/bin/yes\nsha256sum /usr/bin/yes\ncp -p /usr/bin/yes /root/book09-yes.before\ncmp /usr/bin/yes /root/book09-yes.before",
+      "syntax": "stat -c의 %s는 바이트 크기, %a는 숫자 권한, %U는 소유자, %n은 경로이다. sha256sum은 파일 내용의 SHA-256 해시를 계산한다.",
+      "result": "백업 이름은 No such file or directory이다. 기록에서는 31112 755 root /usr/bin/yes였다. 해시를 사건 노트에 적는다. cmp는 출력이 없다."
+    },
+    {
+      "type": "command",
+      "id": "C09-30",
+      "where": "xocrange-web · root 관리 셸",
+      "purpose": "파일 끝에 7바이트를 더하고 패키지 검사로 확인한다.",
+      "text": "printf '\\x00BOOK09' >> /usr/bin/yes\nstat -c '%s %a %U %n' /usr/bin/yes\nsha256sum /usr/bin/yes\ndpkg -V coreutils",
+      "syntax": "printf의 \\x00은 값이 0인 바이트 하나이고 BOOK09가 6바이트이므로 7바이트가 >>로 끝에 붙는다. dpkg -V 패키지는 설치 때 기록한 MD5와 현재 파일을 비교해 다른 파일만 출력한다.",
+      "result": "크기가 7 늘고(기록 31119) 해시가 바뀐다. dpkg 출력에 ??5?????? /usr/bin/yes가 생긴다. 5는 내용(MD5)이 다르다는 표시이다. 이전부터 있던 missing 줄은 문서 파일이 이미지에 없다는 뜻이므로 변경 전에도 있었는지 대조한다."
+    },
+    {
+      "type": "query",
+      "id": "Q09-09",
+      "where": "Windows · Discover · wazuh-alerts-*",
+      "purpose": "yes 파일의 변경 경보를 찾는다.",
+      "text": "agent.name: \"web\" AND syscheck.path: \"/usr/bin/yes\"",
+      "syntax": "size_before·size_after, sha256_before·sha256_after 열을 추가한다.",
+      "result": "550 한 건, size 31112→31119가 나온다. sha256_before가 C09-29의 해시와 같다."
+    },
+    {
+      "type": "command",
+      "id": "C09-31",
+      "where": "xocrange-web · root 관리 셸",
+      "purpose": "(원상복구) 백업으로 되돌리고 해시를 확인한 뒤 나온다.",
+      "text": "cp -p /root/book09-yes.before /usr/bin/yes\ncmp /root/book09-yes.before /usr/bin/yes\nsha256sum /usr/bin/yes\nrm /root/book09-yes.before\nexit",
+      "syntax": "복원 후 cmp와 해시로 원래 파일과 같은지 확인하고 백업을 지운다.",
+      "result": "cmp 출력이 없고 해시가 C09-29의 값과 같다. xOC Range VM 터미널로 돌아온다."
+    },
+    {
+      "type": "image",
+      "path": "assets/screens/chapter09/binary-fields.png",
+      "caption": "화면 9-6. yes 원상복구 경보의 크기 변화.",
+      "width_mm": 85,
+      "asset": "4fae23924b1e98717bfb7e16331406547923466b78ac06ef82af010760e35bca.png"
+    },
+    {
+      "type": "p",
+      "text": "복원도 FIM에는 변경이다. Q09-09에 550이 하나 더 생기고 size는 31119→31112이다. 두 경보를 변조 두 번으로 세지 않도록 크기와 해시의 방향을 읽는다. web의 /usr/bin 감시에는 report_changes가 없어 diff가 없다. 실행 파일은 텍스트가 아니므로 내용 대신 해시와 패키지 검사로 판단한다. 패키지 데이터베이스까지 바뀌었다면 dpkg -V도 믿을 수 없으므로 신뢰할 수 있는 이미지와 비교한다."
+    }
+  ],
+  "break": false,
+  "level": "section",
+  "source": {
+    "file": "volume01-chapter09.json",
+    "section_index": 7,
+    "revision": "REV01",
+    "mapping_status": "pending-review"
+  }
+}
