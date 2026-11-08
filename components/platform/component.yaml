@@ -36,8 +36,11 @@ build_inputs:
 - control/datacenter.py
 - control/datacenter.js
 - control/datacenter-architecture.js
+- control/datacenter-avatars.js
 - control/datacenter-scene.js
 - control/datacenter.css
+- control/datacenter-workspaces.js
+- control/brand.css
 - control/workspace.py
 - control/workspace.js
 - control/workspace.css

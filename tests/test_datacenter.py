@@ -7,7 +7,7 @@ from test_platform_security import application, app, login, send
 
 LOCKED=('B1','1F','3F','4F','5F','6F','7F','8F','XOC','SITE')
 
-@pytest.mark.parametrize('path',['datacenter','datacenter/floors/2F','datacenter/floors/6F','datacenter/floors/7F'])
+@pytest.mark.parametrize('path',['datacenter','datacenter/floors/2F','datacenter/floors/6F','datacenter/floors/7F','datacenter/design/6F'])
 def test_anonymous_cannot_read_floor_inventory(app,registry_files,path):
     assert app.get('/core/api/'+path).status_code==401
 
@@ -17,6 +17,7 @@ def test_core_floor_and_purchased_spaces_are_server_gated(app,registry_files,rol
     response=app.get('/core/api/datacenter');assert response.status_code==200
     data=response.json()
     assert data['tier']=='community' and data['allowed_floors']==['2F']
+    assert set(data['preview_floors'])==(set(LOCKED) if role=='admin' else set())
     assert {f['id'] for f in data['floors'] if f['enabled']}=={'2F'}
     floors={f['id']:f for f in data['floors']}
     assert floors['6F']['access_requirement']=='institution_content_purchase'
@@ -37,6 +38,7 @@ def test_client_cannot_claim_edition_or_purchase(app,registry_files,query):
     assert app.get('/core/api/datacenter?'+query).status_code==400
     assert app.get('/core/api/datacenter/floors/6F?'+query).status_code==400
     assert app.get('/core/api/datacenter/floors/7F?'+query).status_code==400
+    assert app.get('/core/api/datacenter/design/7F?'+query).status_code==400
 
 
 def test_optional_noc_removal_closes_all_visualization_paths(app,registry_files):
@@ -44,7 +46,7 @@ def test_optional_noc_removal_closes_all_visualization_paths(app,registry_files)
     data['components']=[c for c in data['components'] if c['id']!='noc']
     files['REGISTRY_FILE'].write_text(json.dumps(data));login(app)
     assert 'datacenter' not in {p['id'] for p in app.get('/core/api/session').json()['navigation']}
-    for path in ('datacenter','datacenter/floors/2F','datacenter/floors/6F','datacenter/floors/7F'):
+    for path in ('datacenter','datacenter/floors/2F','datacenter/floors/6F','datacenter/floors/7F','datacenter/design/6F'):
         assert app.get('/core/api/'+path).status_code==404
 
 
@@ -65,15 +67,37 @@ def test_lifecycle_auth_and_invalid_floor(app,registry_files):
     assert app.get('/core/api/datacenter/floors/unknown').status_code==404
     assert send(app,'datacenter',{}).status_code==405
     assert send(app,'datacenter/floors/2F',{}).status_code==405
+    assert send(app,'datacenter/design/6F',{}).status_code==405
     profile=Profile.objects.get(user__username='admin');profile.must_change_password=True;profile.save()
     assert app.get('/core/api/datacenter').status_code==403
+    assert app.get('/core/api/datacenter/design/6F').status_code==403
     profile.generation+=1;profile.save()
     assert app.get('/core/api/datacenter').status_code==401
+    assert app.get('/core/api/datacenter/design/6F').status_code==401
 
 
 def test_bad_registry_fails_closed(app,registry_files):
     _,files,_=registry_files;files['REGISTRY_FILE'].write_text('[]');login(app)
     assert app.get('/core/api/datacenter').status_code==503
+    assert app.get('/core/api/datacenter/design/6F').status_code==503
+
+
+@pytest.mark.parametrize('role',['admin','operator','viewer'])
+def test_design_preview_never_grants_commercial_access(app,registry_files,role):
+    login(app,role)
+    for floor in LOCKED:
+        response=app.get('/core/api/datacenter/design/'+floor)
+        assert response.status_code==(200 if role=='admin' else 403)
+        if role=='admin':
+            d=response.json()
+            assert d['floor']['id']==floor and d['preview_only'] is True
+            assert d['assets']==[] and d['actions']==[]
+            assert d['workspace_design']==(floor in ('6F','7F'))
+            assert 'no-store' in response['Cache-Control']
+        assert app.get('/core/api/datacenter/floors/'+floor).status_code==403
+    if role=='admin':
+        for floor in ('2F','unknown'):
+            assert app.get('/core/api/datacenter/design/'+floor).status_code==404
 
 
 def test_racks_and_device_access_follow_selected_inventory(app,registry_files):

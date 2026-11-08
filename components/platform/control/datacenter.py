@@ -89,7 +89,29 @@ def endpoint(request, floor=None):
                                                       '7F':'institution_scenario_purchase',
                                                       '8F':'joint_force_virtual_company'}.get(i,'edition'),
                                   unavailable_reason=None if i=='2F' else 'not_licensed') for i,t,s,m in FLOORS],
-                     selected_floor=floor, allowed_floors=['2F'])
+                     selected_floor=floor, allowed_floors=['2F'],
+                     preview_floors=[f[0] for f in FLOORS if f[0]!='2F'] if request.user.profile.role=='admin' else [])
         return JsonResponse(value)
     except (OSError, ValueError, KeyError, TypeError):
+        return JsonResponse({'error':'registry_unavailable'},status=503)
+
+
+@require_GET
+@protected('registry.read')
+def design(request, floor):
+    """Administrator-only architecture preview; never grants commercial access."""
+    if request.user.profile.role != 'admin':
+        return JsonResponse({'error':'permission_denied'},status=403)
+    try:
+        data=registry()
+        if not any(c['id']=='noc' for c in data['components']):
+            return JsonResponse({'error':'component_not_installed'},status=404)
+        item=next((f for f in FLOORS if f[0]==floor and floor!='2F'),None)
+        if item is None:
+            return JsonResponse({'error':'not_found'},status=404)
+        return JsonResponse({'schema_version':'xoc.datacenter-design/0.1.0',
+                             'floor':{'id':item[0],'title':item[1]}, 'preview_only':True,
+                             'assets':[], 'actions':[],
+                             'workspace_design':floor in ('6F','7F')})
+    except (OSError,ValueError,KeyError,TypeError):
         return JsonResponse({'error':'registry_unavailable'},status=503)

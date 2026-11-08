@@ -1,0 +1,28 @@
+{
+  "status": "passed",
+  "checks": {
+    "datacenter_default": true,
+    "portal_available": true,
+    "installed_inventory_visible": true,
+    "service_search": true,
+    "second_floor_only": true,
+    "four_security_stages": true,
+    "no_simulated_facility_metrics": true,
+    "asset_detail_has_observation": true,
+    "asset_links_to_console": true,
+    "four_bundled_guides": true,
+    "readable_article": true,
+    "siem_still_opens_separately": true,
+    "no_paid_dependencies_requested": true,
+    "mobile_datacenter_no_overflow": true,
+    "mobile_datacenter_nav_accessible": true,
+    "mobile_portal_no_overflow": true,
+    "mobile_portal_nav_accessible": true,
+    "mobile_noc_no_overflow": true,
+    "mobile_noc_nav_accessible": true,
+    "mobile_academy_no_overflow": true,
+    "mobile_academy_nav_accessible": true,
+    "logout": true,
+    "no_javascript_errors": true
+  }
+}

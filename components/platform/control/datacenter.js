@@ -1,9 +1,9 @@
 'use strict';
 window.DataCenter=(()=>{
  let data=null,mode='building',selectedRack=null,selection=null,zoom=1,drag=null,pan={x:0,y:0},camera=null,box=null;
- let floorRequest=0,loading=false,resize=null,resizeFrame=0,sshUser=null,sshPort=22;
+ let floorRequest=0,loading=false,resize=null,resizeFrame=0,sshUser=null,sshPort=22,designFloor=null,designScreen='space';
  const enabled=f=>Boolean(f?.enabled&&data.allowed_floors.includes(f.id));
- const lockNote=f=>f.id==='6F'?'기관별 구매 콘텐츠':f.id==='7F'?'기관별 구매 공방전':f.minimum_tier==='joint-force'?'Joint Force':'Live Fire 이상';
+ const preview=id=>(data?.preview_floors||[]).includes(id);
  function hostCommand(){const h=data?.host_access?.host;if(!/^[a-z_][a-z0-9_-]{0,31}$/.test(sshUser||'')||!Number.isInteger(sshPort)||sshPort<1||sshPort>65535||!/^[a-zA-Z0-9][a-zA-Z0-9.-]*$/.test(h||''))return '';return 'ssh '+(sshPort===22?'':'-p '+sshPort+' ')+sshUser+'@'+h;}
  function sshFields(){const cmd=hostCommand();if($('dc-ssh-command'))$('dc-ssh-command').value=cmd||'Linux 계정을 입력하면 SSH 명령이 표시됩니다.';const b=document.querySelector('[data-dc-copy=ssh]');if(b)b.disabled=!cmd;}
  function inspector(){
@@ -20,35 +20,45 @@ window.DataCenter=(()=>{
   }
  }
  function updateCamera(){if(!camera||!box)return;const cx=box.x+box.width/2,cy=box.y+box.height/2;camera.setAttribute('transform',`translate(${pan.x} ${pan.y}) translate(${cx} ${cy}) scale(${zoom}) translate(${-cx} ${-cy})`);if($('dc-zoom-value'))$('dc-zoom-value').textContent=Math.round(zoom*100)+'%';}
- function scene(){const host=$('dc-scene');if(!host||!host.isConnected)return;const focused=document.activeElement?.closest('[data-dc-rack]')?.dataset.dcRack;const value=DataCenterScene.render(host,data,mode,selectedRack);camera=value.world;box=value.box;updateCamera();if(focused)Array.from(host.querySelectorAll('[data-dc-rack]')).find(n=>n.dataset.dcRack===focused)?.focus({preventScroll:true});}
+ function scene(){const host=$('dc-scene');if(!host||!host.isConnected||mode==='design'&&designScreen==='workspace')return;const focused=document.activeElement?.closest('[data-dc-rack]')?.dataset.dcRack;const value=DataCenterScene.render(host,data,mode,selectedRack,designFloor);camera=value.world;box=value.box;updateCamera();if(focused)Array.from(host.querySelectorAll('[data-dc-rack]')).find(n=>n.dataset.dcRack===focused)?.focus({preventScroll:true});}
  function render(){
   const focused=document.activeElement,focus=focused?.closest('[data-dc-asset],[data-dc-enter],[data-dc-mode],[data-dc-zoom],[data-dc-rack]');
   const restore=focus?['data-dc-asset','data-dc-enter','data-dc-mode','data-dc-zoom','data-dc-rack'].map(k=>[k,focus.getAttribute(k)]).find(([,v])=>v!==null):null;
   const scroll=$('dc-inspector')?.scrollTop||0;resize?.disconnect();cancelAnimationFrame(resizeFrame);
   let stage=$('dc-stage');if(!stage){$('system-view').innerHTML='<section id="dc-stage" class="dc-stage" aria-label="데이터센터 시각화"></section>';stage=$('dc-stage');}
-  stage.dataset.mode=mode;stage.classList.toggle('has-selection',Boolean(selectedRack));
-  stage.innerHTML=`<header class="dc-header"><div class="dc-heading"><span class="dc-kicker">xOC RANGE / FACILITY EXPLORER</span><h2>${mode==='building'?'데이터센터 전체 배치':'2F · 일반 전산실'}<span>${mode==='building'?'SPATIAL OPERATIONS':'RACKS & DEVICES'}</span></h2></div><div class="dc-header-right"><div class="dc-header-metric"><strong>${data.racks.length}</strong><span>랙</span></div><div class="dc-header-metric"><strong>${data.assets.length}</strong><span>설치 장비</span></div><div class="dc-header-metric"><strong>${data.assets.filter(a=>a.health.state==='running').length}</strong><span>실행 중</span></div><span class="dc-edition"><span></span> COMMUNITY</span></div></header>
-  <div class="dc-layout"><aside class="dc-floor-rail" aria-label="층 선택"><div class="dc-rail-title">FLOORS <small>${String(data.floors.filter(enabled).length).padStart(2,'0')} / ${data.floors.length}</small></div>${[...data.floors.filter(f=>!['SITE','XOC'].includes(f.id)).reverse(),...data.floors.filter(f=>['SITE','XOC'].includes(f.id))].map(f=>`<button class="dc-floor-button ${enabled(f)?'dc-available':'dc-locked'}" data-dc-enter="${esc(f.id)}" ${enabled(f)?'':'disabled aria-disabled="true"'} ${enabled(f)&&mode==='floor'?'aria-current="location"':''}><span class="dc-floor-number">${f.id==='SITE'?'옥외':esc(f.id)}</span><span class="dc-floor-label"><strong>${esc(f.title)}</strong><small>${enabled(f)?'CORE SECURITY':esc(lockNote(f))}</small></span>${enabled(f)?'<span class="dc-floor-arrow">↗</span>':icon('lock')}</button>`).join('')}<div class="dc-rail-foot"><span class="dc-key-active"></span> 이용 가능 <span class="dc-key-locked"></span> 이용 불가</div></aside>
-  <div class="dc-viewport"><div class="dc-view-tools"><div class="dc-view-switch" role="group" aria-label="공간 보기"><button data-dc-mode="building" aria-pressed="${mode==='building'}">전체 배치</button><button data-dc-mode="floor" aria-pressed="${mode==='floor'}">2층 내부</button></div><button class="dc-icon-button" data-dc-fullscreen aria-label="전체 화면">⛶</button></div><div id="dc-scene" class="dc-scene ${mode==='floor'?'dc-interior':''}"></div><div class="dc-camera-tools" role="group" aria-label="시점 조절"><button data-dc-zoom="out" aria-label="축소">−</button><span id="dc-zoom-value"></span><button data-dc-zoom="in" aria-label="확대">+</button><button data-dc-zoom="reset" aria-label="시점 초기화">맞춤</button></div><span class="dc-scene-hint">${mode==='building'?'2층 선택 → 랙 → 장비':'랙을 선택해 탑재 장비와 접속 정보를 확인하세요'}<small>드래그 이동 · 확대·축소</small></span></div><aside id="dc-inspector" class="dc-inspector" aria-label="랙 및 장비 정보"></aside></div>
+  const design=mode==='design',floor=data.floors.find(f=>f.id===designFloor),workspace=design&&designScreen==='workspace';
+  stage.dataset.mode=mode;stage.dataset.floor=design?designFloor:mode==='floor'?'2F':'';stage.classList.toggle('dc-workspace-design',workspace);stage.classList.toggle('has-selection',Boolean(selectedRack));
+  stage.innerHTML=`<header class="dc-header"><div class="dc-heading"><span class="dc-kicker">xOC RANGE / FACILITY EXPLORER</span><h2>${design?esc(designFloor+' · '+floor.title):mode==='building'?'데이터센터 전체 배치':'2F · 일반 전산실'}<span>${design?'DESIGN PREVIEW':mode==='building'?'SPATIAL OPERATIONS':'RACKS & DEVICES'}</span></h2></div><div class="dc-header-right">${design?'<span class="dc-preview-badge">관리자 · 디자인 보기</span>':''}<div class="dc-header-metric"><strong>${data.racks.length}</strong><span>랙</span></div><div class="dc-header-metric"><strong>${data.assets.length}</strong><span>설치 장비</span></div><div class="dc-header-metric"><strong>${data.assets.filter(a=>a.health.state==='running').length}</strong><span>실행 중</span></div><span class="dc-edition"><span></span> COMMUNITY</span></div></header>
+  <div class="dc-layout">
+  <div class="dc-viewport"><div class="dc-view-tools"><div class="dc-view-switch" role="group" aria-label="공간 보기"><button data-dc-mode="building" aria-pressed="${mode==='building'}">전체 배치</button><button data-dc-mode="floor" aria-pressed="${mode==='floor'}">2층 내부</button>${design?`<button data-dc-design="space" aria-pressed="${!workspace}">공간 디자인</button>${['6F','7F'].includes(designFloor)?`<button data-dc-design="workspace" aria-pressed="${workspace}">화면 구성</button>`:''}`:''}</div><button class="dc-icon-button" data-dc-fullscreen aria-label="전체 화면">⛶</button></div><div id="dc-scene" class="dc-scene ${mode!=='building'?'dc-interior':''}"></div><div class="dc-camera-tools" ${workspace?'hidden':''} role="group" aria-label="시점 조절"><button data-dc-zoom="out" aria-label="축소">−</button><span id="dc-zoom-value"></span><button data-dc-zoom="in" aria-label="확대">+</button><button data-dc-zoom="reset" aria-label="시점 초기화">맞춤</button></div><span class="dc-scene-hint" ${workspace?'hidden':''}>${design?'관리자 디자인 보기':mode==='building'?'2층 선택 → 랙 → 장비':'랙을 선택해 탑재 장비와 접속 정보를 확인하세요'}<small>드래그 이동 · 확대·축소</small></span></div><aside id="dc-inspector" class="dc-inspector" aria-label="랙 및 장비 정보"></aside></div>
   ${mode==='floor'?`<div class="dc-service-dock" aria-label="랙 선택">${data.racks.map(r=>`<button data-dc-rack="${esc(r.id)}" class="dc-service-chip ${selectedRack===r.id?'selected':''}"><strong>${esc(r.id)}</strong> ${esc(r.title)} <span>${r.asset_ids.length}개 장비</span></button>`).join('')}</div>`:''}
   <footer class="dc-status"><span class="dc-observation ${data.observation.fresh?'':'dc-stale'}"><span></span>${data.observation.fresh?'관측 연결 · '+esc(date(data.observation.observed_at)):'관측 지연 · 상태 미확인'}</span><span>컨테이너 상태 · 15초 갱신</span><span class="dc-status-right">xOC RANGE / FACILITY EXPLORER</span></footer>`;
-  inspector();scene();$('dc-inspector').scrollTop=scroll;
+  inspector();if(workspace){$('dc-scene').innerHTML=DataCenterWorkspaces.render(designFloor);}else scene();$('dc-inspector').scrollTop=scroll;
   if(restore)Array.from(stage.querySelectorAll('['+restore[0]+']')).find(n=>n.getAttribute(restore[0])===restore[1])?.focus({preventScroll:true});
   const host=$('dc-scene');let w=host.clientWidth,h=host.clientHeight;
   resize=new ResizeObserver(()=>{if(!host.isConnected||view!=='datacenter'||(host.clientWidth===w&&host.clientHeight===h))return;w=host.clientWidth;h=host.clientHeight;cancelAnimationFrame(resizeFrame);resizeFrame=requestAnimationFrame(scene);});resize.observe(host);
   $('sync-status').textContent='화면 갱신 '+date(data.served_at);
  }
  async function enter(id){
-  if(loading||view!=='datacenter'||!enabled(data?.floors.find(f=>f.id===id)))return;
+  if(loading||view!=='datacenter')return;
+  if(!enabled(data?.floors.find(f=>f.id===id))){if(preview(id))await enterDesign(id);return;}
   const request=++floorRequest;loading=true;const sequence=loadSequence;
   try{const fresh=await api('datacenter/floors/'+encodeURIComponent(id));if(view!=='datacenter'||request!==floorRequest||sequence!==loadSequence)return;if(!fresh.allowed_floors.includes(id)||!fresh.floors.find(f=>f.id===id)?.enabled)return;
    data=fresh;mode='floor';selection=null;selectedRack=null;zoom=1;pan={x:0,y:0};render();
+  }finally{loading=false;}
+ }
+ async function enterDesign(id){
+  const request=++floorRequest,sequence=loadSequence;loading=true;
+  try{const result=await api('datacenter/design/'+encodeURIComponent(id));
+   if(view!=='datacenter'||request!==floorRequest||sequence!==loadSequence||result.floor?.id!==id||result.preview_only!==true)return;
+   mode='design';designFloor=id;designScreen='space';selectedRack=null;selection=null;reset();render();
   }finally{loading=false;}
  }
  function reset(){zoom=1;pan={x:0,y:0};updateCamera();}
  async function copy(which){const n=$(which==='ssh'?'dc-ssh-command':'dc-shell-command');if(!n||which==='ssh'&&!hostCommand())return;try{await navigator.clipboard.writeText(n.value);notice('접속 명령을 복사했습니다.');}catch{n.focus();n.select();if(document.execCommand('copy'))notice('접속 명령을 복사했습니다.');else notice('명령을 선택했습니다. Ctrl+C로 복사하세요.');}}
  document.addEventListener('click',e=>{
   if(view!=='datacenter'||!data||!e.target.closest('#dc-stage'))return;
+  const design=e.target.closest('[data-dc-design]');if(design&&mode==='design'&&preview(designFloor)){designScreen=design.dataset.dcDesign==='workspace'?'workspace':'space';render();return;}
   const floor=e.target.closest('[data-dc-enter],[data-dc-floor]');if(floor){act(()=>enter(floor.dataset.dcEnter||floor.dataset.dcFloor));return;}
   const rack=e.target.closest('[data-dc-rack]');if(rack){if(data.racks.some(r=>r.id===rack.dataset.dcRack)){selectedRack=rack.dataset.dcRack;selection=null;inspector();scene();document.querySelectorAll('.dc-service-chip').forEach(n=>n.classList.toggle('selected',n.dataset.dcRack===selectedRack));$('dc-inspector').scrollIntoView({block:'nearest',behavior:'instant'});}return;}
   const asset=e.target.closest('[data-dc-asset]');if(asset){if(data.assets.some(a=>a.asset_id===asset.dataset.dcAsset&&a.rack_id===selectedRack)){selection=asset.dataset.dcAsset;inspector();$('dc-inspector').scrollTop=0;}return;}
@@ -60,13 +70,13 @@ window.DataCenter=(()=>{
   if(e.target.closest('[data-dc-fullscreen]'))act(async()=>{if(document.fullscreenElement)await document.exitFullscreen();else await $('dc-stage').requestFullscreen();});
  });
  document.addEventListener('keydown',e=>{if(view!=='datacenter')return;const n=e.target.closest('g[data-dc-floor],g[data-dc-rack]');if(n&&['Enter',' '].includes(e.key)&&n.getAttribute('aria-disabled')!=='true'){e.preventDefault();n.dispatchEvent(new MouseEvent('click',{bubbles:true}));}});
- document.addEventListener('pointerdown',e=>{const host=e.target.closest('#dc-scene');if(!host||e.button!==0||e.target.closest('[data-dc-rack],.dc-level-active'))return;drag={x:e.clientX,y:e.clientY,px:pan.x,py:pan.y,host,id:e.pointerId};host.setPointerCapture(e.pointerId);host.classList.add('dc-dragging');});
+ document.addEventListener('pointerdown',e=>{const host=e.target.closest('#dc-scene');if(!host||e.button!==0||e.target.closest('.commercial-workspace')||e.target.closest('[data-dc-rack],.dc-level-active,.dc-level-preview'))return;drag={x:e.clientX,y:e.clientY,px:pan.x,py:pan.y,host,id:e.pointerId};host.setPointerCapture(e.pointerId);host.classList.add('dc-dragging');});
  document.addEventListener('pointermove',e=>{if(!drag||drag.id!==e.pointerId||!box)return;const factor=box.width/drag.host.clientWidth;pan={x:Math.max(-box.width,Math.min(box.width,drag.px+(e.clientX-drag.x)*factor)),y:Math.max(-box.height,Math.min(box.height,drag.py+(e.clientY-drag.y)*factor))};updateCamera();});
  const end=()=>{if(drag){drag.host.classList.remove('dc-dragging');drag=null;}};document.addEventListener('pointerup',end);document.addEventListener('pointercancel',end);window.addEventListener('blur',end);
- return {get interacting(){return Boolean(drag)||loading;},async load(sequence){
+ return {get interacting(){return Boolean(drag)||loading||view==='datacenter'&&mode==='design';},async load(sequence){
   if(!session.navigation?.some(p=>p.id==='datacenter')){$('system-view').innerHTML='<div class="panel">'+empty('설치되지 않은 기능','NOC 구성요소를 선택 설치하면 데이터센터를 볼 수 있습니다.')+'</div>';return;}
   const fresh=await api('datacenter');if(sequence!==loadSequence)return;data=fresh;if(sshUser===null)sshUser=data.host_access.username_hint||'';
-  if(!data.allowed_floors.includes('2F'))mode='building';if(!data.assets.some(a=>a.asset_id===selection))selection=null;if(!data.racks.some(r=>r.id===selectedRack))selectedRack=null;render();
+  if(!data.allowed_floors.includes('2F')||mode==='design'&&!preview(designFloor))mode='building';if(!data.assets.some(a=>a.asset_id===selection))selection=null;if(!data.racks.some(r=>r.id===selectedRack))selectedRack=null;render();
  }};
 })();
 async function datacenterView(sequence){await DataCenter.load(sequence);}

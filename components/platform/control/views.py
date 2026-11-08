@@ -68,7 +68,7 @@ def page(request):
 
 @require_GET
 def asset(request, name):
-    if name not in ('app.js', 'style.css', 'workspace.js', 'workspace.css', 'datacenter.js', 'datacenter-scene.js', 'datacenter-architecture.js', 'datacenter.css'):
+    if name not in ('app.js', 'style.css', 'workspace.js', 'workspace.css', 'datacenter.js', 'datacenter-scene.js', 'datacenter-architecture.js', 'datacenter.css', 'datacenter-workspaces.js', 'brand.css', 'datacenter-avatars.js'):
         return JsonResponse({'error': 'not_found'}, status=404)
     return HttpResponse((Path(__file__).parent/name).read_text(), content_type='text/javascript' if name.endswith('.js') else 'text/css')
 

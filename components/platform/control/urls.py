@@ -2,6 +2,7 @@ from django.urls import path
 from . import views, console, workspace, datacenter
 
 urlpatterns = [path('core/api/datacenter', datacenter.endpoint),
+               path('core/api/datacenter/design/<str:floor>', datacenter.design),
                path('core/api/datacenter/floors/<str:floor>', datacenter.endpoint),
                path('core/api/registry', workspace.inventory),
                path('core/api/noc', workspace.inventory, {'screen':'noc'}),

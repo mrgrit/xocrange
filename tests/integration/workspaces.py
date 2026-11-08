@@ -46,6 +46,10 @@ if code==200:
 
     for floor in ('B1','1F','3F','4F','5F','6F','7F','8F','XOC','SITE'):
         checks['locked_floor_'+floor]=s.request('/core/api/datacenter/floors/'+floor)[0]==403
+        code,preview,_,_=s.request('/core/api/datacenter/design/'+floor)
+        checks['admin_design_'+floor]=code==200 and preview['preview_only'] and preview['assets']==[] and preview['actions']==[]
+    checks['preview_no_write']=s.request('/core/api/datacenter/design/6F',{})[0]==405
+    checks['preview_purchase_spoof_denied']=s.request('/core/api/datacenter/design/7F?purchased=true')[0]==400
     checks['edition_spoof_denied']=s.request('/core/api/datacenter?tier=joint-force')[0]==400
     checks['purchase_spoof_denied']=s.request('/core/api/datacenter/floors/6F?tenant_id=other&purchased=true')[0]==400
 code,library,_,_=s.request('/core/api/library');checks['reader_selection']=code==(200 if 'academy-reader' in selected else 404)
@@ -64,6 +68,9 @@ try:
     checks['viewer_password_change']=viewer.request('/core/api/password',dict(current_password=password,password='Changed!'+secrets.token_urlsafe(24)))[0]==200
     checks['viewer_registry']=viewer.request('/core/api/registry')[0]==200
     checks['viewer_datacenter']=viewer.request('/core/api/datacenter')[0]==(200 if 'noc' in selected else 404)
+    if 'noc' in selected:
+        checks['viewer_has_no_design_floors']=viewer.request('/core/api/datacenter')[1]['preview_floors']==[]
+        checks['viewer_design_denied']=all(viewer.request('/core/api/datacenter/design/'+f)[0]==403 for f in ('6F','7F','8F'))
     checks['viewer_cannot_write_policy']=viewer.request('/core/api/devices/fw',dict(write_enabled=True,version=1))[0]==403
 finally:
     checks['temporary_viewer_disabled']=s.request('/core/api/users',dict(username=name,role='viewer',active=False))[0]==200

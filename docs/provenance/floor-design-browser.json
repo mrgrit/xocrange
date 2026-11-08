@@ -1,0 +1,220 @@
+{
+  "status": "passed",
+  "checks": {
+    "datacenter_is_default": true,
+    "floor_directory_removed": true,
+    "ten_admin_design_previews": true,
+    "gray_preview_keyboard_access": true,
+    "all_floors_named": true,
+    "original_and_extension_crew_counts": true,
+    "kt66_original_positions_preserved": true,
+    "kt66_avatar_size_preserved": true,
+    "helmet_and_suit_variants": true,
+    "no_tier_selector": true,
+    "desktop_fills_view_without_page_scroll": true,
+    "admin_opens_B1": true,
+    "preview_large_B1": true,
+    "admin_opens_1F": true,
+    "preview_large_1F": true,
+    "admin_opens_3F": true,
+    "preview_large_3F": true,
+    "admin_opens_4F": true,
+    "preview_large_4F": true,
+    "admin_opens_5F": true,
+    "preview_large_5F": true,
+    "admin_opens_6F": true,
+    "preview_large_6F": true,
+    "academy_is_content_library": true,
+    "catalog_filter_search_detail": true,
+    "catalog_preview_uses_no_backend": true,
+    "admin_opens_7F": true,
+    "preview_large_7F": true,
+    "live_fire_one_seat": true,
+    "four_training_panels": true,
+    "mission_design_interactions": true,
+    "no_training_execution": true,
+    "training_dashboard_sections": true,
+    "live_fire_1280_no_overflow": true,
+    "live_fire_430_no_overflow": true,
+    "live_fire_320_no_overflow": true,
+    "admin_opens_8F": true,
+    "preview_large_8F": true,
+    "company_operations_rack": true,
+    "admin_opens_XOC": true,
+    "preview_large_XOC": true,
+    "admin_opens_SITE": true,
+    "preview_large_SITE": true,
+    "keyboard_enters_second_floor": true,
+    "original_two_racks": true,
+    "rack_buttons_match_registry": true,
+    "devices_require_rack_selection": true,
+    "keyboard_opens_rack_inventory": true,
+    "keyboard_selects_actual_device": true,
+    "ssh_targets_deployed_host": true,
+    "ssh_clipboard_matches_display": true,
+    "ssh_options_rejected": true,
+    "custom_ssh_port": true,
+    "shell_clipboard_matches_registered_service": true,
+    "automatic_refresh_preserves_selection_and_camera": true,
+    "real_observation_visible": true,
+    "back_restores_rack_inventory": true,
+    "no_console_device_has_no_link": true,
+    "device_opens_existing_console": true,
+    "siem_device_link_uses_new_tab": true,
+    "fullscreen_enter": true,
+    "fullscreen_exit": true,
+    "camera_pan": true,
+    "reduced_motion": true,
+    "laptop_no_horizontal_overflow": true,
+    "laptop_floor_labels_not_clipped": true,
+    "laptop_active_floor_accessible": true,
+    "laptop_no_page_scroll": true,
+    "mobile_no_horizontal_overflow": true,
+    "mobile_floor_labels_not_clipped": true,
+    "mobile_active_floor_accessible": true,
+    "small_mobile_no_horizontal_overflow": true,
+    "small_mobile_floor_labels_not_clipped": true,
+    "small_mobile_active_floor_accessible": true,
+    "small_mobile_detail_no_overflow": true,
+    "no_defensive_copy": true,
+    "no_paid_endpoints_or_external_assets": true,
+    "nonadmin_contract_keeps_ten_floors_locked": true,
+    "nonadmin_locked_svg_inert": true,
+    "nonadmin_click_cannot_request_preview": true,
+    "logout_hides_scene": true,
+    "no_invalid_svg_attributes": true,
+    "no_javascript_errors": true,
+    "no_csp_violations": true
+  },
+  "javascript_errors": [],
+  "csp_violations": [],
+  "svg_errors": [],
+  "avatar_layout": {
+    "B1": [
+      {
+        "id": "facility-engineer",
+        "position": "4.8,3.5,0.22",
+        "width": 24
+      }
+    ],
+    "1F": [
+      {
+        "id": "physical-security",
+        "position": "5.15,5.9,0.22",
+        "width": 24
+      }
+    ],
+    "2F": [
+      {
+        "id": "network-engineer",
+        "position": "2.3,7,0.22",
+        "width": 24
+      },
+      {
+        "id": "systems-engineer",
+        "position": "10.3,7,0.22",
+        "width": 24
+      }
+    ],
+    "3F": [
+      {
+        "id": "gpu-platform-engineer",
+        "position": "3.3,6.2,0.22",
+        "width": 24
+      }
+    ],
+    "4F": [
+      {
+        "id": "service-desk",
+        "position": "2.38,3.65,0.22",
+        "width": 22
+      },
+      {
+        "id": "application-developer",
+        "position": "2.38,6.549999999999999,0.22",
+        "width": 22
+      },
+      {
+        "id": "compliance-auditor",
+        "position": "5.53,3.65,0.22",
+        "width": 22
+      },
+      {
+        "id": "ops-lead",
+        "position": "9.629999999999999,6.619999999999999,0.22",
+        "width": 22
+      }
+    ],
+    "5F": [
+      {
+        "id": "skill-researcher",
+        "position": "2.58,4.550000000000001,0.22",
+        "width": 22
+      },
+      {
+        "id": "skill-evaluator",
+        "position": "8.33,4.550000000000001,0.22",
+        "width": 22
+      }
+    ],
+    "6F": [
+      {
+        "id": "content-curator",
+        "position": "3.3,6.3,0.22",
+        "width": 24
+      },
+      {
+        "id": "learning-guide",
+        "position": "8.7,6.3,0.22",
+        "width": 24
+      }
+    ],
+    "7F": [
+      {
+        "id": "red-instructor",
+        "position": "3.7,5.03,0.65",
+        "width": 22
+      },
+      {
+        "id": "blue-instructor",
+        "position": "10.55,6.8,0.22",
+        "width": 24
+      }
+    ],
+    "8F": [
+      {
+        "id": "service-desk",
+        "position": "2.38,3.65,0.22",
+        "width": 22
+      },
+      {
+        "id": "application-developer",
+        "position": "2.38,6.549999999999999,0.22",
+        "width": 22
+      },
+      {
+        "id": "compliance-auditor",
+        "position": "5.53,3.65,0.22",
+        "width": 22
+      },
+      {
+        "id": "ops-lead",
+        "position": "9.629999999999999,6.619999999999999,0.22",
+        "width": 22
+      }
+    ],
+    "XOC": [
+      {
+        "id": "agent-supervisor",
+        "position": "2.6799999999999997,4.800000000000001,0.22",
+        "width": 22
+      },
+      {
+        "id": "soc-analyst",
+        "position": "8.53,4.800000000000001,0.22",
+        "width": 22
+      }
+    ],
+    "SITE": []
+  }
+}

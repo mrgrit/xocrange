@@ -1,0 +1,48 @@
+{
+  "kt66": {
+    "repository": "https://github.com/mrgrit/kt66",
+    "commit": "b179231073b25fb797b9c6443da393d02cc12340",
+    "files": {
+      "agents/roster.yaml": "fb91a0fdc2e76affc0e16db92f11851ffeda107738a555edf113b49b36307d32",
+      "noc/static/scene.js": "b8aef2cd718188209e8549244d05599781c2dbc7364ac92bde4fd40822e65924",
+      "noc/static/agent-sprites.js": "0cf0f414ba55644abdcef1c1204f53544db30653e49d5b660f955db8dbae856d",
+      "noc/static/facility-floor.js": "0180cdf828557bf4daab67a2b80578c978b85af7be1add2c13f3ed5e6fe054d4",
+      "noc/static/ai-floor.js": "7ec970592ba71c74d2bead3141a53f51fc2ed906ea22652aa2a4155384876ba9",
+      "noc/static/control-center-scene.js": "3b41d001432b41bf0dbf8fa2de054c55916e01d93608f6113b709babf4b5a958"
+    },
+    "modified": false
+  },
+  "tw2": {
+    "repository": "https://github.com/mrgrit/tw2",
+    "commit": "324d91fb22fee2c76051d5e73b58aa7f82de3e4c",
+    "files": {
+      "README.md": "e8a6bf1e459751d83a0c31460f779b7e964dc42f526315674544ea47737c9919",
+      "docs/manual_student.md": "e3b4731c27ad21c496329ea21b0af79f6a66f32abcd86bd5aa05beede79a3e80",
+      "apps/ui/src/pages/Training.tsx": "f0f5dd01c0fc983d8cfa601f4237931df28308a3b67a3d7474412306aa053b21",
+      "apps/ui/src/pages/Dashboard.tsx": "332d352849f1f0a4e0c0d0bfbb0d6579860747fbea9624defe3227eec5031920",
+      "apps/ui/src/pages/Leaderboard.tsx": "50d0e0cb8565787d207c50551e6bfffbfa068391c8d381c87c0098d7b58a6301",
+      "apps/api/app/routers/feedback.py": "80463406d95ac6590b2468ad996f2390149b8efea6fe42355fad68a2adf49328"
+    },
+    "modified": false
+  },
+  "logo": {
+    "path": "assets/branding/xoc-range-logo.png",
+    "sha256": "a0c2c8e51cabea13b3db61856fea613878c352675b4c05fa52238eb356b63afd"
+  },
+  "avatars": {
+    "source_count": 13,
+    "added_floor_counts": {
+      "6F": 2,
+      "7F": 2,
+      "8F": 4
+    },
+    "original_grid": [
+      24,
+      44
+    ],
+    "standing_width": 24,
+    "seated_width": 22,
+    "design": "xOC logo helmet and role-colored jumpsuit; six rank helmet variants",
+    "runtime_connected": false
+  }
+}

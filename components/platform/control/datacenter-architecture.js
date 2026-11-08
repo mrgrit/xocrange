@@ -13,7 +13,7 @@ window.DataCenterArchitecture=(()=>{
   const n=document.createElementNS(SVGNS,tag==='a'?'g':tag);
   for(const [k,v] of Object.entries(attrs)){
    if(v==null||['on','href','tabindex','role'].includes(k))continue;
-   if(k==='text')n.textContent=v;else n.setAttribute(k,String(v));
+   if(k==='text')n.textContent=v;else n.setAttribute(k,String(['fill','stroke'].includes(k)?({'#647e8c':'#746c8b','#657f8d':'#716b88','#6c8794':'#7c7593','#d0b77e':'#ad86d9','#b2d8e5':'#88e2db'}[v]||v):v));
   }
   (Array.isArray(kids)?kids:[kids]).filter(Boolean).forEach(c=>n.append(c));return n;
  }
@@ -31,8 +31,17 @@ window.DataCenterArchitecture=(()=>{
  const facilityDown=()=>false,facilityGuide=()=>({});
  const workerAttributes=()=>({});
  const workerInfo=g=>g;
- const drawRoomWorker=()=>el('g');
- const crewOf=f=>f==='4F'?['ops-lead','service','development','compliance'].map(id=>({id})):f==='5F'?[{id:'skill-researcher'},{id:'skill-evaluator'}]:f==='XOC'?[{id:'agent-supervisor'},{id:'soc-analyst'}]:[];
+ function drawWorkerFigure(worker,x,y,z,seated=false){
+  const [sx,sy]=iso(x,y,z),width=seated?22:24,height=width*44/24;
+  const g=el('g',{'data-worker-figure':worker.id,'data-avatar-position':[x,y,z].join(','),'data-avatar-width':width,transform:`translate(${sx} ${sy})`,'pointer-events':'none'});
+  g.append(el('ellipse',{cx:0,cy:1,rx:width*.7,ry:width*.24,fill:'#170d2c55',stroke:'#b99bcb','stroke-width':.6}));
+  const sprite=DataCenterAvatars.draw(worker,seated);sprite.setAttribute('x',-width/2);sprite.setAttribute('y',-height);sprite.setAttribute('width',width);sprite.setAttribute('height',height);g.append(sprite);
+  g.append(el('title',{text:worker.name||worker.id}));return g;
+ }
+ const drawRoomWorker=(worker,x,y,z)=>drawWorkerFigure(worker,x,y,z);
+
+ const DESIGN_CREW=[{"id":"facility-engineer","name":"시설 담당(전기/기계)","floor":"B1"},{"id":"physical-security","name":"물리보안(출입/CCTV)","floor":"1F"},{"id":"network-engineer","name":"네트워크 엔지니어","floor":"2F"},{"id":"systems-engineer","name":"시스템/스토리지 엔지니어","floor":"2F"},{"id":"gpu-platform-engineer","name":"GPU/플랫폼 엔지니어","floor":"3F"},{"id":"service-desk","name":"서비스데스크","floor":"4F"},{"id":"soc-analyst","name":"SOC 분석가","floor":"XOC"},{"id":"ops-lead","name":"운영 리드","floor":"4F"},{"id":"compliance-auditor","name":"컴플라이언스 감사인","floor":"4F"},{"id":"application-developer","name":"애플리케이션 개발자","floor":"4F"},{"id":"skill-researcher","name":"스킬 연구원","floor":"5F"},{"id":"skill-evaluator","name":"스킬 평가원","floor":"5F"},{"id":"agent-supervisor","name":"AI 에이전트 관제원","floor":"XOC"}];
+ const crewOf=f=>DESIGN_CREW.filter(w=>w.floor===f);
  const allFacilities=()=>Object.entries(LAYOUT.facility).flatMap(([system,rows])=>rows.map(i=>({...i,system_kind:system,subtype:i.kind,kind:['security','automation','microgrid'].includes(system)?i.kind:system})));
  const physicalFacilitiesOf=f=>allFacilities().filter(i=>(f==='SITE'?i.location==='outdoor':i.location!=='outdoor'&&i.floor===f)&&!['containment','raised_floor','cold_plate'].includes(i.kind));
 const REFERENCE={"facility":{"utility":[{"id":"utility-01","floor":null,"location":"outdoor","site_pos":[0.7,0.7],"name":"수전설비","pos":[1,1]}],"substation":[{"id":"sub-01","floor":null,"location":"outdoor","site_pos":[3.4,0.7],"name":"수전 변전소","pos":[0,1]}],"switchgear":[{"id":"swgr-01","floor":"B1","name":"특고압 개폐기","pos":[0.55,0.65]}],"transformer":[{"id":"tr-01","floor":"B1","name":"주변압기","pos":[2.52,0.65]}],"ats":[{"id":"ats-01","floor":"B1","name":"자동절체스위치","pos":[0.55,2.52]}],"generator":[{"id":"gen-01","floor":null,"location":"outdoor","site_pos":[0.7,3.1],"name":"비상 발전기","pos":[1,5]}],"fuel_tank":[{"id":"tank-fuel-01","floor":null,"location":"outdoor","site_pos":[3.4,3.1],"name":"비상발전 연료탱크","pos":[0,6]}],"ups":[{"id":"ups-01","floor":"B1","name":"무정전 전원장치","pos":[1.63,2.52]}],"battery":[{"id":"batt-01","floor":"B1","name":"배터리 스트링 A","pos":[0.5,5.78]},{"id":"batt-02","floor":"B1","name":"배터리 스트링 B","pos":[1.36,5.78]}],"microgrid":[{"id":"pv-01","floor":null,"location":"outdoor","site_pos":[6.1,3.1],"kind":"solar","name":"옥외 태양광","pos":[10,0]},{"id":"bess-01","floor":null,"location":"outdoor","site_pos":[6.1,0.7],"kind":"storage","name":"에너지저장장치(BESS)","pos":[6,1]},{"id":"fc-01","floor":null,"location":"outdoor","site_pos":[8.8,0.7],"kind":"fuel_cell","name":"연료전지","pos":[7,1]}],"busway":[{"id":"bus-2f-a","floor":"2F","name":"2F A열 부스바","pos":[3,4]},{"id":"bus-3f-b","floor":"3F","name":"3F B열 부스바","pos":[4,3]}],"pdu":[{"id":"pdu-01","floor":"2F","pos":[2,3]},{"id":"pdu-02","floor":"2F","pos":[2,5]},{"id":"pdu-03","floor":"3F","pos":[3,4]},{"id":"pdu-04","floor":"4F","pos":[7,2]}],"cooling_tower":[{"id":"ct-01","floor":null,"location":"outdoor","site_pos":[0.7,5.5],"name":"냉각탑 1호기","pos":[10,5]},{"id":"ct-02","floor":null,"location":"outdoor","site_pos":[3.4,5.5],"name":"냉각탑 2호기","pos":[11,5]}],"chiller":[{"id":"chiller-01","floor":"B1","name":"냉동기","pos":[6.25,0.82]}],"pump":[{"id":"pump-pcw-01","floor":"B1","name":"프로세스수 펌프 A","pos":[6.32,2.66]},{"id":"pump-pcw-02","floor":"B1","name":"프로세스수 펌프 B","pos":[7.55,2.66]},{"id":"pump-cw-01","floor":"B1","name":"응축수 펌프","pos":[9.02,2.3]}],"heat_exchanger":[{"id":"hx-01","floor":"B1","name":"판형 열교환기","pos":[9.2,0.67]}],"economizer":[{"id":"eco-01","floor":"B1","name":"수 이코노마이저","kind":"water","pos":[10.45,0.67]}],"crac":[{"id":"crac-01","floor":"2F","aisle":"A","name":"항온항습기 A","kind":"chilled-water","pos":[9,4]},{"id":"crac-02","floor":"3F","aisle":"B","name":"항온항습기 B","kind":"chilled-water","pos":[9,4]},{"id":"crac-03","floor":"4F","aisle":"C","name":"항온항습기 C","kind":"dx","pos":[10,2]}],"fan_coil":[{"id":"fcu-3f-01","floor":"3F","aisle":"B","name":"인로우 팬코일","pos":[5,4]}],"containment":[{"id":"cont-a","floor":"2F","aisle":"A","kind":"hot-aisle","pos":[3,4]},{"id":"cont-b","floor":"3F","aisle":"B","kind":"hot-aisle","pos":[4,4]},{"id":"cont-c","floor":"4F","aisle":"C","kind":"none","pos":[8,2]}],"raised_floor":[{"id":"rf-2f","floor":"2F","name":"2F 이중마루","pos":[6,6]}],"cdu":[{"id":"cdu-01","floor":"3F","name":"냉각분배장치","pos":[6,4]}],"cold_plate":[{"id":"cp-dgx-01","floor":"3F","name":"DGX 콜드플레이트 루프","pos":[4,5]}],"immersion":[{"id":"imm-01","floor":"3F","name":"침지냉각 시험 탱크","pos":[8,6]}],"water_tank":[{"id":"tank-water-01","floor":null,"location":"outdoor","site_pos":[6.1,5.5],"name":"축열·보충수 탱크","pos":[11,6]}],"weather":[{"id":"wx-01","floor":null,"location":"outdoor","site_pos":[8.8,3.1],"name":"외기","pos":[0,0]}],"fire":[{"id":"fm200-01","floor":"B1","name":"지하 소화설비","pos":[8.85,5.85]},{"id":"fm200-02","floor":"2F","name":"소화설비 2F","pos":[10,6]},{"id":"fm200-03","floor":"3F","name":"소화설비 3F","pos":[10,6]},{"id":"vesda-01","floor":"B1","kind":"aspirating","name":"조기연기감지(VESDA)","pos":[4.72,0.18]},{"id":"vesda-02","floor":"3F","kind":"aspirating","name":"조기연기감지(VESDA)","pos":[9,7]},{"id":"fp-01","floor":"1F","kind":"panel","name":"소방 수신반","pos":[4.1,0.18]}],"security":[{"id":"door-main","floor":"1F","name":"정문 출입구","kind":"door","pos":[8,7.91]},{"id":"door-2f","floor":"2F","name":"전산실 출입문","kind":"door","pos":[0,4]},{"id":"door-3f","floor":"3F","name":"AI 전산실 출입문","kind":"door","pos":[0,4]},{"id":"cctv-01","floor":"1F","name":"로비 CCTV","kind":"cctv","pos":[10.65,3.18]},{"id":"cctv-02","floor":"2F","name":"전산실 CCTV","kind":"cctv","pos":[11,1]},{"id":"cctv-03","floor":"3F","name":"AI 전산실 CCTV","kind":"cctv","pos":[11,1]},{"id":"mantrap-01","floor":"1F","name":"인터록 포털(맨트랩)","kind":"mantrap","pos":[8.2,2.9]},{"id":"mdet-01","floor":"1F","name":"금속탐지기","kind":"metal_detector","pos":[8.36,5.3]},{"id":"guard-01","floor":null,"location":"outdoor","site_pos":[8.8,5.5],"name":"경비 초소","kind":"guard_post","pos":[1,3]},{"id":"badge-3f","floor":"3F","name":"AI 전산실 카드리더","kind":"badge_reader","pos":[0,5]}],"automation":[{"id":"robot-01","floor":"2F","kind":"rack_mover","name":"랙 무버 로봇","pos":[6,7]},{"id":"shred-01","floor":"B1","kind":"disk_shredder","name":"디스크 파쇄기","pos":[3.67,6.51]}]},"racks":[{"id":"R-2F-01","floor":"2F","aisle":"A","u":42,"pos":[3,3]},{"id":"R-2F-02","floor":"2F","aisle":"A","u":42,"pos":[3,5]},{"id":"R-3F-01","floor":"3F","aisle":"B","u":42,"pos":[1.55,3.0],"style":"nvidia-ai","name":"NVIDIA AI COMPUTE"},{"id":"R-4F-01","floor":"4F","aisle":"C","u":24,"pos":[8,2]}]};
@@ -43,6 +52,8 @@ function sceneDefs() {
     stops.map(([o, c, a]) => el('stop', { offset: o, 'stop-color': c, 'stop-opacity': a })));
   return el('defs', {}, [
     // 면 위를 흐르는 빛. 윗면·앞면·옆면이 감쇠 세기가 다르다.
+    lg('holoGlass', [[0, '#c2fff5', .20], [.4, '#45c9d5', .035], [1, '#a479ee', .15]], 1, 1),
+    lg('holoViolet', [[0, '#d0b8ff', .23], [.5, '#7967cb', .045], [1, '#47d9df', .12]], 1, 1),
     lg('fTop', [[0, '#ffffff', .20], [.55, '#ffffff', .05], [1, '#000000', .10]]),
     lg('fFront', [[0, '#ffffff', .13], [1, '#000000', .26]]),
     lg('fSide', [[0, '#ffffff', .05], [1, '#000000', .34]]),
@@ -332,7 +343,7 @@ function drawWorkstation(worker,x,y,z,detail) {
   g.appendChild(prism(x+.27,y+.88,z+.45,.52,.5,.08,'#2b4352'));
   // Keep the chair behind the front-facing sprite so faces stay visible.
   g.appendChild(prism(x+.27,y+1.27,z+.52,.52,.09,.57,'#2c4352'));
-
+  if(worker.id)g.appendChild(drawWorkerFigure(worker,x+.53,y+1.1,z,true));
   return g;
 }
 function drawRoom(fid,detail) {
@@ -1099,31 +1110,147 @@ function drawControlCenterRoom(fid,detail) {
 }
 
 
+ // Thin optical glass: see-through faces, edge light, reflections and local HUD artwork.
+ function holoDisplay(x,y,z,w,h,title,accent,kind='radar',yaw=0){
+  const g=el('g',{'data-holographic-display':kind}),[sx,sy]=iso(x,y,z+h);
+  const face=el('g',{transform:`matrix(${XS*(1-yaw)},${YS*(1+yaw)},0,${ZS},${sx},${sy})`});
+  const cut=.12,outline=`M${cut} 0 H${w-.28} L${w} .24 V${h-cut} L${w-cut} ${h} H.2 L0 ${h-.2} V${cut}Z`;
+  face.append(el('path',{d:outline,fill:'none',stroke:accent,'stroke-width':.13,opacity:.09}));
+  face.append(el('path',{d:outline,fill:kind.startsWith('cover')?'url(#holoViolet)':'url(#holoGlass)',stroke:accent,'stroke-width':.022,'stroke-opacity':.75}));
+  face.append(el('path',{d:`M.12 .1 H${w*.53} L${w*.28} ${h-.12} H.12Z`,fill:'#dbfff9',opacity:.035}));
+  face.append(el('path',{d:`M.04 .38 V.15 L.15 .04 H.46 M${w-.46} ${h-.04} H${w-.15} L${w-.04} ${h-.15} V${h-.38}`,fill:'none',stroke:'#d5fffa','stroke-width':.04}));
+  face.append(el('text',{x:.15,y:.24,'font-size':Math.min(.15,w/10),'font-family':'system-ui,sans-serif',fill:'#e2fff9',stroke:'none','font-weight':600,text:title}));
+  face.append(el('path',{d:`M.15 .34 H${w-.15}`,stroke:accent,'stroke-width':.012,opacity:.5}));
+  const line=(d,color=accent,width=.025)=>el('path',{d,fill:'none',stroke:color,'stroke-width':width});
+  const label=(x,y,text,size=.11,color=accent)=>el('text',{x,y,text,'font-size':size,'font-family':'ui-monospace,monospace',fill:color,stroke:'none'});
+  if(kind==='radar'){
+   const cx=w*.54,cy=h*.58,r=Math.min(w*.25,h*.31);
+   for(const mult of [1,.73,.4])face.append(el('circle',{cx,cy,r:r*mult,fill:'none',stroke:accent,'stroke-width':.014,'stroke-dasharray':mult===.73?'.05 .06':'none',opacity:mult===1?.9:.5}));
+   face.append(line(`M${cx-r-.16} ${cy} H${cx+r+.16} M${cx} ${cy-r-.14} V${cy+r+.14}`,accent,.012));
+   face.append(line(`M${cx-r*.8} ${cy+r*.3} L${cx-r*.2} ${cy-r*.5} L${cx+r*.35} ${cy-r*.1} L${cx+r*.8} ${cy-r*.7}`,'#c4a5ff',.03));
+   for(const [dx,dy,color] of [[-.8,.3,accent],[-.2,-.5,'#e883bc'],[.35,-.1,accent],[.8,-.7,'#e883bc']])face.append(el('circle',{cx:cx+r*dx,cy:cy+r*dy,r:.045,fill:color,stroke:'none'}));
+   for(let n=0;n<4;n++)face.append(line(`M.17 ${.6+n*.18} H${.42+(n%2)*.18}`,accent,.02));
+   face.append(label(.16,h-.15,'RED  /  BLUE',.095),label(w-.86,h-.15,'TACTICAL',.095));
+  }else if(kind==='level'){
+   const cx=w/2,cy=h*.57,r=h*.25;
+   face.append(line(`M${cx} ${cy-r} L${cx+r*.85} ${cy-r*.5} V${cy+r*.5} L${cx} ${cy+r} L${cx-r*.85} ${cy+r*.5} V${cy-r*.5}Z`,'#c5a4ff',.035));
+   face.append(line(`M${cx-.23} ${cy+.04} L${cx} ${cy-.14} L${cx+.23} ${cy+.04} M${cx-.23} ${cy+.19} L${cx} ${cy+.01} L${cx+.23} ${cy+.19}`,'#d6c0ff',.055));
+   face.append(label(w*.35,h-.12,'LV. —',.13));
+  }else if(kind==='feedback'){
+   face.append(line(`M.2 ${h*.54} H${w*.22} L${w*.3} ${h*.4} L${w*.38} ${h*.72} L${w*.48} ${h*.45} L${w*.56} ${h*.59} H${w-.2}`,'#bf9afa',.04));
+   face.append(label(.2,h-.25,'EVIDENCE / REVIEW',.11));
+  }else if(kind==='progress'||kind==='ranking'){
+   for(let n=0;n<3;n++){
+    const yy=.56+n*(h-.76)/3;
+    face.append(el('circle',{cx:.22,cy:yy+.045,r:.04,fill:'none',stroke:accent,'stroke-width':.02}));
+    face.append(roomRect(.4,yy,w-.8,.08,'none',{stroke:accent,'stroke-width':.012,rx:.025,opacity:.6}));
+    if(kind==='ranking')face.append(label(w-.25,yy+.09,'—',.11));
+   }
+  }else if(kind==='modes'){
+   ['SOLO','DUEL','FFA'].forEach((t,i)=>{const xx=.16+i*(w-.25)/3;face.append(roomRect(xx,.46,(w-.6)/3,h-.61,'#180f3226',{rx:.04,stroke:i===1?'#e992c5':accent,'stroke-width':.018}));face.append(label(xx+.12,h-.25,t,.17,i===1?'#f0b0d7':'#b9fff1'));});
+  }else if(kind.startsWith('cover')){
+   const k=Number(kind.slice(-1))||0,cx=w/2,cy=h*.54,r=w*.29;
+   if(k===0)face.append(line(`M${cx} ${cy-r} L${cx+r} ${cy-r*.6} V${cy+.1} Q${cx+r} ${cy+r*.6} ${cx} ${cy+r} Q${cx-r} ${cy+r*.6} ${cx-r} ${cy+.1} V${cy-r*.6}Z`,accent,.04),line(`M${cx-.22} ${cy} L${cx-.04} ${cy+.2} L${cx+.28} ${cy-.2}`,'#eddbff',.045));
+   else if(k===1)face.append(line(`M${cx-r*.7} ${cy-r*.5} L${cx-r*.2} ${cy} L${cx-r*.7} ${cy+r*.5} M${cx+.02} ${cy+r*.5} H${cx+r*.75}`,accent,.065));
+   else if(k===2){face.append(roomRect(cx-r,cy-r*.7,r*2,r*1.4,'none',{stroke:accent,'stroke-width':.035,rx:.05}));face.append(line(`M${cx-r} ${cy-r*.25} H${cx+r} M${cx-r*.65} ${cy+r*.05} H${cx+r*.65} M${cx-r*.65} ${cy+r*.3} H${cx+r*.3}`,accent,.025));}
+   else{face.append(line(`M${cx} ${cy-r} L${cx-r} ${cy+r*.6} H${cx+r}Z`,accent,.025));for(const [dx,dy] of [[0,-1],[-1,.6],[1,.6]])face.append(el('circle',{cx:cx+r*dx,cy:cy+r*dy,r:.11,fill:'#24203b',stroke:accent,'stroke-width':.035}));}
+   face.append(label(.17,h-.29,'LECTURE / LAB',.09),line(`M.17 ${h-.15} H${w-.17}`,accent,.018));
+  }else{
+   for(let n=0;n<4;n++)face.append(line(`M.17 ${.55+n*.18} H${w-.17-(n%2)*.25}`,accent,.018));
+  }
+  g.append(face);return g;
+ }
+ function trainingCockpit(x,y,z){
+  const g=el('g',{'data-training-cockpit':'single-seat'}),cyan='#61eee5';
+  const outline=[[.3,0],[4.5,0],[4.8,.3],[4.8,3.3],[4.5,3.6],[.3,3.6],[0,3.3],[0,.3]];
+  const floor=outline.map(([a,b])=>iso(x+a,y+b,z+.17));
+  g.append(el('polygon',{points:pts(outline.map(([a,b])=>iso(x+a,y+b,z+.03))),fill:'#100f20',stroke:'#050713','stroke-width':5}));
+  g.append(el('polygon',{points:pts(floor),fill:'#1c2838',stroke:cyan,'stroke-width':1.3}));
+  g.append(quad(x+.24,y+.24,z+.18,4.32,3.12,{fill:'#192332',stroke:'#7c6bb955','stroke-width':.8}));
+  // Projected rings and a swept glass HUD surround one pilot station.
+  const ring=el('g',{transform:`translate(${iso(x+2.35,y+2.35,z+.19).join(' ')}) scale(1 ${YS/XS})`});
+  for(const r of [27,39,46])ring.append(el('circle',{r,fill:'none',stroke:r===39?'#b09ae6':cyan,'stroke-width':r===39?1.2:.6,opacity:.55,'stroke-dasharray':r===46?'8 5':'none'}));g.append(ring);
+  g.append(holoDisplay(x+.9,y+.2,z+.92,3,1.78,'MISSION / TACTICAL HUD',cyan,'radar',-.08));
+  g.append(holoDisplay(x-.16,y+.72,z+.92,1.15,1.5,'RED','#ed92c7','scan',-.65));
+  g.append(holoDisplay(x+3.93,y+.2,z+.92,1.25,1.5,'BLUE',cyan,'scan',.25));
+  // Low consoles keep the transparent screen and pilot silhouette exposed.
+  for(const side of [0,1]){
+   const xx=x+.42+side*3.24,col=side?cyan:'#e68dc5';
+   g.append(prism(xx,y+1.46,z+.17,.6,1.27,.45,'#293044'));
+   g.append(quad(xx+.04,y+1.51,z+.64,.52,1.17,{fill:'#182237',stroke:col,'stroke-width':.7}));
+   for(let n=0;n<4;n++)g.append(quad(xx+.11,y+1.64+n*.22,z+.65,.1,.07,{fill:col,opacity:.75}));
+   g.append(roomLine([xx+.08,y+1.53,z+.68],[xx+.52,y+1.53,z+.68],col,1));
+  }
+  // The seat faces the HUD. Its opaque near-side back hides the occupant and far armrest.
+  g.append(prism(x+1.77,y+1.98,z+.17,1.18,1.1,.4,'#232c40'));
+  g.append(prism(x+1.83,y+2.03,z+.58,1.06,.93,.13,'#47445e'));
+  g.append(drawWorkerFigure({id:'red-instructor',name:'공방전 교관',facing:'rear'},3.7,5.03,z+.43,true));
+  g.append(prism(x+1.74,y+2.92,z+.45,1.24,.22,.8,'#343449'));
+  g.append(prism(x+1.84,y+3.15,z+.56,1.04,.035,.57,'#292b3d'));
+  for(const xx of [x+1.85,x+2.85])g.append(roomLine([xx,y+3.19,z+.61],[xx,y+3.19,z+1.15],cyan,.65));
+  g.append(prism(x+2.84,y+2.12,z+.55,.16,.77,.24,'#6d6b8b'));
+  g.append(prism(x+2.62,y+1.6,z+.48,.08,.08,.38,'#9cabc1'));
+  g.append(roomLettering(x+.32,y+3.43,z+.2,'SOLO / MISSION POD',.14,'#a2c8d9'));
+  return g;
+ }
  function extensionFloor(fid){
   const z=.22,g=el('g',{'data-extension-floor':fid}),academy=fid==='6F',live=fid==='7F';
-  const accent=academy?'#b9abdc':live?'#b9bfc6':'#a5c4a9';
-  g.append(prism(0,0,0,GW,GD,z,'#708391',{flat:true}));
-  for(let x=0;x<GW;x+=.5)for(let y=0;y<GD;y+=.5)g.append(quad(x+.008,y+.008,z+.01,.484,.484,{fill:(Math.round((x+y)*2)%2)?'#718895':'#7b929d',stroke:'#9babb4','stroke-width':.22}));
-  g.append(prism(0,0,z,GW,.14,1.75,'#96a8b2'),prism(0,0,z,.14,GD,1.25,'#889eab'));
-  g.append(roomLine([.3,.2,z+1.6],[11.7,.2,z+1.6],accent,2));
+  const accent=academy?'#c2a4ff':live?'#58e9df':'#a5c4a9';
+  g.append(prism(0,0,0,GW,GD,z,academy||live?'#303047':'#708391',{flat:true}));
+  for(let x=0;x<GW;x+=.5)for(let y=0;y<GD;y+=.5)g.append(quad(x+.008,y+.008,z+.01,.484,.484,{fill:academy||live?((Math.round((x+y)*2)%2)?'#26273a':'#292b3e'):((Math.round((x+y)*2)%2)?'#718895':'#7b929d'),stroke:academy||live?'#72708c33':'#9babb4','stroke-width':.22}));
+  if(academy||live){
+   g.append(prism(0,0,z,GW,.14,.65,'#34364b'),prism(0,0,z,.14,GD,.65,'#34364b'));
+   for(const off of [.12,.22])g.append(quad(off,off,z+.025,GW-off*2,GD-off*2,{fill:'none',stroke:accent,'stroke-width':off===.12?1.3:.35,opacity:.65}));
+   g.append(roomLine([.15,.18,z+.67],[11.8,.18,z+.67],accent,1.6),roomLine([.18,.18,z+.67],[.18,7.8,z+.67],accent,1.2));
+   for(const xx of [.8,3.4,6,8.6,11.2])g.append(quad(xx,7.5,z+.03,.5,.06,{fill:accent,opacity:.8}));
+  }else{
+   g.append(prism(0,0,z,GW,.14,1.75,'#96a8b2'),prism(0,0,z,.14,GD,1.25,'#889eab'));
+   g.append(roomLine([.3,.2,z+1.6],[11.7,.2,z+1.6],accent,2));
+  }
   const objects=[],put=(x,y,node)=>objects.push({depth:x+y,node});
   if(academy){
-   g.append(prism(4,.2,z+.65,5.6,.09,1.05,'#d2dbd8'));
-   g.append(roomLettering(4.25,.3,z+1.43,'ACADEMY / CONTENT LIBRARY',.18,'#3c5665'));
-   for(let n=0;n<2;n++){const x=.5+n*1.3;g.append(prism(x,.35,z,1.1,.35,1.5,'#4a6273'));for(let row=0;row<3;row++)for(let col=0;col<6;col++)g.append(prism(x+.09+col*.15,.66,z+.15+row*.43,.1,.09,.3,['#c2afd8','#9ebfc3','#ccb99d'][col%3]));}
-   for(const y of [2.2,5.2])for(const x of [1.5,5,8.5])put(x+.7,y+.8,drawWorkstation({},x,y,z,false));
+   g.setAttribute('data-content-catalog','thumbnails');
+   g.append(roomLettering(.65,.2,z+3.16,'xOC ACADEMY  /  KNOWLEDGE GALLERY',.23,'#d8c9fb'));
+   const covers=[['보안 관제','#b9f5e1'],['공격 · 대응','#f2acd8'],['웹 보안','#8de9f1'],['클라우드','#bec3ff'],['AI 보안','#d3a6ff']];
+   covers.forEach(([title,color],i)=>{
+    const x=.7+i*2.15,y=.44;
+    g.append(prism(x+.55,y+.14,z,.7,.28,.12,'#42405f'));
+    g.append(roomLine([x+.9,y+.27,z+.18],[x+.9,y+.27,z+.65],color,.7,{'stroke-dasharray':'2 3',opacity:.4}));
+    const cover=holoDisplay(x,y,z+.72,1.83,1.94,title,color,'cover'+i);cover.setAttribute('data-content-thumbnail',String(i));g.append(cover);
+   });
+   for(const [x,y] of [[1.2,3.85],[6.6,3.85]]){
+    const island=el('g',{'data-catalog-display':''});
+    island.append(prism(x+.48,y+.3,z,3.1,.63,.38,'#303047'));
+    island.append(quad(x+.35,y+.15,z+.42,3.35,.95,{fill:'#503f6b',stroke:'#b8a0e5','stroke-width':1}));
+    // Floating touch glass with upright miniature content covers.
+    island.append(quad(x,y,z+.86,4.2,1.35,{fill:'#8ee9e91b',stroke:'#a9f4ed','stroke-width':.9}));
+    island.append(roomLine([x+.1,y+1.31,z+.87],[x+4.1,y+1.31,z+.87],accent,1.5));
+    for(let i=0;i<3;i++)island.append(holoDisplay(x+.18+i*1.28,y+.18,z+.92,1.12,1.15,['강의','실습','워크북'][i],i===1?'#83e7e5':'#d3b9ff','cover'+i));
+    island.append(roomLettering(x+.12,y+1.36,z+.75,'BROWSE  /  SELECT  /  OPEN',.12,'#d7c7f3'));put(x+2,y+.8,island);
+   }
+   put(3.3,6.3,drawRoomWorker({id:'content-curator',name:'콘텐츠 큐레이터'},3.3,6.3,z));
+   put(8.7,6.3,drawRoomWorker({id:'learning-guide',name:'학습 안내'},8.7,6.3,z));
   }else if(live){
-   g.append(quad(.4,1.5,z+.02,5.1,5.9,{fill:'#8d7580',opacity:.75}),quad(6.3,1.5,z+.02,5.3,5.9,{fill:'#6b889d',opacity:.8}));
-   for(let n=0;n<6;n++)g.append(prism(.65+n*1.8,.2,z+.5,1.55,.1,1.13,'#2e4659'));
-   g.append(roomLettering(.8,.32,z+1.9,'RED TEAM',.25,'#e4b2b4'),roomLettering(7,.32,z+1.9,'BLUE TEAM',.25,'#b6d1e2'));
-   for(const y of [2.4,5.3])for(const x of [1.5,4,7,9.5])put(x+.7,y+.8,drawWorkstation({},x,y,z,false));
+   g.setAttribute('data-training-mode','pilot');
+   g.append(roomLettering(.55,.2,z+3.03,'LIVE FIRE  /  CYBER COMBAT RANGE',.23,'#c9fbf2'));
+   g.append(roomLettering(.58,.2,z+2.68,'TRAIN CYBERSECURITY LIKE A FIGHTER PILOT',.13,'#baa4e2'));
+   g.append(holoDisplay(.55,.4,z+1.25,5.05,1.03,'SCENARIO  /  MISSION',accent,'modes'));
+   const cockpit=trainingCockpit(1.35,2.5,z);put(4,4.4,cockpit);
+   const panels=[['과정별 진척도',6.8,.45,3.8,1.45,'progress'],['전체 리더보드',7.4,2.45,3.8,1.45,'ranking'],['나의 레벨',7.05,4.9,1.7,1.5,'level'],['AI 피드백',9.05,4.9,2.45,1.5,'feedback']];
+   for(const [title,x,y,w,h,kind] of panels){
+    const panel=holoDisplay(x,y,z+.9,w,h,title,accent,kind);panel.setAttribute('data-mission-panel',title);
+    const base=el('g');base.append(quad(x+.2,y+.13,z+.03,w-.4,.36,{fill:'#4ce8e512',stroke:'#6ce9e366','stroke-width':.6}));
+    base.append(roomLine([x+w/2,y+.3,z+.06],[x+w/2,y+.3,z+.75],accent,.65,{opacity:.35,'stroke-dasharray':'2 3'}));
+    base.append(panel);put(x+w/2,y+.3,base);
+   }
+   put(10.55,6.8,drawRoomWorker({id:'blue-instructor',name:'방어 코치'},10.55,6.8,z));
   }else{
    g.append(roomLettering(.7,.2,z+1.98,'VIRTUAL COMPANY / AGENT OPERATIONS',.23,'#d0e2c9'));
-   for(const [x,y] of [[1.3,2],[4.1,2],[1.3,5.2],[4.1,5.2]])put(x+.7,y+.8,drawWorkstation({},x,y,z,false));
-   put(10,6.2,drawLeadOffice({},8.25,4.85,z,false));
-   g.append(prism(8.1,.6,z,3.1,1.35,.7,'#728795'),quad(8.2,.7,z+.72,2.9,1.15,{fill:'#b5c2c4'}));
-   for(const x of [8.5,10.1])for(const y of [.25,2.1])g.append(prism(x,y,z,.5,.45,.45,'#4f6676'));
-   g.append(prism(6.9,.3,z,.6,.5,1.45,'#647984'));
+   const staff=crewOf('4F').filter(w=>w.id!=='ops-lead');
+   staff.forEach((w,i)=>{const x=1.85+(i%2)*3.15,y=2.55+Math.floor(i/2)*2.9;put(x+.7,y+1.1,drawWorkstation(w,x,y,z,false));});
+   const rack=drawRoomRack({id:'R-8F-01',floor:'8F',aisle:'C',u:24,design_kw:999},8,2,z);
+   rack.setAttribute('data-company-rack','R-8F-01');put(8.8,2.8,rack);
+   put(10,6.2,drawLeadOffice(crewOf('4F').find(w=>w.id==='ops-lead'),8.25,4.85,z,false));
   }
   objects.sort((a,b)=>a.depth-b.depth).forEach(o=>g.append(o.node));
   g.append(roomLine([0,GD,z+.02],[GW,GD,z+.02],accent,1.2));return g;

@@ -49,14 +49,14 @@ function arrangeBuilding(outlines,mainIds,frame) {
   // 층을 화면 순서대로 분해해 배치한다. 길게 늘어선 대각선 대신
   // 위층→아래층 순서를 유지하는 2~4열을 비교해 화면에 가장 크게 맞춘다.
   const ids=[...mainIds].reverse().concat(['SITE','XOC']);
-  for(const columns of [2,3,4])for(const offset of [.14,-.14,.28,-.28])for(let dx=380;dx<=600;dx+=20){
+  for(const columns of (frame.width/frame.height>2.6?[3,4]:[2,3]))for(const offset of [.14,-.14,.28,-.28])for(let dx=320;dx<=540;dx+=20){
     const positions=dy=>new Map(ids.map((id,i)=>{
       const row=Math.floor(i/columns),column=i%columns;
       const count=Math.min(columns,ids.length-row*columns),center=(columns-count)*dx/2;
       return [id,[column*dx+(row%2)*dx*offset+center,row*dy+column*30]];
     }));
     const shapes=map=>ids.map(id=>buildingMove(outlines.get(id),...map.get(id)));
-    const clear=rows=>rows.every((a,i)=>rows.slice(i+1).every(b=>buildingSeparated(a,b,3)));
+    const clear=rows=>rows.every((a,i)=>rows.slice(i+1).every(b=>buildingSeparated(a,b,-62)));
     let low=100,high=450;
     if(!clear(shapes(positions(high))))continue;
     for(let n=0;n<9;n++){const mid=(low+high)/2;if(clear(shapes(positions(mid))))high=mid;else low=mid}
@@ -76,9 +76,9 @@ function arrangeBuilding(outlines,mainIds,frame) {
   BUILDING_LAYOUT_CACHE.set(key,best);return best;
 }
 
- function render(host,data,mode,selection){
+ function render(host,data,mode,selection,designFloor){
   const arch=DataCenterArchitecture,el=arch.el,building=mode==='building';
-  const svg=el('svg',{class:'dc-world',role:'group','aria-label':building?'층별 데이터센터 전체 배치':'2층 일반 전산실 · 랙을 선택하세요'});
+  const svg=el('svg',{class:'dc-world',role:'group','aria-label':building?'층별 데이터센터 전체 배치':mode==='design'?designFloor+' 공간 디자인':'2층 일반 전산실 · 랙을 선택하세요'});
   svg.setAttribute('role','group');
   host.replaceChildren(svg);arch.prepare(svg,data,building);svg.append(arch.defs());
   const root=el('g',{'data-camera':''});svg.append(root);
@@ -91,15 +91,15 @@ function arrangeBuilding(outlines,mainIds,frame) {
    const layout=arrangeBuilding(outlines,data.floors.filter(f=>!['SITE','XOC'].includes(f.id)).map(f=>f.id),frame);
    root.replaceChildren();root.setAttribute('data-building-layout','kt66-compact');
    for(const f of data.floors){
-    const active=f.enabled&&data.allowed_floors.includes(f.id),[x,y]=layout.positions.get(f.id);
-    const g=el('g',{'data-dc-floor':f.id,transform:`translate(${x} ${y})`,class:active?'dc-level-active':'dc-level-locked','aria-disabled':String(!active)});
-    if(active){g.setAttribute('role','button');g.setAttribute('tabindex','0');g.setAttribute('aria-label',f.title+' 내부 보기');}
+    const active=f.enabled&&data.allowed_floors.includes(f.id),preview=(data.preview_floors||[]).includes(f.id),[x,y]=layout.positions.get(f.id);
+    const g=el('g',{'data-dc-floor':f.id,transform:`translate(${x} ${y})`,class:active?'dc-level-active':preview?'dc-level-preview':'dc-level-locked','aria-disabled':String(!active&&!preview)});
+    if(active||preview){g.setAttribute('role','button');g.setAttribute('tabindex','0');g.setAttribute('aria-label',f.title+(active?' 내부 보기':' 디자인 보기'));}
     g.append(rooms.get(f.id));root.append(g);
     const position=arch.iso(8.2,7.8,.22);labels.push({x:x+position[0],y:y+position[1]+20,title:f.id+' · '+f.title,active});
    }
   }else{
-   const room=arch.room('2F');root.append(room);
-   for(const rack of data.racks){
+   const room=arch.room(mode==='design'?designFloor:'2F');root.append(room);
+   for(const rack of (mode==='design'?[]:data.racks)){
     const node=room.querySelector('[data-rack="'+rack.id+'"]');if(!node)continue;
     node.setAttribute('data-dc-rack',rack.id);node.setAttribute('role','button');node.setAttribute('tabindex','0');node.setAttribute('aria-label',rack.id+' · '+rack.title+' · 장비 '+rack.asset_ids.length+'개');
     node.classList.add('dc-rack');if(selection===rack.id)node.classList.add('selected');

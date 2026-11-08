@@ -60,7 +60,7 @@ sudo bash install.sh
 
 설치 후 `sudo xoc platform credentials`로 `https://VM주소/core/`의 초기 관리자 계정을 확인하고 첫 로그인에서 비밀번호를 변경한다. 이 관리 화면은 SIEM 제외 시에도 유지된다. SIEM은 자체 Wazuh 계정을 사용하며, Core 역할을 SIEM에 자동 적용하는 SSO는 포함하지 않는다. [공통 보안과 권한](docs/development/COMMON-SECURITY.md)
 
-로그인 후 `/core/#datacenter`에서 데이터센터 전체와 2층 내부를 볼 수 있다. 2층에서 **랙 → 장비**를 선택하면 현재 상태·장비 설명·웹 콘솔 링크와 복사 가능한 SSH/장비 셸 명령이 나온다. Linux 계정과 SSH 포트는 접속 패널에서 지정한다. Core는 2F만 활성화되며, 아카데미(6F)·Live Fire(7F)·가상회사(8F)는 비활성이다. 기관별 유료 콘텐츠·공방전 권한과 Joint Force 학생 회사 실행은 후속 상용 모듈 범위다. [공간 구성과 권한 경계](docs/development/DATACENTER.md)
+로그인 후 `/core/#datacenter`에서 데이터센터 전체와 2층 내부를 볼 수 있다. 2층에서 **랙 → 장비**를 선택하면 현재 상태·장비 설명·웹 콘솔 링크와 복사 가능한 SSH/장비 셸 명령이 나온다. Linux 계정과 SSH 포트는 접속 패널에서 지정한다. Core의 운영 기능은 2F에서 제공한다. **admin은 회색 층도 클릭해 확대 디자인을 볼 수 있다.** 6F·7F에서 **공간 디자인 / 화면 구성**을 전환하면 콘텐츠 카탈로그와 미션 대시보드를 확인할 수 있다. 일반 사용자의 상용 층 잠금은 유지하며, 관리자 미리보기의 훈련 실행 버튼도 비활성이다. 각 층의 헬멧·점프슈트 아바타는 직무·직급별 디자인이며 에이전트 실행은 연결하지 않았다. 기관별 유료 콘텐츠·공방전 권한과 Joint Force 학생 회사 실행은 후속 상용 모듈 범위다. [공간 구성과 권한 경계](docs/development/DATACENTER.md)
 
 장비 콘솔은 `/core/#fw/policies`, `/core/#ips/policies`, `/core/#waf/policies`에서 사용한다. `--without console-fw`·`console-ips`·`console-waf`로 각각 제외할 수 있으며 기존 정책은 유지한다. 적용하려면 관리자가 **접근 제어 → 쓰기 허용**을 설정한다. [콘솔 초안과 적용 범위](docs/development/DEVICE-CONSOLES.md)
 
