@@ -23,6 +23,7 @@ build_inputs:
 - Dockerfile
 - control/__init__.py
 - control/app.js
+- control/console.py
 - control/middleware.py
 - control/migrations/0001_initial.py
 - control/migrations/__init__.py

@@ -142,3 +142,45 @@ def test_unknown_device_and_self_demotion(app):
     login(app)
     assert send(app,'devices/shell',{'write_enabled':True,'version':1}).status_code==404
     assert send(app,'users',{'username':'admin','role':'viewer','active':False}).status_code==403
+
+
+def test_console_uses_same_auth_role_lock_and_csrf_boundary(app,monkeypatch):
+    from django.conf import settings
+    from control import console
+    from control.models import DevicePolicy,Audit
+    monkeypatch.setitem(settings.CONFIG,'consoles',['fw'])
+    calls=[]
+    def device(name,body):
+        calls.append((name,body));return {'ok':True,'data':{'version':1}}
+    monkeypatch.setattr(console,'rpc',device)
+    assert app.get('/core/api/console/fw').status_code==401
+    login(app,'viewer')
+    assert app.get('/core/api/console/fw').status_code==200
+    calls.clear()
+    assert send(app,'console/fw/preview',{'version':0,'payload':{}}).status_code==403
+    assert send(app,'console/fw/apply',{'version':0,'token':'a'}).status_code==403
+    assert calls==[]
+    send(app,'logout',{});login(app,'operator')
+    assert send(app,'console/fw/preview',{'version':0,'payload':{}}).status_code==200
+    calls.clear()
+    assert send(app,'console/fw/apply',{'version':0,'token':'a'}).status_code==403
+    DevicePolicy.objects.filter(device='fw').update(write_enabled=True)
+    assert send(app,'console/fw/apply',{'version':0,'token':'a'},HTTP_X_CSRFTOKEN='').status_code==403
+    assert calls==[]
+    assert send(app,'console/fw/apply',{'version':0,'token':'a'}).status_code==200
+    assert calls[-1][1]['actor']=='operator'
+    assert Audit.objects.filter(action='console_apply',outcome='applied').exists()
+    assert app.get('/core/api/console/ips').status_code==404
+
+
+def test_console_audit_failure_prevents_device_call(app,monkeypatch):
+    from django.conf import settings
+    from django.db import OperationalError
+    from control import console
+    from control.models import Audit,DevicePolicy
+    monkeypatch.setitem(settings.CONFIG,'consoles',['fw']);login(app)
+    DevicePolicy.objects.filter(device='fw').update(write_enabled=True)
+    def fail(**kwargs): raise OperationalError('audit unavailable')
+    monkeypatch.setattr(Audit.objects,'create',fail)
+    monkeypatch.setattr(console,'rpc',lambda *args:pytest.fail('Device must not be contacted'))
+    assert send(app,'console/fw/apply',{'version':0,'token':'a'}).status_code==503

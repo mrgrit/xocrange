@@ -1,7 +1,7 @@
 """One authorization gate for every device API, including future K08 handlers."""
 from functools import wraps
 from django.http import JsonResponse
-from .models import Audit, DevicePolicy
+from .models import Audit, DevicePolicy, Profile
 
 ROLES = {'viewer': {'devices.read'}, 'operator': {'devices.read', 'devices.preview'},
          'admin': {'devices.read', 'devices.preview', 'devices.policy', 'users.manage', 'audit.read'}}
@@ -33,14 +33,16 @@ def protected(permission=None):
     return decorate
 
 
-def device_permission(request, device, *, write=False):
+def device_permission(request, device, *, write=False, preview=False):
     """K08 must call this inside its serialized, audited apply transaction."""
     if device not in ('fw', 'ips', 'waf') or not request.user.is_authenticated:
         return False
-    profile = getattr(request.user, 'profile', None)
-    if not profile or profile.must_change_password or request.session.get('generation') != profile.generation:
+    profile = Profile.objects.select_related('user').filter(user=request.user).first()
+    if not profile or not profile.user.is_active or profile.must_change_password or request.session.get('generation') != profile.generation:
         return False
     role = profile.role
+    if preview:
+        return 'devices.preview' in ROLES.get(role, set())
     if not write:
         return 'devices.read' in ROLES.get(role, set())
     return role in ('admin', 'operator') and DevicePolicy.objects.get(device=device).write_enabled

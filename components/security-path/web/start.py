@@ -24,14 +24,15 @@ def render(raw):
             raise ValueError("Duplicate target or invalid port")
         names.add(target["id"])
         services.append(target)
+    console = ['Include /etc/xoc/console.conf'] if os.environ.get('XOC_POLICY_STATE') == '1' else []
     lines = ['<VirtualHost *:8080>', 'ServerName core.xoc.test', 'DocumentRoot /run/apache2/site',
-             '<Directory /run/apache2/site>', 'Require all granted', '</Directory>', '</VirtualHost>']
+             '<Directory /run/apache2/site>', 'Require all granted', '</Directory>'] + console + ['</VirtualHost>']
     links = []
     for target in sorted(services, key=lambda t: t["id"]):
         host = target["id"] + ".xoc.test"
         backend = f'http://{target["service"]}:{target["port"]}/'
         lines.extend(['<VirtualHost *:8080>', f'ServerName {host}', 'ProxyPreserveHost On',
-                      f'ProxyPass / {backend}', f'ProxyPassReverse / {backend}', '</VirtualHost>'])
+                      f'ProxyPass / {backend}', f'ProxyPassReverse / {backend}'] + console + ['</VirtualHost>'])
         links.append(f'<li><a href="http://{host}:8080/">{html.escape(target["id"])}</a></li>')
     page = '<!doctype html><html lang="en"><meta charset="utf-8"><title>xOC Core lab</title><h1>xOC Core security-path lab</h1>'
     page += '<p>Experimental gateway. Selected targets require lab DNS or a matching Host header.</p><ul>' + ''.join(links) + '</ul></html>'
@@ -53,5 +54,9 @@ if __name__ == "__main__":
     if os.environ.get('XOC_MANAGEMENT') == '1':
         with (base / 'xoc-sites.conf').open('a') as stream:
             stream.write('\nInclude /etc/xoc/management.conf\n')
+    if os.environ.get("XOC_POLICY_STATE") == "1":
+        subprocess.run(["python3", "-B", "/usr/local/lib/xoc/console/broker.py", "waf", "init"], check=True)
+    if os.environ.get("XOC_CONSOLE") == "1":
+        subprocess.Popen(["python3", "-B", "/usr/local/lib/xoc/console/broker.py", "waf"])
     subprocess.run(["apache2ctl", "configtest"], check=True)
     os.execvp("apache2ctl", ["apache2ctl", "-D", "FOREGROUND"])

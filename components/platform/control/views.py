@@ -80,7 +80,7 @@ def session(request):
 
 def session_data(request):
     from django.conf import settings
-    result = {'csrf_token': get_token(request), 'authenticated': False, 'siem_available': settings.CONFIG.get('siem_available', False)}
+    result = {'csrf_token': get_token(request), 'authenticated': False, 'siem_available': settings.CONFIG.get('siem_available', False), 'consoles': settings.CONFIG.get('consoles', [])}
     if request.user.is_authenticated:
         p = request.user.profile
         if request.session.get('generation') != p.generation:
@@ -198,7 +198,7 @@ def devices(request, device=None):
         if device is not None and device not in ('fw','ips','waf'):
             return JsonResponse({'error': 'not_found'}, status=404)
         items = DevicePolicy.objects.filter(device=device) if device else DevicePolicy.objects.all()
-        return JsonResponse({'devices': list(items.values()), 'configuration_api': 'planned_k08'})
+        return JsonResponse({'devices': list(items.values()), 'configuration_api': 'console_v1'})
     return policy(request, device)
 
 

@@ -6,7 +6,7 @@
 
 선택한 기능으로 구성하는 보안 운영 실습 환경. Core의 공통 계약 위에 Live Fire·Joint Force 모듈을 연결한다.
 
-**개발 초기 단계:** Ubuntu 26.04 VM에서 자동 설치와 fw·IPS·WAF의 실제 통신·차단을 검증했다. 공통 관리 로그인·역할·세션·감사와 8종 보안 로그의 C1 정규화·원본 보관·Wazuh Manager/API·Indexer·전용 Dashboard와 C1 통합 검색을 연결했다. 장비 콘솔·포털과 전체 Community 배포본은 개발 중이다. `bootstrap`은 설치 기반 확인용 health 서비스다.
+**개발 초기 단계:** Ubuntu 26.04 VM에서 자동 설치와 fw·IPS·WAF의 실제 통신·차단을 검증했다. 공통 관리 로그인·역할·세션·감사와 8종 보안 로그의 C1 정규화·원본 보관·Wazuh Manager/API·Indexer·전용 Dashboard와 C1 통합 검색을 연결했다. 운영 장비 형태의 FW·IPS·WAF 콘솔 초안을 연결했다. 포털과 전체 Community 배포본은 개발 중이다. `bootstrap`은 설치 기반 확인용 health 서비스다.
 
 ## 지금 실행할 수 있는 것
 
@@ -16,6 +16,7 @@
 | SIEM 백엔드 | 8종 원본 직접 분석과 C1 독립 전송, 원본 SHA-256, 처리 확인·재전송, Wazuh Manager/API·기본/보완 규칙, 원본 경보·증거 연결 |
 | SIEM 웹 관제 | Wazuh Indexer + 전용 Dashboard, 8종 통합 검색·차트·필터, HTTPS 인증, 범위를 제한한 WAF Rule 예외 |
 | 공통 보안 | `/core/` 관리 화면, 관리자·운영자·조회자 역할, 서버 세션·CSRF, 장비 쓰기 정책·변경 감사 |
+| 장비 콘솔 초안 | FORWARD 필터 정책, 객체·NAT, IPS/WAF 규칙, 실제 설정 검증·적용·복원, 별도 전체 규칙 탭 |
 | 설치 계획 | manifest 검증, 의존성·충돌·포트 검사, Compose·입력 해시 생성 |
 | 구성 진단 | `xoc doctor`: 로컬 구성과 Docker CLI 존재 확인 |
 | 구성요소 목록 | 필수 platform + 선택 기능; 준비된 기능과 계획 단계 구분 |
@@ -33,9 +34,11 @@ Ubuntu Server 26.04 LTS amd64 전용 VM에서 저장소 또는 별도로 받은 
 sudo bash install.sh
 ```
 
-**현재 개발 버전의 설치 범위는 공통 관리 화면 + platform + 방화벽 + IPS + WAF + SIEM 백엔드·웹 관제 + 호스트 관측 도구 + 통신 검증용 타깃이다.** 웹 관제를 포함하면 최소 8 GiB RAM을 요구하며 실제 검증 VM은 16 GiB다. `--without siem-ui`로 웹 관제만 제외하거나 `--without siem`으로 SIEM 전체를 제외할 수 있다. 콘솔·포털까지 완성된 Core 전체 설치를 뜻하지 않는다. [웹 관제 구성·WAF 예외·검증](docs/development/SIEM-WEB.md)
+**현재 개발 버전의 설치 범위는 공통 관리 화면 + 장비 콘솔 3종 + platform + 방화벽 + IPS + WAF + SIEM 백엔드·웹 관제 + 호스트 관측 도구 + 통신 검증용 타깃이다.** 웹 관제를 포함하면 최소 8 GiB RAM을 요구하며 실제 검증 VM은 16 GiB다. `--without siem-ui`로 웹 관제만 제외하거나 `--without siem`으로 SIEM 전체를 제외할 수 있다. 포털까지 완성된 Core 전체 설치를 뜻하지 않는다. [웹 관제 구성·WAF 예외·검증](docs/development/SIEM-WEB.md)
 
 설치 후 `sudo xoc platform credentials`로 `https://VM주소/core/`의 초기 관리자 계정을 확인하고 첫 로그인에서 비밀번호를 변경한다. 이 관리 화면은 SIEM 제외 시에도 유지된다. SIEM은 자체 Wazuh 계정을 사용하며, Core 역할을 SIEM에 자동 적용하는 SSO는 포함하지 않는다. [공통 보안과 권한](docs/development/COMMON-SECURITY.md)
+
+장비 콘솔은 `/core/#fw/policies`, `/core/#ips/policies`, `/core/#waf/policies`에서 사용한다. `--without console-fw`·`console-ips`·`console-waf`로 각각 제외할 수 있으며 기존 정책은 유지한다. 적용하려면 관리자가 **접근 제어 → 쓰기 허용**을 설정한다. [콘솔 초안과 적용 범위](docs/development/DEVICE-CONSOLES.md)
 
 `sudo xoc siem credentials`로 HTTPS 주소와 생성된 관리자 비밀번호를 확인한다. 기본 주소는 `https://VM주소/siem/`이며 `--public-host siem.example.test`로 DNS 이름을 지정할 수 있다. 설치기가 만든 로컬 CA(`/etc/xocrange/ca.crt`)는 접속 PC에 한 번 신뢰 등록해야 브라우저 인증서 경고가 없어진다. 인증서와 비밀번호는 재설치 시 유지한다.
 

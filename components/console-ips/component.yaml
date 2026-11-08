@@ -3,16 +3,19 @@ id: console-ips
 kind: component
 title: Suricata device console
 version: 0.1.0
-core: ">=0.1.0 <0.2.0"
-status: planned
+core: '>=0.1.0 <0.2.0'
+status: experimental
 commercial: false
 minimum_tier: community
 requires:
-  components: ["security-path"]
+  components:
+  - management
   capabilities: []
-provides: ["console.ips"]
+provides:
+- console.ips
 conflicts: []
-networks: ["int"]
+networks: []
 config_keys: []
 contracts: {}
 build_inputs: []
+compose: compose.yaml

@@ -1,30 +1,144 @@
 'use strict';
-let csrf = '';
-const el = id => document.getElementById(id);
-async function api(path, body) {
-  const response = await fetch('/core/api/' + path, {method: body ? 'POST' : 'GET', credentials: 'same-origin', headers: body ? {'Content-Type':'application/json','X-CSRFToken':csrf} : {}, body: body ? JSON.stringify(body) : undefined});
-  const data = await response.json();
-  if (data.csrf_token) csrf = data.csrf_token;
-  if (!response.ok) throw new Error(({invalid_credentials:'계정과 비밀번호를 확인해 주세요.',invalid_input:'입력 형식과 비밀번호 조건을 확인해 주세요.',permission_denied:'이 작업을 실행할 권한이 없습니다.',try_later:'로그인 시도 제한에 도달했습니다. 15분 뒤 다시 시도해 주세요.',csrf_failed:'세션을 새로 불러온 뒤 다시 시도해 주세요.'})[data.error] || '요청을 처리하지 못했습니다: ' + data.error);
-  return data;
+const $ = id => document.getElementById(id);
+const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const icon = name => `<svg aria-hidden="true"><use href="#i-${name}"/></svg>`;
+const labels = {fw:'방화벽',ips:'침입 방지',waf:'웹 방화벽',access:'접근 제어',users:'계정',audit:'감사 기록'};
+const descriptions = {fw:'통과 트래픽의 허용·차단 정책을 순서대로 관리합니다.',ips:'트래픽 검사 조건과 탐지·차단 규칙을 관리합니다.',waf:'웹 요청의 검사 대상과 차단 조건을 관리합니다.',access:'장비별 변경 권한과 쓰기 잠금을 관리합니다.',users:'관리 계정의 역할과 접근 권한을 관리합니다.',audit:'계정·권한·장비 설정의 변경 기록을 확인합니다.'};
+const tabLabels = {policies:'정책',objects:'주소·서비스 객체',nat:'NAT',ruleset:'전체 규칙',events:'이벤트',history:'변경 이력'};
+const errors = {invalid_credentials:'계정과 비밀번호를 확인해 주세요.',invalid_input:'입력 형식을 확인해 주세요.',permission_denied:'이 작업을 실행할 권한이 없습니다.',device_write_locked:'장비 쓰기가 잠겨 있습니다. 접근 제어에서 변경을 허용해 주세요.',device_unavailable:'장비와 연결하지 못했습니다. 잠시 후 새로고침해 주세요.',try_later:'로그인 시도 제한에 도달했습니다. 15분 뒤 다시 시도해 주세요.',csrf_failed:'세션을 새로 불러온 뒤 다시 시도해 주세요.',stale_version:'다른 변경이 적용되었습니다. 새로고침 후 다시 검토해 주세요.'};
+let csrf='',session={},view='fw',tab='policies',current=null,edit=null,review=null,search='',actionFilter='',loadSequence=0,busy=false,noticeTimer;
+async function api(path,body){
+ const response=await fetch('/core/api/'+path,{method:body?'POST':'GET',credentials:'same-origin',headers:body?{'Content-Type':'application/json','X-CSRFToken':csrf}:{},body:body?JSON.stringify(body):undefined});
+ let data;try{data=await response.json();}catch{throw new Error(`요청이 거부되었습니다 (HTTP ${response.status}). 입력과 WAF 이벤트를 확인해 주세요.`);}
+ if(data.csrf_token)csrf=data.csrf_token;
+ if(!response.ok){if(response.status===401&&path!=='login'){session={};$('account').hidden=true;$('login').hidden=false;for(const d of document.querySelectorAll('dialog[open]'))d.close();}throw new Error(data.detail||errors[data.error]||'요청을 처리하지 못했습니다: '+data.error);}
+ return data;
 }
-async function refresh() {
-  const s = await api('session');
-  el('login').hidden = s.authenticated; el('account').hidden = !s.authenticated;
-  if (!s.authenticated) return;
-  el('identity').textContent = s.username + ' · ' + s.role;
-  el('devices').hidden = s.must_change_password; el('admin').hidden = s.role !== 'admin' || s.must_change_password;
-  el('siem-link').hidden = !s.siem_available;
-  if (s.must_change_password) { el('password-panel').open = true; el('notice').textContent = '초기 비밀번호를 변경해 주세요.'; return; }
-  const result = await api('devices'); el('device-list').replaceChildren();
-  for (const d of result.devices) {
-    const row = document.createElement('li'); row.textContent = d.device.toUpperCase() + ' · 쓰기 ' + (d.write_enabled ? '허용' : '잠금');
-    if (s.role === 'admin') { const b=document.createElement('button'); b.textContent=d.write_enabled?'잠그기':'쓰기 허용'; b.onclick=()=>act(async()=>{await api('devices/'+d.device,{write_enabled:!d.write_enabled,version:d.version}); await refresh();}); row.append(b); }
-    el('device-list').append(row);
-  }
-  if (s.role === 'admin') { el('users').textContent=JSON.stringify((await api('users')).users,null,2); el('audit').textContent=JSON.stringify((await api('audit')).events,null,2); }
+function notice(text,error=false){clearTimeout(noticeTimer);$('notice').textContent=text;$('notice').classList.toggle('error',error);$('notice').hidden=false;noticeTimer=setTimeout(()=>$('notice').hidden=true,error?12000:5000);}
+async function act(fn){try{await fn();}catch(e){notice(e.message,true);}}
+function date(value){return value?new Date(value).toLocaleString('ko-KR',{hour12:false}):'—';}
+function badge(action){const text={accept:'허용',drop:'차단',reject:'거부',alert:'탐지',pass:'통과',deny:'차단',block:'차단'}[action]||action;return `<span class="badge ${['accept','pass'].includes(action)?'allow':['drop','reject','deny','block'].includes(action)?'deny':'detect'}">${esc(text)}</span>`;}
+function empty(title,description,button=''){return `<div class="empty">${icon('list')}<strong>${esc(title)}</strong><p>${esc(description)}</p>${button}</div>`;}
+function field(name,label,value='',placeholder='',type='text'){return `<label>${label}<input name="${name}" value="${esc(value)}" placeholder="${esc(placeholder)}" type="${type}" maxlength="300"></label>`;}
+function select(name,label,options,value){return `<label>${label}<select name="${name}">${options.map(o=>{const [v,t]=Array.isArray(o)?o:[o,o];return `<option value="${esc(v)}" ${String(value)===String(v)?'selected':''}>${esc(t)}</option>`;}).join('')}</select></label>`;}
+function check(name,label,value){return `<label class="checkbox"><input type="checkbox" name="${name}" ${value?'checked':''}>${esc(label)}</label>`;}
+function route(){const parts=location.hash.slice(1).split('/');view=labels[parts[0]]?parts[0]:(session.consoles?.[0]||'access');tab=tabLabels[parts[1]]?parts[1]:'policies';search='';actionFilter='';act(load);}
+async function refreshSession(){
+ session=await api('session');$('login').hidden=session.authenticated;$('account').hidden=!session.authenticated;
+ if(!session.authenticated)return;
+ $('identity').textContent=session.username+' · '+({admin:'관리자',operator:'운영자',viewer:'조회자'}[session.role]||session.role);
+ $('siem-link').hidden=!session.siem_available;
+ for(const el of document.querySelectorAll('.admin-nav'))el.hidden=session.role!=='admin';
+ if(session.must_change_password){$('device-view').hidden=true;$('system-view').hidden=true;if(!$('password-panel').open)$('password-panel').showModal();notice('초기 비밀번호를 변경해 주세요.');return;}
+ route();
 }
-async function act(fn) { el('notice').textContent=''; try {await fn();} catch(e){el('notice').textContent=e.message;} }
-for(const [id,path] of [['login-form','login'],['password-form','password'],['user-form','users']]) el(id).onsubmit=e=>{e.preventDefault();act(async()=>{const b=Object.fromEntries(new FormData(e.target)); if(path==='users')b.active=true; await api(path,b); e.target.reset(); await refresh();});};
-el('logout').onclick=()=>act(async()=>{await api('logout',{});await refresh();});
-act(refresh);
+async function load(){
+ if(!session.authenticated||session.must_change_password)return;
+ const sequence=++loadSequence;current=null;
+ for(const b of document.querySelectorAll('[data-nav]')){b.classList.toggle('active',b.dataset.nav===view);b.setAttribute('aria-label',labels[b.dataset.nav]);b.title=labels[b.dataset.nav];}
+ $('crumb').textContent=labels[view];$('page-title').textContent=labels[view]+(['fw','ips','waf'].includes(view)?' 정책':'');$('page-description').textContent=descriptions[view];$('eyebrow').textContent=view==='fw'?'NETWORK SECURITY':view==='ips'?'THREAT PREVENTION':view==='waf'?'APPLICATION SECURITY':'SYSTEM MANAGEMENT';
+ const device=['fw','ips','waf'].includes(view);$('device-view').hidden=!device;$('system-view').hidden=device;$('sync-status').textContent='상태를 불러오는 중…';$('refresh').disabled=true;
+ try{
+  if(!device){await systemView(sequence);return;}
+  $('device-content').innerHTML='<div class="panel">'+empty('장비 상태를 불러오는 중','현재 설정과 실행 상태를 확인하고 있습니다.')+'</div>';$('device-summary').replaceChildren();$('tabs').replaceChildren();
+  if(!session.consoles?.includes(view)){$('device-content').innerHTML='<div class="panel">'+empty('설치되지 않은 콘솔','이 장비 콘솔을 선택 설치하면 정책을 관리할 수 있습니다.')+'</div>';return;}
+  const d=await api('console/'+view);if(sequence!==loadSequence)return;current=d;drawSummary();drawTabs();drawPanel();$('sync-status').textContent='마지막 확인 '+date(d.observed_at);
+ }finally{if(sequence===loadSequence)$('refresh').disabled=false;}
+}
+function drawSummary(){
+ const d=current;const active=d.rules.filter(r=>r.enabled).length;
+ $('device-summary').innerHTML=`<div class="metric"><span class="metric-label">장비 연결</span><div class="metric-value small"><span class="dot"></span>연결됨 <span class="tag">${view.toUpperCase()}</span></div><small>${esc(d.engine)}</small></div><div class="metric"><span class="metric-label">사용자 정책</span><div class="metric-value">${d.rules.length}<span class="tag">활성 ${active}</span></div><small>${view==='fw'?'FORWARD · 필터링':view==='ips'?'인라인 검사 · 사용자 규칙':'웹 서비스 · 사용자 규칙'}</small></div><div class="metric"><span class="metric-label">실행 중인 버전</span><div class="metric-value">r${d.version}</div><small>검증된 설정 적용</small></div><div class="metric"><span class="metric-label">변경 권한</span><div class="metric-value small">${icon('lock')}${d.write_enabled?'쓰기 허용':'쓰기 잠금'}</div><small>${d.can_preview?'설정 검토 가능':'조회 전용'}</small></div>`;
+}
+function drawTabs(){const list=view==='fw'?['policies','objects','nat','ruleset','events','history']:['policies','ruleset','events','history'];if(!list.includes(tab))tab='policies';$('tabs').innerHTML=list.map(t=>`<button role="tab" aria-selected="${t===tab}" data-tab="${t}">${tabLabels[t]}${t==='policies'?`<span class="count">${current.rules.length}</span>`:''}</button>`).join('');}
+function kind(){return tab==='objects'?'object':tab==='nat'?'nat':'rule';}
+function rows(){return current[tab==='objects'?'objects':tab==='nat'?'nat':'rules'];}
+function drawPanel(){
+ const d=current;
+ if(['policies','objects','nat'].includes(tab)){
+  const title=tab==='objects'?'주소·서비스 객체':tab==='nat'?'주소 변환 정책':view==='fw'?'트래픽 정책':view==='ips'?'탐지·차단 규칙':'웹 요청 검사 규칙';
+  $('device-content').innerHTML=`${view==='fw'&&tab==='policies'?'<div class="info-line">'+icon('shield')+'<span>FORWARD 체인의 사용자 정책을 위에서 아래로 평가합니다. 허용된 트래픽에는 시스템 경로 정책이 이어서 적용되며, 관리 접속은 별도로 보호됩니다.</span></div>':''}${view==='fw'&&tab==='nat'?'<div class="info-line">'+icon('globe')+'<span>주소 변환 후에도 방화벽 필터 정책이 적용됩니다. 현재 장비 프로파일의 경로와 대상 주소를 확인해 주세요.</span></div>':''}<div class="panel"><div class="toolbar"><div class="toolbar-title">${title} <span class="tag">${view==='fw'&&tab==='policies'?'FORWARD':tab==='objects'?'OBJECTS':tab==='nat'?'NAT':'CUSTOM'}</span></div><button class="primary" data-action="new" ${!d.can_preview?'disabled':''}>${icon('plus')}${tab==='objects'?'객체 추가':tab==='nat'?'NAT 추가':'정책 추가'}</button></div><div class="filters"><label class="search" aria-label="정책 검색">${icon('search')}<input id="policy-search" aria-label="정책 검색" placeholder="이름, 주소, 서비스 검색" value="${esc(search)}"></label>${tab==='policies'?'<select id="action-filter" aria-label="동작 필터"><option value="">모든 동작</option><option value="allow">허용 / 통과</option><option value="deny">차단 / 거부</option><option value="detect">탐지</option></select>':''}<span class="filter-count" id="filter-count"></span></div><div class="table-wrap" id="policy-table"></div><div class="table-foot"><span>${view==='fw'&&tab==='policies'?'사용자 정책은 순서대로 적용됩니다.':'검증 후 적용된 설정만 실행됩니다.'}</span><span class="revision">Running revision · ${d.version}</span></div></div>`;
+  $('policy-search').oninput=e=>{search=e.target.value;drawRows();};if($('action-filter')){$('action-filter').value=actionFilter;$('action-filter').onchange=e=>{actionFilter=e.target.value;drawRows();};}drawRows();
+ }else if(tab==='ruleset'){
+  $('device-content').innerHTML=`<div class="panel"><div class="toolbar"><div class="toolbar-title">${view==='fw'?'전체 테이블 · 체인':'실행 규칙 및 기본 설정'} <span class="tag">READ ONLY</span></div><button class="secondary" data-action="copy">복사</button></div><div class="panel-body"><p class="muted">${view==='fw'?'시스템 정책과 사용자 정책을 함께 확인합니다. 변경은 정책·객체·NAT 탭에서 관리합니다.':'기본 보호 규칙은 유지되며, 사용자 규칙은 정책 탭에서 관리합니다.'}</p><pre class="code-panel" id="full-rules"></pre>${d.crs_files?'<h3>OWASP CRS 규칙 파일</h3><div class="log-lines">'+d.crs_files.map(esc).join('\n')+'</div>':''}</div></div>`;$('full-rules').textContent=d.raw;
+ }else if(tab==='history'){
+  $('device-content').innerHTML=`<div class="panel"><div class="toolbar"><div class="toolbar-title">적용 이력 <span class="tag">최근 20건</span></div><button class="secondary" data-action="rollback" ${!d.history.length||!d.can_preview?'disabled':''}>이전 설정 복원</button></div>${d.history.length?'<div class="table-wrap"><table><thead><tr><th>버전</th><th>적용 시각</th><th>작업자</th><th>작업</th><th>상태</th></tr></thead><tbody>'+d.history.map(h=>`<tr><td class="mono">r${h.version}</td><td>${date(h.at)}</td><td>${esc(h.actor)}</td><td>${esc({upsert:'추가 / 수정',delete:'삭제',move:'순서 변경',rollback:'이전 설정 복원'}[h.operation]||h.operation)}</td><td><span class="badge allow">적용 완료</span></td></tr>`).join('')+'</tbody></table></div>':empty('적용 이력이 없습니다','설정 변경을 적용하면 버전과 작업자가 기록됩니다.')}</div>`;
+ }else{
+  $('device-content').innerHTML=`<div class="panel"><div class="toolbar"><div class="toolbar-title">최근 장비 이벤트 <span class="tag">최근 50줄</span></div><a href="/siem/" ${!session.siem_available?'hidden':''}>SIEM에서 검색 ↗</a></div><div class="panel-body"><pre class="log-lines" id="event-log"></pre></div></div>`;$('event-log').textContent=d.events?.length?d.events.join('\n'):'최근 기록이 없습니다.';
+ }
+}
+function drawRows(){
+ const all=rows();const filtered=all.filter(r=>{const text=JSON.stringify(r).toLowerCase();const a=r.fields.action||'accept';return text.includes(search.toLowerCase())&&(!actionFilter||(actionFilter==='allow'?['accept','pass'].includes(a):actionFilter==='deny'?['drop','deny','block','reject'].includes(a):a==='alert'));});
+ $('filter-count').textContent=`${filtered.length} / ${all.length}개`;
+ if(!filtered.length){$('policy-table').innerHTML=(view==='fw'&&tab==='policies'&&!all.length?'<div class="empty-compact">등록된 사용자 정책이 없습니다. 아래 시스템 경로 정책이 적용 중입니다.</div>':empty(all.length?'검색 결과가 없습니다':tab==='objects'?'등록된 객체가 없습니다':'등록된 사용자 정책이 없습니다',all.length?'검색어 또는 동작 필터를 변경해 주세요.':'기본 보호 정책은 유지됩니다. 필요한 정책을 추가해 검토하세요.'))+systemRules();return;}
+ const headers=tab==='objects'?['이름','유형','구성원','관리']:tab==='nat'?['순서','정책 이름','변환 방식','조건','변환 대상','상태','관리']:['순서','정책 이름',view==='waf'?'검사 대상':'출발지',view==='waf'?'일치 조건':'목적지',view==='waf'?'검사 단계':'서비스','동작','로그','상태','관리'];
+ $('policy-table').innerHTML='<table><thead><tr>'+headers.map(h=>'<th>'+h+'</th>').join('')+'</tr></thead><tbody>'+filtered.map(r=>{
+  const f=r.fields,index=all.indexOf(r),actions=`<div class="row-actions"><button data-action="edit" data-id="${r.id}" ${!current.can_preview?'disabled':''}>편집</button>${tab==='policies'&&view==='fw'?`<button data-action="up" data-id="${r.id}" aria-label="${esc(r.name)} 위로 이동" ${index===0||!current.can_preview?'disabled':''}>↑</button><button data-action="down" data-id="${r.id}" aria-label="${esc(r.name)} 아래로 이동" ${index===all.length-1||!current.can_preview?'disabled':''}>↓</button>`:''}<button data-action="delete" data-id="${r.id}" ${!current.can_preview?'disabled':''}>삭제</button></div>`;
+  const name=`<span class="policy-name">${esc(r.name)}</span><small class="policy-id">${view==='fw'?'ID '+r.id:'ID '+r.rule_id}</small>`;
+  if(tab==='objects')return `<tr><td>${name}<small>@${esc(f.name)}</small></td><td><span class="badge">${f.type==='ipv4_addr'?'주소 그룹':'서비스 그룹'}</span></td><td class="mono">${esc(f.elements)}</td><td>${actions}</td></tr>`;
+  const enabled=`<span class="switch-dot ${r.enabled?'on':''}" aria-label="${r.enabled?'활성':'비활성'}"></span>`;
+  if(tab==='nat')return `<tr><td class="cell-muted">${index+1}</td><td>${name}</td><td><span class="badge">${esc(f.kind.toUpperCase())}</span></td><td class="mono">${esc(f.kind==='dnat'?(f.iif||'any')+' / '+(f.dport||'any'):(f.saddr||'any'))}</td><td class="mono">${esc((f.to_ip||f.oif||'interface')+(f.to_port?':'+f.to_port:''))}</td><td>${enabled}</td><td>${actions}</td></tr>`;
+  const src=view==='fw'?f.saddr||'Any':view==='ips'?f.src||'Any':f.variable;
+  const dst=view==='fw'?f.daddr||'Any':view==='ips'?f.dst||'Any':f.operator+' '+f.pattern;
+  const svc=view==='waf'?'Phase '+(f.phase||'2'):(f.proto||'any').toUpperCase()+(f.dport?' / '+f.dport:'');
+  return `<tr><td class="cell-muted">${index+1}</td><td>${name}${current.counters?.[r.id]?`<small>${Number(current.counters[r.id].packets).toLocaleString()} packets</small>`:''}</td><td class="mono">${esc(src)}</td><td class="mono">${esc(dst)}</td><td><span class="badge">${esc(svc)}</span></td><td>${badge(f.action||'accept')}</td><td class="cell-muted">${view!=='fw'||f.log?'기록':'—'}</td><td>${enabled}</td><td>${actions}</td></tr>`;
+ }).join('')+'</tbody></table>'+systemRules();
+}
+function systemRules(){
+ if(view!=='fw'||tab!=='policies'||search||actionFilter)return '';
+ const list=(current.system_rules||[]).filter(r=>r.expr.some(e=>['accept','drop','reject'].some(k=>k in e)));
+ if(!list.length)return '';
+ return '<div class="toolbar"><div class="toolbar-title">시스템 경로 정책 <span class="tag">보호됨</span></div><span class="check-label">사용자 정책 평가 후 적용 · 기본 차단</span></div><table><thead><tr><th>정책</th><th>출발지</th><th>목적지</th><th>서비스 / 조건</th><th>동작</th><th>관리</th></tr></thead><tbody>'+list.map(r=>{
+  const fields={},conditions=[];let action='';
+  for(const e of r.expr){if(e.match){const left=e.match.left,key=left.payload?.field||left.ct?.key||left.meta?.key;const v=e.match.right;const text=v?.prefix?v.prefix.addr+'/'+v.prefix.len:v?.set?v.set.join(', '):typeof v==='object'?JSON.stringify(v):String(v);fields[key]=text;if(!['saddr','daddr'].includes(key))conditions.push((key==='dport'?'TCP / ':key==='sport'?'TCP 응답 / ':key+' ')+text);}for(const k of ['accept','drop','reject'])if(k in e)action=k;}
+  return `<tr><td><span class="policy-name">${fields.dport==='8443'||fields.sport==='8443'?'관리 접속':fields.state==='invalid'?'비정상 연결 차단':'웹 서비스 경로'}</span><small class="policy-id">FORWARD · handle ${r.handle}</small></td><td class="mono">${esc(fields.saddr||'Any')}</td><td class="mono">${esc(fields.daddr||'Any')}</td><td class="mono">${esc(conditions.join(' · '))}</td><td>${badge(action)}</td><td class="cell-muted">${icon('lock')}</td></tr>`;
+ }).join('')+'</tbody></table>';
+}
+function openEditor(row=null){
+ edit={row,kind:kind(),device:view};const f=row?.fields||{};
+ $('editor-title').textContent=(row?'편집':'추가')+' · '+(edit.kind==='object'?'객체':edit.kind==='nat'?'NAT':labels[view]+' 정책');$('editor-eyebrow').textContent=view.toUpperCase()+' CONFIGURATION';
+ let fields=field('name','이름',row?.name||'','정책의 목적을 구분할 수 있는 이름');
+ if(edit.kind==='object'){
+  fields+=field('f_name','객체 식별자',f.name||'','예: trusted_hosts')+select('f_type','객체 유형',[['ipv4_addr','주소 그룹'],['inet_service','서비스 그룹']],f.type||'ipv4_addr')+field('f_elements','구성원',f.elements||'','주소·대역 또는 포트, 쉼표로 구분');
+ }else if(edit.kind==='nat'){
+  fields+=select('f_kind','변환 방식',[['dnat','DNAT · 목적지 변환'],['snat','SNAT · 출발지 변환'],['masquerade','Masquerade · 인터페이스 주소']],f.kind||'dnat')+'<div class="form-row">'+field('f_iif','수신 인터페이스',f.iif||'eth0')+field('f_oif','송신 인터페이스',f.oif||'eth1')+'</div><div class="form-row">'+select('f_proto','프로토콜',['tcp','udp'],f.proto||'tcp')+field('f_dport','수신 포트',f.dport||'','예: 8080')+'</div>'+field('f_saddr','출발지 대역',f.saddr||'','Any')+'<div class="form-row">'+field('f_to_ip','변환 주소',f.to_ip||'','예: 172.29.12.80')+field('f_to_port','변환 포트',f.to_port||'','예: 8080')+'</div>';
+ }else if(view==='fw'){
+  fields+='<div class="info-line">'+icon('arrow')+'FORWARD · 통과 트래픽 필터</div>'+field('f_saddr','출발지',f.saddr||'','Any · IPv4 / CIDR / @주소그룹')+field('f_daddr','목적지',f.daddr||'','Any · IPv4 / CIDR / @주소그룹')+'<div class="form-row">'+select('f_proto','프로토콜',[['','Any'],['tcp','TCP'],['udp','UDP'],['icmp','ICMP']],f.proto??'tcp')+field('f_dport','목적지 포트 / 서비스',f.dport||'','Any · 80, 443 · @서비스그룹')+'</div>'+select('f_action','동작',[['accept','허용'],['drop','차단'],['reject','거부 응답']],f.action||'accept')+check('f_log','일치 트래픽 로그 기록',f.log??true)+'<details class="form-section"><summary>고급 조건</summary><div class="form-row">'+field('f_iif','수신 인터페이스',f.iif||'','Any')+field('f_oif','송신 인터페이스',f.oif||'','Any')+'</div>'+field('f_sport','출발지 포트',f.sport||'','Any')+select('f_ct_state','연결 상태',[['','Any'],['new','신규 연결'],['established,related','기존 / 연관 연결']],f.ct_state||'')+field('f_limit_rate','속도 제한',f.limit_rate||'','예: 10/second')+check('f_limit_over','제한 초과 트래픽에 일치',f.limit_over)+'</details>';
+ }else if(view==='ips'){
+  fields+='<div class="form-row">'+select('f_action','동작',[['alert','탐지'],['drop','차단'],['reject','거부 응답'],['pass','통과']],f.action||'alert')+select('f_proto','프로토콜',['http','tcp','udp','dns','tls','icmp'],f.proto||'http')+'</div><div class="form-row">'+field('f_src','출발지',f.src||'any')+field('f_dst','목적지',f.dst||'any')+'</div><div class="form-row">'+field('f_sport','출발지 포트',f.sport||'any')+field('f_dport','목적지 포트',f.dport||'any')+'</div>'+select('f_buffer','검사 영역',[['','패킷 데이터'],'http.uri','http.user_agent','http.host','http.method','http.header','http.request_body','http.response_body','http.cookie','dns.query','tls.sni'],f.buffer||'http.uri')+field('f_content','일치 문자열',f.content||'','검사할 문자열')+check('f_nocase','대소문자 구분 안 함',f.nocase??true)+'<details class="form-section"><summary>고급 조건</summary>'+field('f_pcre','정규식',f.pcre||'','예: /pattern/i')+select('f_flow','흐름',[['','제한 없음'],['to_server,established','서버 방향 · 연결 수립'],['to_client,established','클라이언트 방향 · 연결 수립']],f.flow||'')+check('f_content_negate','문자열이 없는 경우에 일치',f.content_negate)+'<div class="form-row">'+field('f_threshold_count','탐지 횟수',f.threshold_count||'','예: 10')+field('f_threshold_seconds','시간 (초)',f.threshold_seconds||'','예: 60')+'</div></details>';
+ }else{
+  fields+=select('f_variable','검사 대상',['REQUEST_URI','ARGS','ARGS_NAMES','QUERY_STRING','REQUEST_BODY','REQUEST_HEADERS','REQUEST_HEADERS:User-Agent','REQUEST_COOKIES','REQUEST_FILENAME','REQUEST_LINE','REQUEST_HEADERS:Referer'],f.variable||'REQUEST_URI')+select('f_operator','일치 방식',[['@contains','포함'],['@streq','완전 일치'],['@rx','정규식'],['@beginsWith','시작 문자열'],['@endsWith','끝 문자열'],['@pm','단어 일치']],f.operator||'@contains')+field('f_pattern','탐지 패턴',f.pattern||'','검사할 패턴')+'<div class="form-row">'+select('f_action','동작',[['deny','차단'],['pass','탐지 · 기록'],['drop','연결 종료'],['block','기본 차단']],f.action||'deny')+select('f_severity','심각도',['CRITICAL','ERROR','WARNING','NOTICE'],f.severity||'WARNING')+'</div><details class="form-section"><summary>고급 조건</summary>'+select('f_phase','검사 단계',[['1','Phase 1 · 요청 헤더'],['2','Phase 2 · 요청 본문']],f.phase||'2')+select('f_transform','변환',['none','lowercase','urlDecodeUni','removeNulls','compressWhitespace'],f.transforms?.[0]||'none')+select('f_status','차단 응답',['403','406','429'],f.status||'403')+'</details>';
+ }
+ if(edit.kind!=='object')fields+='<div class="form-section">'+check('enabled','정책 활성화',row?.enabled??true)+'</div>';
+ $('editor-fields').innerHTML=fields;$('editor').showModal();$('policy-form').elements.name.focus();
+}
+async function preview(payload){
+ if(busy)return;busy=true;$('validate-button').disabled=true;
+ try{
+  const device=view,version=current.version;const data=await api('console/'+device+'/preview',{version,payload});
+  review={...data,device};$('editor').close();$('review-diff').textContent=data.diff||'실행 규칙의 변경이 없습니다. 정책 이름이나 활성 상태를 확인해 주세요.';
+  $('review-summary').textContent=labels[device]+' · r'+version+' → r'+(version+1)+' · '+({upsert:'정책 저장',delete:'정책 삭제',move:'정책 순서 변경',rollback:'이전 설정 복원'}[payload.operation]||'설정 변경');
+  $('apply').disabled=!current.write_enabled;$('review-lock').textContent=current.write_enabled?'적용 시 변경 이력과 감사 기록이 저장됩니다.':'쓰기 잠금 상태입니다. 접근 제어에서 허용 후 다시 검토해 주세요.';$('review').showModal();
+ }finally{busy=false;$('validate-button').disabled=false;}
+}
+$('policy-form').onsubmit=e=>{e.preventDefault();act(async()=>{const values=Object.fromEntries(new FormData(e.target));const fields={};for(const [k,v] of Object.entries(values))if(k.startsWith('f_')&&v!=='')fields[k.slice(2)]=v;for(const input of e.target.querySelectorAll('input[type=checkbox][name^=f_]'))fields[input.name.slice(2)]=input.checked;if(fields.transform){fields.transforms=[fields.transform];delete fields.transform;}await preview({operation:'upsert',kind:edit.kind,...(edit.row?{id:edit.row.id}:{}),name:values.name,enabled:edit.kind==='object'||values.enabled==='on',fields});});};
+$('apply').onclick=()=>act(async()=>{if(busy)return;busy=true;$('apply').disabled=true;try{await api('console/'+review.device+'/apply',{version:review.version,token:review.token});$('review').close();notice('변경 사항을 적용했습니다.');await load();}finally{busy=false;$('apply').disabled=!current?.write_enabled;}});
+document.addEventListener('click',e=>{const close=e.target.closest('[data-close]');if(close){$(close.dataset.close).close();return;}const nav=e.target.closest('[data-nav]');if(nav){location.hash=nav.dataset.nav+'/policies';return;}const t=e.target.closest('[data-tab]');if(t){location.hash=view+'/'+t.dataset.tab;return;}const button=e.target.closest('[data-action]');if(!button||button.disabled||busy||!current)return;act(async()=>{const action=button.dataset.action;const row=rows()?.find(r=>r.id===button.dataset.id);if(action==='new')openEditor();if(action==='edit')openEditor(row);if(action==='delete')await preview({operation:'delete',kind:kind(),id:row.id});if(action==='up'||action==='down')await preview({operation:'move',kind:kind(),id:row.id,position:rows().indexOf(row)+(action==='up'?-1:1)});if(action==='rollback')await preview({operation:'rollback'});if(action==='copy'){await navigator.clipboard.writeText(current.raw);notice('전체 규칙을 복사했습니다.');}});});
+async function systemView(sequence){
+ $('system-view').innerHTML='<div class="panel">'+empty('불러오는 중','관리 정보를 확인하고 있습니다.')+'</div>';
+ if(view==='access'){
+  const result=await api('devices');if(sequence!==loadSequence)return;
+  $('system-view').innerHTML='<section class="panel" id="devices"><div class="toolbar"><div class="toolbar-title">장비 쓰기 권한</div><span class="tag">관리자 설정</span></div><div class="panel-body"><p class="muted">쓰기 잠금 상태에서도 정책 조회와 검토가 가능합니다. 실제 적용은 관리자 또는 운영자에게만 허용됩니다.</p><ul id="device-list" class="device-permission">'+result.devices.map(d=>`<li><div><strong>${labels[d.device]} <span class="tag">${d.device.toUpperCase()}</span></strong><span class="muted">${d.write_enabled?'설정 적용 허용':'설정 적용 잠금'} · 권한 버전 ${d.version}</span></div><button class="${d.write_enabled?'secondary':'primary'}" data-permission="${d.device}" ${session.role!=='admin'?'disabled':''}>${d.write_enabled?'잠그기':'쓰기 허용'}</button></li>`).join('')+'</ul></div></section>';
+  for(const b of document.querySelectorAll('[data-permission]'))b.onclick=()=>act(async()=>{const d=result.devices.find(d=>d.device===b.dataset.permission);await api('devices/'+d.device,{write_enabled:!d.write_enabled,version:d.version});notice('장비 쓰기 권한을 변경했습니다.');await load();});
+ }else if(view==='users'){
+  const result=await api('users');if(sequence!==loadSequence)return;
+  $('system-view').innerHTML='<div class="split" id="admin"><section class="panel"><div class="toolbar"><div class="toolbar-title">계정 목록</div></div><div class="table-wrap"><table id="users"><thead><tr><th>계정</th><th>역할</th><th>상태</th></tr></thead><tbody>'+result.users.map(u=>`<tr><td>${esc(u.user__username)}</td><td>${esc({admin:'관리자',operator:'운영자',viewer:'조회자'}[u.role])}</td><td><span class="badge ${u.user__is_active?'allow':'off'}">${u.user__is_active?'활성':'비활성'}</span></td></tr>`).join('')+'</tbody></table></div></section><section class="panel"><div class="toolbar"><div class="toolbar-title">계정 추가 / 갱신</div></div><form id="user-form" class="panel-body">'+field('username','계정','','영문 소문자로 시작, 3–32자')+select('role','역할',[['viewer','조회자'],['operator','운영자'],['admin','관리자']],'viewer')+field('password','초기 / 재설정 비밀번호','','신규 계정은 14자 이상 필수','password')+check('active','계정 활성화',true)+'<p class="muted">기존 계정 이름을 입력하면 역할·활성 상태를 갱신합니다. 비밀번호를 비워 두면 기존 비밀번호를 유지합니다.</p><button class="primary">계정 저장</button></form></section></div>';
+  $('user-form').onsubmit=e=>{e.preventDefault();act(async()=>{const b=Object.fromEntries(new FormData(e.target));b.active=b.active==='on';if(!b.password)delete b.password;await api('users',b);notice('계정을 저장했습니다.');await load();});};
+ }else{
+  const result=await api('audit');if(sequence!==loadSequence)return;
+  $('system-view').innerHTML='<section class="panel"><div class="toolbar"><div class="toolbar-title">감사 기록 <span class="tag">최근 100건</span></div></div><div class="table-wrap"><table id="audit" class="event-table"><thead><tr><th>시각</th><th>계정</th><th>작업</th><th>대상</th><th>결과</th><th>변경 내용</th></tr></thead><tbody>'+result.events.map(a=>`<tr><td>${date(a.at)}</td><td>${esc(a.actor)}</td><td>${esc(a.action)}</td><td>${esc(a.target||'—')}</td><td><span class="badge ${['denied','rejected'].includes(a.outcome)?'deny':'allow'}">${esc(a.outcome)}</span></td><td class="mono">${esc(JSON.stringify(a.before))} → ${esc(JSON.stringify(a.after))}</td></tr>`).join('')+'</tbody></table></div></section>';
+ }
+ $('sync-status').textContent='마지막 확인 '+date(new Date());
+}
+$('login-form').onsubmit=e=>{e.preventDefault();act(async()=>{await api('login',Object.fromEntries(new FormData(e.target)));e.target.reset();await refreshSession();});};
+$('password-form').onsubmit=e=>{e.preventDefault();act(async()=>{await api('password',Object.fromEntries(new FormData(e.target)));e.target.reset();$('password-panel').close();notice('비밀번호를 변경했습니다.');await refreshSession();});};
+$('password-open').onclick=()=>$('password-panel').showModal();$('logout').onclick=()=>act(async()=>{await api('logout',{});await refreshSession();});$('refresh').onclick=()=>act(load);window.addEventListener('hashchange',route);act(refreshSession);

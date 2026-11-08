@@ -15,3 +15,10 @@
 !web/envvars
 !runtime/
 !runtime/entrypoint.sh
+
+!runtime/console/
+!runtime/console/*.py
+!web/console.conf
+!web/management.conf
+!web/siem.conf
+!fw/nflog.py

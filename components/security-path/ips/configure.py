@@ -1,5 +1,6 @@
 """Adapt the distribution's configuration without rewriting installed files."""
 from pathlib import Path
+import os
 import yaml
 
 
@@ -9,7 +10,7 @@ def configure(original):
     original["nfq"] = {"mode": "accept", "fail-open": False}
     original["default-log-dir"] = "/var/log/suricata"
     original["default-rule-path"] = "/etc/xoc"
-    original["rule-files"] = ["probe.rules"]
+    original["rule-files"] = ["probe.rules"] + (["/var/lib/xoc-console/current.conf"] if os.environ.get("XOC_POLICY_STATE") == "1" else [])
     original["stats"] = {"enabled": True, "interval": 8}
     original["unix-command"] = {"enabled": True, "filename": "/run/suricata-command.socket"}
     original["pid-file"] = "/run/suricata.pid"

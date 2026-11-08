@@ -23,7 +23,7 @@ def prepare(engine, project, root, selected, host=None, state=STATE, tls=TLS_STA
     config = private_json(path) if path.exists() else {'secret_key': secrets.token_urlsafe(64), 'bootstrap_password': secrets.token_urlsafe(32)}
     previous = private_json(tls/'credentials.json').get('public_host') if (tls/'credentials.json').exists() else None
     host = public_host(host or config.get('public_host') or previous or json.loads(subprocess.check_output(['ip','-j','-4','route','get','1.1.1.1'],text=True))[0]['prefsrc'])
-    config.update(public_host=host, siem_available='siem-ui' in selected)
+    config.update(public_host=host, siem_available='siem-ui' in selected, consoles=[d for d in ('fw','ips','waf') if 'console-'+d in selected])
     write(path, json.dumps(config))
     if not (tls/'ca.pem').exists():
         subprocess.run(['openssl','req','-x509','-newkey','rsa:3072','-nodes','-days','3650','-sha256','-keyout',str(tls/'ca-key.pem'),'-out',str(tls/'ca.pem'),'-subj','/CN=xOC Range local CA','-addext','basicConstraints=critical,CA:TRUE','-addext','keyUsage=critical,keyCertSign,cRLSign'],check=True,capture_output=True)
@@ -34,9 +34,13 @@ def prepare(engine, project, root, selected, host=None, state=STATE, tls=TLS_STA
         os.chown(base, uid, uid if gid is None else gid); base.chmod(mode)
         return base
     config_volume = volume('platform-config', 65532)
-    write(config_volume/'config.json', json.dumps({k:config[k] for k in ('secret_key','bootstrap_password','public_host','siem_available')}), 65532)
+    write(config_volume/'config.json', json.dumps({k:config[k] for k in ('secret_key','bootstrap_password','public_host','siem_available','consoles')}), 65532)
     volume('platform-data', 65532)
     volume('platform-socket', 65532, 33, 0o770)
+    for device in ('fw','ips','waf'):
+        volume('console-'+device+'-state', 33 if device=='waf' else 0)
+        if 'console-'+device in selected:
+            volume('console-'+device+'-socket', 33 if device=='waf' else 0, 33, 0o770)
     ingress = volume('ingress-config', 65532)
     write(ingress/'haproxy.cfg', ingress_config(host), 65532)
     write(ingress/'ingress.pem', (tls/'web.pem').read_bytes()+(tls/'web-key.pem').read_bytes(), 65532)

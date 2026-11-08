@@ -10,7 +10,7 @@
 sudo bash install.sh
 ```
 
-현재는 개발 버전이라 위 실행이 experimental security-path를 선택한다. platform·fw·IPS·WAF, Wazuh Manager/API, osquery·Sysmon·auditd와 무해한 검증용 client/backend를 설치한다. `management`가 공통 HTTPS·로그인·역할·감사·장비 쓰기 정책을 제공한다. 기본 선택인 `siem-ui`는 같은 버전의 Wazuh Indexer·전용 Dashboard를 추가한다. `--without siem-ui`는 웹 관제만, `--without siem`은 웹 관제와 SIEM·xOC 호스트 수집을 함께 제외한다. SIEM 제외 시에도 `/core/` 관리와 계정은 유지한다. 실제 장비 구성 콘솔·사용자 포털은 아직 포함하지 않으며, 전체 Community 완성본으로 성공을 표시하지 않는다. [8종 수집·검증](SIEM.md)을 함께 참고한다.
+현재는 개발 버전이라 위 실행이 experimental security-path를 선택한다. platform·fw·IPS·WAF, Wazuh Manager/API, osquery·Sysmon·auditd와 무해한 검증용 client/backend를 설치한다. `management`가 공통 HTTPS·로그인·역할·감사·장비 쓰기 정책을 제공한다. 기본 선택인 `siem-ui`는 같은 버전의 Wazuh Indexer·전용 Dashboard를 추가한다. `--without siem-ui`는 웹 관제만, `--without siem`은 웹 관제와 SIEM·xOC 호스트 수집을 함께 제외한다. SIEM 제외 시에도 `/core/` 관리와 계정은 유지한다. FW·IPS·WAF 구성 콘솔 초안을 포함한다. 사용자 포털과 전체 Community 배포는 개발 중이며 전체 완성본으로 성공을 표시하지 않는다. [8종 수집·검증](SIEM.md)을 함께 참고한다.
 
 현재 프로필의 실행 전 검사는 2 vCPU, 웹 관제 포함 시 RAM 약 8GB(제외 시 약 4GB), 데이터 경로 여유 20GB 이상이다. 이번 웹 관제 검증 VM은 8 vCPU·16GB RAM이다. 이는 전체 Core 최소 사양을 실측한 값이 아니다. 전체 개발을 위한 권장 예산은 8 vCPU·32GB RAM·OS 80GB + 데이터 300GB다.
 
@@ -99,3 +99,7 @@ sudo xoc catalog
 기본 설치는 SIEM을 포함하며 15개 통신 검사에 이어 실제 8종 로그가 Wazuh에서 디코딩되는지 검사한다. xOC collector·osquery·Sysmon·auditd 구성을 설치기가 수행한다. `last-install.json`에 선택 모듈과 SIEM 검사 결과를 기록한다. 제외·재포함 시 컨테이너 로그 볼륨과 원본 DB를 삭제하지 않으며, source volume의 안정된 식별자로 재수집 중복을 방지한다. 실험 중 초기 디코더 오류는 원본을 보관한 채 수정 후 재처리했다.
 
 웹 관제 제외 시 Indexer·Dashboard 데이터와 설치별 CA·비밀번호를 보존한다. 재포함 또는 재설치는 기본 saved object를 덮어쓰지 않는다. 빈 Indexer로 복구할 때는 보존한 원본 C1을 다시 전송하며, 미전송·미확인 데이터는 성공 처리하지 않는다. Ubuntu 26.04의 심볼릭 링크 명령은 auditd 규칙에 실제 실행 파일 경로를 기록한다. 수용 검사는 `xoc_probe` 실행 이벤트를 확인한다. 이미 실행 중인 auditd를 다시 start하여 Ubuntu 26.04의 `audit-rules` oneshot과 충돌하지 않도록 하며, 진행 중인 규칙 로더가 끝난 뒤 자체 규칙만 조정한다.
+
+## 장비 콘솔 초안
+
+기본 설치에는 `console-fw`, `console-ips`, `console-waf`를 포함한다. `--without console-fw` 등으로 개별 콘솔을 제외할 수 있다. 기존 정책은 관리 기반의 장비별 영속 볼륨에 유지되며, UI를 제외해도 계속 적용된다. `/core/`의 접근 제어에서 관리자가 쓰기를 허용하면 검토한 정책을 적용할 수 있다. [사용 범위](DEVICE-CONSOLES.md)와 [검증 결과](K08-VALIDATION.md)를 참고한다.

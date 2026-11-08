@@ -162,7 +162,7 @@ def plan(root: Path, *, preset="bootstrap", include=(), without=(), allow_fixtur
             raise XocError("experimental_component", "The security-path runtime requires explicit experimental selection.")
         siem = identifier == "siem" and manifest["kind"] == "component"
         siem_ui = identifier == "siem-ui" and manifest["kind"] == "component"
-        schema = "security-compose-fragment" if security_path else "siem-compose-fragment" if siem else "siem-ui-compose-fragment" if siem_ui else "management-compose-fragment" if identifier == "management" else "compose-fragment"
+        schema = "security-compose-fragment" if security_path else "siem-compose-fragment" if siem else "siem-ui-compose-fragment" if siem_ui else "management-compose-fragment" if identifier == "management" else "console-compose-fragment" if identifier in ("console-fw","console-ips","console-waf") else "compose-fragment"
         fragment = validate(yaml_document(fragment_path), schema)
         if siem:
             service = fragment["services"]["siem"]
@@ -211,6 +211,19 @@ def plan(root: Path, *, preset="bootstrap", include=(), without=(), allow_fixtur
         compose['services']['web']['volumes'] += ['web-tls:/run/xoc-tls:ro', 'platform-socket:/run/xoc-platform-socket:ro']
         compose['services']['web']['environment']['XOC_MANAGEMENT'] = '1'
         compose['services']['platform'].update(user='65532:33', volumes=['platform-config:/run/xoc-platform:ro', 'platform-data:/var/lib/xoc-platform', 'platform-socket:/run/xoc-platform-socket'], tmpfs=['/tmp:size=32m,mode=1777'])
+    if 'management' in selected:
+        for device, service in (('fw','fw'), ('ips','ips'), ('waf','web')):
+            # Keep persistent device policy even when its optional GUI is unselected.
+            volume = 'console-' + device + '-state'
+            compose.setdefault('volumes', {})[volume] = {}
+            compose['services'][service].setdefault('volumes', []).append(volume + ':/var/lib/xoc-console')
+            compose['services'][service].setdefault('environment', {})['XOC_POLICY_STATE'] = '1'
+            if 'console-' + device in selected:
+                socket = 'console-' + device + '-socket'
+                compose['volumes'][socket] = {}
+                compose['services'][service]['volumes'].append(socket + ':/run/xoc-console')
+                compose['services'][service]['environment']['XOC_CONSOLE'] = '1'
+                compose['services']['platform']['volumes'].append(socket + ':/run/xoc-console-' + device + ':ro')
     if 'siem-ui' in selected:
         compose['services']['web']['environment']['XOC_SIEM_UI'] = '1'
     check_addresses(compose)

@@ -27,18 +27,24 @@ contracts:
 build_inputs:
 - .dockerignore
 - fw/Dockerfile
-- fw/rules.nft
 - fw/nflog.py
+- fw/rules.nft
 - ips/Dockerfile
 - ips/configure.py
 - ips/probe.rules
 - ips/rules.nft
+- runtime/console/broker.py
+- runtime/console/engine.py
+- runtime/console/fw_builders.py
+- runtime/console/ips_builders.py
+- runtime/console/waf_builders.py
 - runtime/entrypoint.sh
 - web/Dockerfile
 - web/apache.conf
+- web/console.conf
 - web/envvars
+- web/management.conf
 - web/modsecurity.conf
 - web/siem.conf
 - web/start.py
-- web/management.conf
 compose: compose.yaml
