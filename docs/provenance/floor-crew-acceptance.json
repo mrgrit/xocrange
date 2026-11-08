@@ -1,0 +1,44 @@
+{
+  "status": "passed",
+  "verified_at": "2026-11-08T15:21:06.531244+00:00",
+  "release_source_sha256": "8bfde4893b555f991752d7552d2db039692abf169ec12fdef7c6f8af5acf6969",
+  "visible_crew": {
+    "B1": 1,
+    "1F": 1,
+    "2F": 2,
+    "3F": 1,
+    "4F": 4,
+    "5F": 2,
+    "6F": 0,
+    "7F": 1,
+    "8F": 4,
+    "XOC": 2,
+    "SITE": 0
+  },
+  "checks": {
+    "building_and_expanded_academy_empty": true,
+    "livefire_only_one_seated_cockpit_avatar": true,
+    "original_floor_positions_preserved": true,
+    "no_browser_errors": true
+  },
+  "vm_datacenter_browser": {
+    "passed": 83,
+    "failed": 0
+  },
+  "installer_acceptance": {
+    "fresh": true,
+    "checks_passed": {
+      "acceptance": 15,
+      "management_acceptance": 6,
+      "siem_acceptance": 8,
+      "siem_ui_acceptance": 52,
+      "siem_native": 8
+    }
+  },
+  "content_module": {
+    "schema_version": "xoc.content-lock/0.1.0",
+    "repository": "https://github.com/mrgrit/xocrange_contents",
+    "commit": "85c45d6453e953d835cce9e60ccd957be976146e",
+    "manifest_sha256": "c3bc5236f40bf47f0c91faf856c7b631270715beea84b801f48c4d57fa9ab35f"
+  }
+}

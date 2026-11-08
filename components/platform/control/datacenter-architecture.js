@@ -1255,8 +1255,6 @@ function drawControlCenterRoom(fid,detail) {
     island.append(contentDisplay(x,y,z+.66,4.8,1.78,'연계 공방전 · '+(i+1),'#bca6ef',[{title:subject.title,detail:count===undefined?'콘텐츠 조회':count+'개 시나리오 · Red / Blue / Purple',route:learning?'#academy/scenarios/'+subject.id:null}]));
     put(x+2,y+.8,island);
    });
-   put(3.3,6.3,drawRoomWorker({id:'content-curator',name:'콘텐츠 큐레이터'},3.3,6.3,z));
-   put(8.7,6.3,drawRoomWorker({id:'learning-guide',name:'학습 안내'},8.7,6.3,z));
   }else if(live){
    g.setAttribute('data-training-mode','pilot');
    g.append(contentLettering(.55,.5,z+.95+contentHeight(3.1)+.68,'LIVE FIRE  /  CYBER COMBAT RANGE',.23,'#c9fbf2'));
@@ -1267,7 +1265,6 @@ function drawControlCenterRoom(fid,detail) {
    const state=contentDisplay(6.2,.5,z+.95,5.2,3.1,'TRAINING / 훈련 현황','#bda5f4',[{title:'개인 훈련',detail:'훈련 엔진 연결 전'},{title:'교수자 리그',detail:'리그 기능 연결 전'}],'현재 시나리오와 미션 열람 가능');state.setAttribute('data-mission-panel','training');g.append(state);
    const cockpit=trainingCockpit(1.35,3.1,z);put(4,5,cockpit);
    const missions=contentDisplay(6.7,4.7,z+.8,4.8,3.1,'MISSION BRIEF / 미션 보기','#81e9dd',scenarios.slice(0,2).map(s=>({title:s.title,detail:s.missions+'개 미션 · '+s.total_points+'점',route:'#academy/scenario/'+s.id})),'Red 공격 → Blue 대응 → Purple 보고');missions.setAttribute('data-mission-panel','missions');put(9.1,5.1,missions);
-   put(6.1,6.8,drawRoomWorker({id:'defense-coach',name:'대응 코치'},6.1,6.8,z));
   }else{
    g.append(roomLettering(.7,.2,z+1.98,'AGENT OFFICE',.23,'#d0e2c9'));
    const staff=crewOf('4F').filter(w=>w.id!=='ops-lead');

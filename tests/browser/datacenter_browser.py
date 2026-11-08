@@ -54,13 +54,13 @@ with Server(('127.0.0.1',0),Proxy) as server:
             checks['gray_preview_keyboard_access']=page.locator('.dc-level-preview').evaluate_all("nodes=>nodes.every(n=>n.getAttribute('aria-disabled')==='false'&&n.getAttribute('tabindex')==='0'&&getComputedStyle(n).filter.includes('grayscale(1)'))")
             checks['all_floors_named']=all(t in page.locator('.dc-world-labels').text_content() for t in ('아카데미','Live Fire','Agent Office'))
             avatar_layout=page.locator('[data-dc-floor]').evaluate_all("nodes=>Object.fromEntries(nodes.map(n=>[n.dataset.dcFloor,[...n.querySelectorAll('[data-worker-figure]')].map(a=>({id:a.dataset.workerFigure,position:a.dataset.avatarPosition,width:Number(a.dataset.avatarWidth)}))]))")
-            counts={'B1':1,'1F':1,'2F':2,'3F':1,'4F':4,'5F':2,'XOC':2,'SITE':0,'6F':2,'7F':2,'8F':4}
+            counts={'B1':1,'1F':1,'2F':2,'3F':1,'4F':4,'5F':2,'XOC':2,'SITE':0,'6F':0,'7F':1,'8F':4}
             checks['original_and_extension_crew_counts']={f:len(v) for f,v in avatar_layout.items()}==counts
             original_positions={'facility-engineer':(4.8,3.5),'physical-security':(5.15,5.9),'network-engineer':(2.3,7),'systems-engineer':(10.3,7),'gpu-platform-engineer':(3.3,6.2),'service-desk':(2.38,3.65),'application-developer':(2.38,6.55),'compliance-auditor':(5.53,3.65),'ops-lead':(9.63,6.62),'skill-researcher':(2.58,4.55),'skill-evaluator':(8.33,4.55),'agent-supervisor':(2.68,4.8),'soc-analyst':(8.53,4.8)}
             original=[v for floor,rows in avatar_layout.items() if floor not in ('6F','7F','8F') for v in rows]
             checks['kt66_original_positions_preserved']=len(original)==13 and all(all(abs(float(actual)-expected)<1e-8 for actual,expected in zip(v['position'].split(','),(*original_positions[v['id']],.22))) for v in original)
             checks['kt66_avatar_size_preserved']=page.locator('[data-worker-figure]').evaluate_all("nodes=>nodes.every(n=>{const a=n.querySelector('svg');return Number(n.dataset.avatarWidth)===(a.dataset.avatarSeated==='true'?22:24)&&parseFloat(getComputedStyle(a).width)===Number(n.dataset.avatarWidth)&&getComputedStyle(a).stroke==='none'})")
-            checks['helmet_and_suit_variants']=page.locator('[data-avatar-design]').evaluate_all("nodes=>new Set(nodes.map(n=>n.dataset.avatarRole)).size===17&&new Set(nodes.map(n=>n.dataset.avatarRank)).size===6")
+            checks['helmet_and_suit_variants']=page.locator('[data-avatar-design]').evaluate_all("nodes=>new Set(nodes.map(n=>n.dataset.avatarRole)).size===14&&new Set(nodes.map(n=>n.dataset.avatarRank)).size===6")
             checks['no_tier_selector']=page.locator('#dc-stage select').count()==0
             checks['floor_toolbar_scope']=page.locator('[data-dc-mode=floor]').count()==0
             checks['desktop_fills_view_without_page_scroll']=page.evaluate('document.documentElement.scrollHeight <= innerHeight+2')
@@ -69,6 +69,9 @@ with Server(('127.0.0.1',0),Proxy) as server:
                 checks['building_has_no_separate_learning_panel']=page.locator('#dc-learning').count()==0
                 page.locator('[data-dc-floor="6F"]').click();expect(page.locator('#dc-stage')).to_have_attribute('data-mode','learning')
                 expect(page.locator('.al-card')).to_have_count(24);checks['floor_toolbar_scope'] &= page.locator('[data-dc-mode=floor]').count()==0;checks['floor6_displays_real_catalog']=page.locator('a.al-card').count()==1
+                page.locator('[data-dc-design=space]').click();expect(page.locator('[data-extension-floor="6F"]')).to_be_visible()
+                checks['original_and_extension_crew_counts'] &= page.locator('[data-extension-floor="6F"] [data-worker-figure]').count()==0
+                page.locator('[data-dc-design=workspace]').click();expect(page.locator('a.al-card.is-available')).to_be_visible()
                 page.locator('a.al-card.is-available').click();expect(page.locator('.ac-lesson-card').first).to_be_visible()
                 checks['floor6_screen_opens_course']=True
                 page.goto(base+'/core/#datacenter');expect(page.locator('#dc-stage')).to_have_attribute('data-mode','learning');page.locator('[data-dc-mode=building]').click();page.locator('.dc-level-active').first.wait_for()
@@ -82,7 +85,7 @@ with Server(('127.0.0.1',0),Proxy) as server:
                 if fid in ('4F','6F','7F','8F'):
                     page.screenshot(path=str(a.output.with_suffix('.'+fid+'.png')),full_page=True)
                 if fid=='7F':
-                    checks['live_fire_one_seat']=page.locator('[data-training-cockpit=single-seat]').count()==1
+                    checks['live_fire_one_seat']=page.locator('[data-training-cockpit=single-seat]').count()==1 and page.locator('[data-worker-figure]').count()==1 and page.locator('[data-training-cockpit=single-seat] [data-avatar-seated=true]').count()==1
                     checks['four_training_panels']=page.locator('[data-mission-panel]').count()==4
                     page.locator('[data-dc-design=workspace]').click()
                     if academy_enabled:
