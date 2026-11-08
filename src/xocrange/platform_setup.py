@@ -1,6 +1,7 @@
 """Provision the common gateway and private management volumes without SIEM."""
 import json
 import os
+import re
 from pathlib import Path
 import secrets
 import subprocess
@@ -26,6 +27,10 @@ def prepare(engine, project, root, selected, host=None, state=STATE, tls=TLS_STA
     previous = private_json(tls/'credentials.json').get('public_host') if (tls/'credentials.json').exists() else None
     host = public_host(host or config.get('public_host') or previous or json.loads(subprocess.check_output(['ip','-j','-4','route','get','1.1.1.1'],text=True))[0]['prefsrc'])
     config.update(public_host=host, siem_available='siem-ui' in selected, consoles=[d for d in ('fw','ips','waf') if 'console-'+d in selected])
+    installer_user = os.environ.get('SUDO_USER', '')
+    if installer_user != 'root' and re.fullmatch(r'[a-z_][a-z0-9_-]{0,31}', installer_user):
+        config.setdefault('ssh_username', installer_user)
+    config.setdefault('ssh_username', None)
     config.setdefault('installation_id', str(uuid.uuid4()))
     write(path, json.dumps(config))
     if not (tls/'ca.pem').exists():
@@ -37,7 +42,7 @@ def prepare(engine, project, root, selected, host=None, state=STATE, tls=TLS_STA
         os.chown(base, uid, uid if gid is None else gid); base.chmod(mode)
         return base
     config_volume = volume('platform-config', 65532)
-    write(config_volume/'config.json', json.dumps({k:config[k] for k in ('secret_key','bootstrap_password','public_host','siem_available','consoles')}), 65532)
+    write(config_volume/'config.json', json.dumps({k:config[k] for k in ('secret_key','bootstrap_password','public_host','siem_available','consoles','ssh_username')}), 65532)
     if planned is not None:
         write(config_volume/'registry.json', json.dumps(build_registry(planned, config['installation_id'])), 65532)
     volume('platform-observation', 0, 33, 0o750)

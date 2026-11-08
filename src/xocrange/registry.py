@@ -19,7 +19,7 @@ SERVICE_LABELS = {
 
 def registrations(manifests):
     panels, identifiers, routes = [], set(), set()
-    owned_routes = {'portal':'/core/#portal','noc':'/core/#noc','academy-reader':'/core/#academy',
+    owned_routes = {'portal':'/core/#portal','noc':('/core/#noc','/core/#datacenter'),'academy-reader':'/core/#academy',
                     'console-fw':'/core/#fw/policies','console-ips':'/core/#ips/policies',
                     'console-waf':'/core/#waf/policies','siem-ui':'/siem/'}
     for manifest in manifests:
@@ -27,7 +27,8 @@ def registrations(manifests):
             validate(panel, 'c4-panel')
             if manifest.get('contracts', {}).get('C4') != '0.1.0':
                 raise XocError('missing_contract', 'UI registrations require C4 v0.1.')
-            if panel['route'] != owned_routes.get(manifest['id'], '/core/#module/' + manifest['id']):
+            owned = owned_routes.get(manifest['id'], '/core/#module/' + manifest['id'])
+            if panel['route'] not in ((owned,) if isinstance(owned,str) else owned):
                 raise XocError('ui_route_owner', 'A UI panel must use its component-owned local route.')
             if panel['id'] in identifiers or panel['route'] in routes:
                 raise XocError('ui_conflict', 'UI identifiers and routes must have one selected owner.')

@@ -1,0 +1,95 @@
+"""Core visualization policy. Commercial floor data is never supplied by Core."""
+from django.conf import settings
+from django.http import JsonResponse
+import re
+from django.views.decorators.http import require_GET
+from .security import protected
+from .workspace import registry, snapshot, panels
+
+
+# 6F–8F are the requested academy, live-fire and student-company extension.
+# xOC remains a separately named restricted operations area.
+FLOORS = [
+    ('B1', '전력 · 냉각 설비', 'INFRASTRUCTURE', 'live-fire'),
+    ('1F', '보안 로비', 'SECURITY LOBBY', 'live-fire'),
+    ('2F', '일반 전산실', 'CORE SECURITY', 'community'),
+    ('3F', 'AI 전산실', 'AI COMPUTE', 'live-fire'),
+    ('4F', '운영 사무실', 'OPERATIONS', 'live-fire'),
+    ('5F', 'AI 연구소', 'RESEARCH LAB', 'live-fire'),
+    ('6F', '아카데미', 'ACADEMY', 'community'),
+    ('7F', 'Live Fire', 'CYBER RANGE', 'live-fire'),
+    ('8F', '가상회사', 'VIRTUAL COMPANY', 'joint-force'),
+    ('XOC', 'xOC 관제센터', 'JOINT OPERATIONS', 'joint-force'),
+    ('SITE', '옥외 설비', 'OUTDOOR INFRASTRUCTURE', 'live-fire'),
+]
+
+# Inherit the kt66 rack identities and positions; install-only Core management
+# services share R-2F-02 while their commercial 4F workspace is unavailable.
+RACKS = [
+    dict(id='R-2F-01', title='네트워크 · 보안 · 웹 서비스', floor='2F', aisle='A', units=42, position=[3, 3]),
+    dict(id='R-2F-02', title='SIEM · Core 관리', floor='2F', aisle='A', units=42, position=[3, 5]),
+]
+DESCRIPTIONS = {
+    'ingress': '외부 HTTPS 연결을 받아 FW → IPS → WAF 보안 검사 경로로 전달하는 진입 게이트웨이입니다.',
+    'fw': 'nftables 방화벽입니다. FORWARD 필터 정책과 NAT로 네트워크 구간 사이의 접근을 제어합니다.',
+    'ips': 'Suricata 인라인 침입 방지 장비입니다. NFQUEUE 경로의 패킷을 검사하고 적용된 규칙에 따라 탐지·차단합니다.',
+    'web': 'Apache와 ModSecurity 기반 웹 방화벽입니다. 웹 요청을 검사하고 허용된 서비스로 전달하며 접근·오류·차단 로그를 기록합니다.',
+    'siem': 'Wazuh Manager입니다. 수집된 보안 로그를 디코딩하고 탐지 규칙으로 분석해 경보와 원본 확인 기록을 생성합니다.',
+    'indexer': 'Wazuh Indexer입니다. 보안 이벤트와 경보를 색인·저장하고 대시보드의 검색 요청을 처리합니다.',
+    'dashboard': 'Wazuh Dashboard입니다. 보안 이벤트의 검색·분석과 Wazuh 관리 화면을 제공합니다. Core와 별도 계정을 사용합니다.',
+    'platform': 'Core 공통 관리 서비스입니다. 로그인·역할·감사·선택 설치 등록부와 보안 장비 콘솔의 접근을 관리합니다.',
+    'lab-client': '설치 검증용 클라이언트입니다. 보안 검사 경로를 통과하는 정상 요청과 차단 표식 요청을 생성합니다.',
+    'lab-target': '설치 검증용 웹 타깃입니다. 정상 통신·접근 제한·경로 복구를 검증하는 응답 서버입니다.',
+}
+
+
+def device_metadata(asset, available_panels):
+    service = asset['service']
+    if not re.fullmatch(r'[a-z][a-z0-9-]{0,63}', service):
+        raise ValueError('Invalid registered service')
+    rack = 'R-2F-02' if service in ('siem', 'indexer', 'dashboard', 'platform') else 'R-2F-01'
+    panel_id = {'fw':'fw', 'ips':'ips', 'web':'waf', 'siem':'siem', 'indexer':'siem',
+                'dashboard':'siem', 'platform':'portal'}.get(service)
+    panel = next((p for p in available_panels if p['id'] == panel_id), None)
+    # Commands are text for the user's own SSH session, never executed by Core.
+    selector = ('sudo docker ps -q --filter label=com.docker.compose.project=xoc-core-security-path '
+                '--filter label=com.docker.compose.service=' + service)
+    return dict(asset, rack_id=rack, description=DESCRIPTIONS.get(service, '선택 설치된 Core 서비스입니다.'),
+                web_console=panel['route'] if panel else None,
+                access={'kind':'container_via_host', 'direct_ssh':False,
+                        'shell_command':'sudo docker exec -it "$(' + selector + ')" sh'})
+
+
+@require_GET
+@protected('registry.read')
+def endpoint(request, floor=None):
+    try:
+        data = registry()
+        if not any(c['id'] == 'noc' for c in data['components']):
+            return JsonResponse({'error':'component_not_installed'},status=404)
+        if floor is not None and floor not in {f[0] for f in FLOORS}:
+            return JsonResponse({'error':'not_found'},status=404)
+        # No client tier/floor flags, query parameters or unverified license
+        # strings can unlock a floor. Commercial providers follow C7 in K10.
+        if floor is not None and floor != '2F':
+            return JsonResponse({'error':'floor_unavailable'},status=403)
+        value = snapshot(data)
+        value['assets'] = [a for a in value['assets'] if a['floor'] == '2F'
+                           and a['tenant_id'] == 'community' and a['range_id'] == 'local']
+        available_panels = panels(data, request.user.profile.role)
+        value['assets'] = [device_metadata(a, available_panels) for a in value['assets']]
+        ssh_username = settings.CONFIG.get('ssh_username')
+        if not isinstance(ssh_username, str) or not re.fullmatch(r'[a-z_][a-z0-9_-]{0,31}', ssh_username):
+            ssh_username = None
+        value.update(schema_version='xoc.datacenter/0.1.0', tier='community',
+                     panels=available_panels, racks=[dict(r, asset_ids=[a['asset_id'] for a in value['assets'] if a['rack_id']==r['id']]) for r in RACKS],
+                     host_access={'host':settings.CONFIG['public_host'], 'username_hint':ssh_username, 'port':22},
+                     floors=[dict(id=i,title=t,subtitle=s,minimum_tier=m,enabled=i=='2F',
+                                  access_requirement={'6F':'institution_content_purchase',
+                                                      '7F':'institution_scenario_purchase',
+                                                      '8F':'joint_force_virtual_company'}.get(i,'edition'),
+                                  unavailable_reason=None if i=='2F' else 'not_licensed') for i,t,s,m in FLOORS],
+                     selected_floor=floor, allowed_floors=['2F'])
+        return JsonResponse(value)
+    except (OSError, ValueError, KeyError, TypeError):
+        return JsonResponse({'error':'registry_unavailable'},status=503)

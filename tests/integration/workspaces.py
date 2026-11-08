@@ -11,7 +11,7 @@ from xocrange.ui_setup import private_json,owned_volume
 spec=importlib.util.spec_from_file_location('gateway',a.root/'scripts/verify-platform.py');gateway=importlib.util.module_from_spec(spec);spec.loader.exec_module(gateway)
 directory,plan=checked_plan(a.root,a.plan);engine=Docker(directory/'compose.yaml',plan['compose']['name'])
 c=private_json(STATE/'credentials.json');s=gateway.Session(c['public_host']);checks={}
-for path in ('registry','noc','library'):
+for path in ('datacenter','registry','noc','library'):
     checks['anonymous_'+path+'_denied']=s.request('/core/api/'+path)[0]==401
 checks['login_through_security_path']=s.login('admin',c.get('admin_password',c['bootstrap_password']))[0]==200
 code,data,headers,raw=s.request('/core/api/registry')
@@ -28,11 +28,31 @@ selected=set(plan['lock']['selected'])
 code,noc,_,_=s.request('/core/api/noc')
 checks['noc_selection']=code==(200 if 'noc' in selected else 404)
 if code==200:checks['only_second_floor']=noc['floor']=='2F' and {a['floor'] for a in noc['assets']}=={'2F'}
+code,dc,_,_=s.request('/core/api/datacenter')
+checks['datacenter_selection']=code==(200 if 'noc' in selected else 404)
+if code==200:
+    checks['datacenter_only_core_floor']=dc['allowed_floors']==['2F'] and {f['id'] for f in dc['floors'] if f['enabled']}=={'2F'}
+    checks['datacenter_actual_assets']=[{k:a[k] for k in data['assets'][0]} for a in dc['assets']]==data['assets']
+    checks['datacenter_floor_read']=s.request('/core/api/datacenter/floors/2F')[0]==200
+    checks['datacenter_rack_membership']=sorted(i for r in dc['racks'] for i in r['asset_ids'])==sorted(a['asset_id'] for a in data['assets'])
+    checks['datacenter_ssh_host']=dc['host_access']['host']==c['public_host']
+    for asset in dc['assets']:
+        service=asset['service']
+        expected='sudo docker exec -it "$(sudo docker ps -q --filter label=com.docker.compose.project=xoc-core-security-path --filter label=com.docker.compose.service='+service+')" sh'
+        if service not in plan['compose']['services'] or asset['access']['shell_command']!=expected:
+            raise SystemExit('Unexpected device access command')
+        probe=subprocess.run(['bash','-c',expected.replace(' -it ',' ')+" -c 'test -d / && printf xoc-device-shell-ok'"],capture_output=True,text=True,timeout=15)
+        checks['device_shell_'+service]=probe.returncode==0 and probe.stdout=='xoc-device-shell-ok'
+
+    for floor in ('B1','1F','3F','4F','5F','6F','7F','8F','XOC','SITE'):
+        checks['locked_floor_'+floor]=s.request('/core/api/datacenter/floors/'+floor)[0]==403
+    checks['edition_spoof_denied']=s.request('/core/api/datacenter?tier=joint-force')[0]==400
+    checks['purchase_spoof_denied']=s.request('/core/api/datacenter/floors/6F?tenant_id=other&purchased=true')[0]==400
 code,library,_,_=s.request('/core/api/library');checks['reader_selection']=code==(200 if 'academy-reader' in selected else 404)
 if code==200:
     checks['all_selected_guides_readable']=bool(library['articles']) and all(s.request('/core/api/library/'+i['id'])[0]==200 for i in library['articles'])
     checks['unknown_guide_rejected']=s.request('/core/api/library/not-a-guide')[0]==404
-for path in ('registry','noc','library'):
+for path in ('datacenter','registry','noc','library'):
     checks[path+'_no_write_action']=s.request('/core/api/'+path,{})[0]==405
 code,session,_,_=s.request('/core/api/session')
 checks['navigation_matches_selection']={p['component_id'] for p in session['navigation']}=={m['component_id'] for m in plan['registry']['panels']}
@@ -43,6 +63,7 @@ try:
     checks['first_password_gate']=viewer.request('/core/api/registry')[0]==403
     checks['viewer_password_change']=viewer.request('/core/api/password',dict(current_password=password,password='Changed!'+secrets.token_urlsafe(24)))[0]==200
     checks['viewer_registry']=viewer.request('/core/api/registry')[0]==200
+    checks['viewer_datacenter']=viewer.request('/core/api/datacenter')[0]==(200 if 'noc' in selected else 404)
     checks['viewer_cannot_write_policy']=viewer.request('/core/api/devices/fw',dict(write_enabled=True,version=1))[0]==403
 finally:
     checks['temporary_viewer_disabled']=s.request('/core/api/users',dict(username=name,role='viewer',active=False))[0]==200
@@ -71,6 +92,9 @@ if a.exercise_observer:
         observation=json.loads(location.read_text());observation['observed_at']=(datetime.now(timezone.utc)-timedelta(seconds=90)).isoformat();location.write_text(json.dumps(observation))
         stale=s.request('/core/api/registry')[1]
         checks['stale_observation_not_green']=not stale['observation']['fresh'] and all(x['health']['state']=='unknown' for x in stale['assets'])
+        if 'noc' in selected:
+            stale_dc=s.request('/core/api/datacenter')[1]
+            checks['stale_datacenter_not_green']=not stale_dc['observation']['fresh'] and all(x['health']['state']=='unknown' for x in stale_dc['assets'])
     finally:
         subprocess.run(['systemctl','start','xocrange-observer.service','xocrange-observer.timer'],check=True)
     checks['observer_recovery']=s.request('/core/api/registry')[1]['observation']['fresh']

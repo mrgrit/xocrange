@@ -1,7 +1,9 @@
 from django.urls import path
-from . import views, console, workspace
+from . import views, console, workspace, datacenter
 
-urlpatterns = [path('core/api/registry', workspace.inventory),
+urlpatterns = [path('core/api/datacenter', datacenter.endpoint),
+               path('core/api/datacenter/floors/<str:floor>', datacenter.endpoint),
+               path('core/api/registry', workspace.inventory),
                path('core/api/noc', workspace.inventory, {'screen':'noc'}),
                path('core/api/library', workspace.library), path('core/api/library/<slug:article>', workspace.library),
                path('core/api/console/<str:device>', console.endpoint),

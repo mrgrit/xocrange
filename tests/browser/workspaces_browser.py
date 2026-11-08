@@ -47,15 +47,18 @@ with Server(('127.0.0.1',0),Proxy) as server:
             page.locator('#login-form button').click();page.locator('#account').wait_for(state='visible')
             if a.reduced:
                 page.locator('#tabs').wait_for(state='visible')
-                checks['optional_navigation_hidden']=all(page.locator('[data-nav='+v+']').count()==0 or page.locator('[data-nav='+v+']').is_hidden() for v in ('portal','noc','academy','ips'))
+                checks['optional_navigation_hidden']=all(page.locator('[data-nav='+v+']').count()==0 or page.locator('[data-nav='+v+']').is_hidden() for v in ('datacenter','portal','noc','academy','ips'))
                 checks['siem_hidden']=page.locator('#siem-link').is_hidden()
-                for view in ('portal','noc','academy'):
+                for view in ('datacenter','portal','noc','academy'):
                     page.goto(base+'/core/#'+view)
                     expect(page.locator('#system-view')).to_contain_text('설치되지 않은 기능')
-                checks['disabled_features_make_no_requests']=not any(any('/core/api/'+path in u for path in ('registry','noc','library','console/ips')) or '/siem/' in u for u in requests)
+                checks['disabled_features_make_no_requests']=not any(any('/core/api/'+path in u for path in ('datacenter','registry','noc','library','console/ips')) or '/siem/' in u for u in requests)
             else:
+                page.locator('#dc-stage').wait_for()
+                checks['datacenter_default']=page.locator('#page-title').inner_text()=='데이터센터'
+                page.locator('[data-nav=portal]').click()
                 page.locator('#inventory-rows tr').nth(9).wait_for()
-                checks['portal_default']=page.locator('#page-title').inner_text()=='운영 개요'
+                checks['portal_available']=page.locator('#page-title').inner_text()=='운영 개요'
                 checks['installed_inventory_visible']=page.locator('#inventory-rows tr').count()==10
                 page.screenshot(path=str(a.output.with_suffix('.portal.png')),full_page=True)
                 page.locator('#inventory-search').fill('fw')
@@ -81,7 +84,7 @@ with Server(('127.0.0.1',0),Proxy) as server:
                 checks['siem_still_opens_separately']=popup is not page and page.locator('#account').is_visible();popup.close()
                 checks['no_paid_dependencies_requested']=not any(any(token in u for token in ('/envsim','/injector','/agents','/roster')) for u in requests)
                 page.set_viewport_size({'width':430,'height':900})
-                for view in ('portal','noc','academy'):
+                for view in ('datacenter','portal','noc','academy'):
                     page.locator('[data-nav='+view+']').click()
                     page.wait_for_timeout(500)
                     checks['mobile_'+view+'_no_overflow']=page.evaluate('document.documentElement.scrollWidth <= window.innerWidth')

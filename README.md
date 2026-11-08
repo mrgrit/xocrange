@@ -6,7 +6,28 @@
 
 선택한 기능으로 구성하는 보안 운영 실습 환경. Core의 공통 계약 위에 Live Fire·Joint Force 모듈을 연결한다.
 
-**개발 초기 단계:** Ubuntu 26.04 VM에서 자동 설치와 fw·IPS·WAF의 실제 통신·차단을 검증했다. 공통 관리 로그인·역할·세션·감사와 8종 보안 로그의 C1 정규화·원본 보관·Wazuh Manager/API·Indexer·전용 Dashboard와 C1 통합 검색을 연결했다. 운영 장비 형태의 FW·IPS·WAF 콘솔 초안을 연결했다. 설치 등록부 기반 운영 개요·NOC 2층·번들 자료실을 연결했다. 전체 Community 배포본은 개발 중이다. `bootstrap`은 설치 기반 확인용 health 서비스다.
+## 설치 후 접속 · 계정 확인
+
+설치한 **xOC 서버의 터미널**에서 아래 명령으로 주소와 관리자 초기 접속 정보를 확인한다. Windows PC에서는 먼저 `ssh 사용자명@서버IP`로 서버에 접속하면 된다.
+
+| 구분 | 브라우저 접속 주소 | 계정·초기 비밀번호 확인 명령 |
+|---|---|---|
+| **Core 관리 · 데이터센터** | `https://서버IP/core/` | `sudo xoc platform credentials` — 관리자 계정 `admin` |
+| **SIEM · Wazuh** | `https://서버IP/siem/` | `sudo xoc siem credentials` — Core와 별도 계정 |
+
+```bash
+# Core 관리자 접속 정보
+sudo xoc platform credentials
+
+# SIEM 관리자 접속 정보
+sudo xoc siem credentials
+```
+
+예를 들어 서버 IP가 `192.168.0.74`이면 **[Core 로그인](https://192.168.0.74/core/)** 및 **[SIEM 로그인](https://192.168.0.74/siem/)**으로 접속한다. `--public-host`에 도메인을 지정했다면 명령에 표시되는 주소를 사용한다.
+
+처음 로그인하면 Core 초기 비밀번호를 변경해야 한다. 이후에는 변경한 비밀번호를 사용한다. 위 명령은 UI에서 변경한 비밀번호를 조회하거나 초기화하지 않는다. 고정 공용 비밀번호는 없으며 실제 비밀번호는 README나 Git에 기록하지 않는다. 로컬 인증서를 사용하는 경우 설치된 서버의 `/etc/xocrange/ca.crt`를 접속 PC에서 신뢰 등록한다.
+
+**개발 초기 단계:** Ubuntu 26.04 VM에서 자동 설치와 fw·IPS·WAF의 실제 통신·차단을 검증했다. 공통 관리 로그인·역할·세션·감사와 8종 보안 로그의 C1 정규화·원본 보관·Wazuh Manager/API·Indexer·전용 Dashboard와 C1 통합 검색을 연결했다. 운영 장비 형태의 FW·IPS·WAF 콘솔 초안을 연결했다. 층별 데이터센터 시각화·운영 개요·NOC 2층·번들 자료실을 연결했다. 전체 Community 배포본은 개발 중이다. `bootstrap`은 설치 기반 확인용 health 서비스다.
 
 ## 지금 실행할 수 있는 것
 
@@ -17,6 +38,7 @@
 | SIEM 웹 관제 | Wazuh Indexer + 전용 Dashboard, 8종 통합 검색·차트·필터, HTTPS 인증, 범위를 제한한 WAF Rule 예외 |
 | 공통 보안 | `/core/` 관리 화면, 관리자·운영자·조회자 역할, 서버 세션·CSRF, 장비 쓰기 정책·변경 감사 |
 | 장비 콘솔 초안 | FORWARD 필터 정책, 객체·NAT, IPS/WAF 규칙, 실제 설정 검증·적용·복원, 별도 전체 규칙 탭 |
+| 데이터센터 시각화 | kt66 층·설비 디자인 계승, 랙 → 장비 목록 → 상태·설명·웹 콘솔·SSH 명령 복사, 티어별 비활성 공간 |
 | 설치 계획 | manifest 검증, 의존성·충돌·포트 검사, Compose·입력 해시 생성 |
 | 구성 진단 | `xoc doctor`: 로컬 구성과 Docker CLI 존재 확인 |
 | 구성요소 목록 | 필수 platform + 선택 기능; 준비된 기능과 계획 단계 구분 |
@@ -34,9 +56,11 @@ Ubuntu Server 26.04 LTS amd64 전용 VM에서 저장소 또는 별도로 받은 
 sudo bash install.sh
 ```
 
-**현재 개발 버전의 설치 범위는 공통 관리 화면 + 운영 개요·NOC 2층·자료실 + 장비 콘솔 3종 + platform + 방화벽 + IPS + WAF + SIEM 백엔드·웹 관제 + 호스트 관측 도구 + 통신 검증용 타깃이다.** 웹 관제를 포함하면 최소 8 GiB RAM을 요구하며 실제 검증 VM은 16 GiB다. `--without siem-ui`로 웹 관제만 제외하거나 `--without siem`으로 SIEM 전체를 제외할 수 있다. `--without portal`, `--without noc`, `--without academy-reader`로 각 화면을 제외할 수 있다. 실제 입문 타깃·전체 모듈 수명주기·백업/복구가 남아 있으며 Core 전체 출시 완료를 뜻하지 않는다. [운영 개요·NOC·자료실](docs/development/WORKSPACES.md) [웹 관제 구성·WAF 예외·검증](docs/development/SIEM-WEB.md)
+**현재 개발 버전의 설치 범위는 공통 관리 화면 + 데이터센터·운영 개요·NOC 2층·자료실 + 장비 콘솔 3종 + platform + 방화벽 + IPS + WAF + SIEM 백엔드·웹 관제 + 호스트 관측 도구 + 통신 검증용 타깃이다.** 웹 관제를 포함하면 최소 8 GiB RAM을 요구하며 실제 검증 VM은 16 GiB다. `--without siem-ui`로 웹 관제만 제외하거나 `--without siem`으로 SIEM 전체를 제외할 수 있다. `--without portal`, `--without noc`, `--without academy-reader`로 각 화면을 제외할 수 있다. 실제 입문 타깃·전체 모듈 수명주기·백업/복구가 남아 있으며 Core 전체 출시 완료를 뜻하지 않는다. [운영 개요·NOC·자료실](docs/development/WORKSPACES.md) [웹 관제 구성·WAF 예외·검증](docs/development/SIEM-WEB.md)
 
 설치 후 `sudo xoc platform credentials`로 `https://VM주소/core/`의 초기 관리자 계정을 확인하고 첫 로그인에서 비밀번호를 변경한다. 이 관리 화면은 SIEM 제외 시에도 유지된다. SIEM은 자체 Wazuh 계정을 사용하며, Core 역할을 SIEM에 자동 적용하는 SSO는 포함하지 않는다. [공통 보안과 권한](docs/development/COMMON-SECURITY.md)
+
+로그인 후 `/core/#datacenter`에서 데이터센터 전체와 2층 내부를 볼 수 있다. 2층에서 **랙 → 장비**를 선택하면 현재 상태·장비 설명·웹 콘솔 링크와 복사 가능한 SSH/장비 셸 명령이 나온다. Linux 계정과 SSH 포트는 접속 패널에서 지정한다. Core는 2F만 활성화되며, 아카데미(6F)·Live Fire(7F)·가상회사(8F)는 비활성이다. 기관별 유료 콘텐츠·공방전 권한과 Joint Force 학생 회사 실행은 후속 상용 모듈 범위다. [공간 구성과 권한 경계](docs/development/DATACENTER.md)
 
 장비 콘솔은 `/core/#fw/policies`, `/core/#ips/policies`, `/core/#waf/policies`에서 사용한다. `--without console-fw`·`console-ips`·`console-waf`로 각각 제외할 수 있으며 기존 정책은 유지한다. 적용하려면 관리자가 **접근 제어 → 쓰기 허용**을 설정한다. [콘솔 초안과 적용 범위](docs/development/DEVICE-CONSOLES.md)
 

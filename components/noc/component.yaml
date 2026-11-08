@@ -20,6 +20,12 @@ contracts:
   C4: 0.1.0
 build_inputs: []
 ui:
+- id: datacenter
+  title: 데이터센터
+  route: /core/#datacenter
+  order: 5
+  permission: registry.read
+  floor: 2F
 - id: noc
   title: NOC · 2F
   route: /core/#noc

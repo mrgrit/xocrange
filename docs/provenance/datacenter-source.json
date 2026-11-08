@@ -1,0 +1,22 @@
+{
+  "source_repository": "https://github.com/mrgrit/kt66",
+  "source_changes": false,
+  "adapted_geometry": true,
+  "references": {
+    "noc/static/app.js": "66d131d631828ca72a2477476a2d484712d5f6638cea075c27d463dcede341e2",
+    "noc/static/scene.js": "b8aef2cd718188209e8549244d05599781c2dbc7364ac92bde4fd40822e65924",
+    "noc/static/building-layout.js": "ed30ca1ca4368e2c68354cc84745c13b2621de9d12d9b70f982c6136ffcfedbe",
+    "noc/static/facility-scene.js": "2ba5a23d3857735d2e71de765c0d5c2722f11e23d827cc4734112746f527511e",
+    "noc/static/facility-floor.js": "0180cdf828557bf4daab67a2b80578c978b85af7be1add2c13f3ed5e6fe054d4",
+    "noc/static/ai-floor.js": "7ec970592ba71c74d2bead3141a53f51fc2ed906ea22652aa2a4155384876ba9",
+    "noc/static/control-center-scene.js": "3b41d001432b41bf0dbf8fa2de054c55916e01d93608f6113b709babf4b5a958",
+    "envsim/assets.yaml": "eaf4c141499d610d30b3490c6ff6cb1ccae400f4e3312f8b8dd42e067b28ca6a"
+  },
+  "adaptation": "Adapted kt66 architectural SVG geometry, materials, floor plans, rack IDs/positions and compact layout. Replaced asset interaction with Core C4/C5 rack inventory and device detail. Original host credentials, telemetry, HTTP controls and agent runtime are excluded.",
+  "requested_extensions": {
+    "6F": "Institution-purchased academy content",
+    "7F": "Institution-purchased live-fire scenarios",
+    "8F": "Joint Force student-created agent companies"
+  },
+  "commercial_execution_implemented": false
+}
