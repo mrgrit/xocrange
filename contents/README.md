@@ -4,6 +4,9 @@
 
 ```text
 contents/
+  battle-scenarios/
+    xoc-web-01.yaml                # tw2 시나리오·정답·배점·semantic 기준
+    xoc-host-01.yaml
   academy/
     wazuh-threat-hunting/
       course.json                  # 강좌·차시 목록, 버전, 공개 범위, 자산 해시
@@ -32,3 +35,5 @@ python3 scripts/import-academy-bundle.py \
 설치 계획 작성 시 선언 파일·해시·페이지 경계·자산 크기·경로를 검사한다. `academy-reader`를 선택했을 때만 읽기 전용 콘텐츠 볼륨으로 복사한다. Core는 명시적으로 무료인 번들만 제공한다. 기관 구매 콘텐츠와 공방전, Live Fire AI 채점·분석·피드백은 C7 상용 제공자에서 연결할 후속 범위다.
 
 화면·기록 API·DB·제한·검증: [아카데미 구현](../docs/development/ACADEMY.md).
+
+36개 차시는 웹 8개·리눅스/네트워크 7개 공방전으로 묶었다. 두 과목의 연결과 tw2 호환 규칙은 [Live Fire 콘텐츠](battle-scenarios/README.md)를 따른다. `scenarios.json`은 `scripts/sync-livefire-catalog.py`로 생성하는 정답 없는 미리보기다. 아카데미 v0.2는 교재와 실습을 한 화면에 표시하고 각 미션의 `response_field` 한 개만 입력받는다. 기존 DB 기록의 다른 필드는 지우지 않는다.

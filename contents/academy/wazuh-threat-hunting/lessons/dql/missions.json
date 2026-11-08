@@ -2,7 +2,7 @@
   {
     "id": "dql-investigate",
     "title": "검색과 증거",
-    "instruction": "이번 차시에서 확인한 화면·검색식·설정을 직접 기록하세요. 확인 결과와 자신의 해석을 함께 남기세요.",
+    "instruction": "앞 미션의 결과에서 판단 근거가 되는 로그 한 줄을 붙여넣으세요. 화면으로 확인했다면 캡처 한 장으로 대신할 수 있습니다.",
     "source_pages": [
       20
     ],
@@ -11,6 +11,8 @@
       "output_or_screenshot",
       "interpretation"
     ],
-    "evaluation": "self-record"
+    "evaluation": "self-record",
+    "response_field": "output",
+    "response_label": "결과 한 줄 또는 캡처 한 장"
   }
 ]

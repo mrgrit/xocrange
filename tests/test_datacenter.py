@@ -5,7 +5,7 @@ import pytest
 from test_registry import registry_files
 from test_platform_security import application, app, login, send
 
-LOCKED=('B1','1F','3F','4F','5F','6F','7F','8F','XOC','SITE')
+LOCKED=('B1','1F','3F','4F','5F','7F','8F','XOC','SITE')
 
 @pytest.mark.parametrize('path',['datacenter','datacenter/floors/2F','datacenter/floors/6F','datacenter/floors/7F','datacenter/design/6F'])
 def test_anonymous_cannot_read_floor_inventory(app,registry_files,path):
@@ -16,11 +16,14 @@ def test_core_floor_and_purchased_spaces_are_server_gated(app,registry_files,rol
     login(app,role)
     response=app.get('/core/api/datacenter');assert response.status_code==200
     data=response.json()
-    assert data['tier']=='community' and data['allowed_floors']==['2F']
-    assert set(data['preview_floors'])==(set(LOCKED) if role=='admin' else set())
-    assert {f['id'] for f in data['floors'] if f['enabled']}=={'2F'}
+    assert data['tier']=='community' and data['allowed_floors']==['2F','6F']
+    assert set(data['preview_floors'])==(set(LOCKED)|{'6F'} if role=='admin' else set())
+    assert {f['id'] for f in data['floors'] if f['enabled']}=={'2F','6F'}
     floors={f['id']:f for f in data['floors']}
-    assert floors['6F']['access_requirement']=='institution_content_purchase'
+    assert floors['6F']['access_requirement']=='community_bundle_and_purchased_catalog'
+    academy=app.get('/core/api/datacenter/floors/6F').json()
+    assert academy['entry_route']=='/core/#academy' and academy['assets']==[]
+    assert academy['commercial_execution'] is False
     assert floors['7F']['access_requirement']=='institution_scenario_purchase'
     assert floors['8F']['minimum_tier']=='joint-force'
     assert floors['8F']['access_requirement']=='joint_force_virtual_company'

@@ -63,6 +63,12 @@ def lesson(cid,lid):
     return c,read(base/'lesson.json'),read(base/'missions.json')
 
 
+def scenario_catalog(cid):
+    c=course(cid)
+    if c.get('scenario_catalog')!='scenarios.json':return {'subjects':[],'scenarios':[]}
+    return read(content_root()/cid/'scenarios.json')
+
+
 def summary(record):
     return {k:str(getattr(record,k)) if k in ('id',) else getattr(record,k) for k in
             ('id','course','lesson','mission','title','content_version','status','revision','created_at','updated_at')}
@@ -98,7 +104,9 @@ def catalog(request):
         result.append({k:c[k] for k in ('id','version','title','subtitle','description','author','review_status','public_pages')}|{
             'lessons':len(c['lessons']),'missions':sum(l['missions'] for l in c['lessons']),
             'completed':rows.filter(status='complete').values('mission').distinct().count(), 'records':rows.count()})
-    return JsonResponse({'courses':result,'history_count':MissionRecord.objects.filter(user=request.user).count()})
+    training=scenario_catalog('wazuh-threat-hunting')
+    return JsonResponse({'courses':result,'history_count':MissionRecord.objects.filter(user=request.user).count(),
+                         'subjects':training['subjects'],'scenarios':[{k:s[k] for k in ('id','title','category','academy','total_points')} for s in training['scenarios']]})
 
 
 @require_GET
@@ -107,7 +115,8 @@ def catalog(request):
 def course_view(request,cid):
     c=course(cid); done=MissionRecord.objects.filter(user=request.user,course=cid,status='complete')
     return JsonResponse({k:c[k] for k in ('id','title','subtitle','version','description','public_pages','review_status')}|{
-        'lessons':[l|{'completed':done.filter(lesson=l['id']).values('mission').distinct().count()} for l in c['lessons']]})
+        'lessons':[l|{'completed':done.filter(lesson=l['id']).values('mission').distinct().count()} for l in c['lessons']],
+        'livefire':scenario_catalog(cid)})
 
 
 @require_GET
@@ -120,7 +129,8 @@ def lesson_view(request,cid,lid):
         r=MissionRecord.objects.filter(user=request.user,course=cid,lesson=lid,mission=m['id']).order_by('-updated_at').first()
         if r:records.append(detail(r))
     return JsonResponse(l|{'course_id':cid,'course_title':c['title'],'content_version':c['version'],'missions':missions,
-        'explanation':read(content_root()/cid/'lessons'/lid/'explanation.json'),'records':records})
+        'explanation':read(content_root()/cid/'lessons'/lid/'explanation.json'),'records':records,
+        'livefire_scenarios':[{k:s[k] for k in ('id','title','category','briefing')} for s in scenario_catalog(cid)['scenarios'] if lid in s['academy']['lessons']]})
 
 
 @require_GET
@@ -167,8 +177,14 @@ def record(request,rid=None):
             if any(value[k]!=getattr(r,k) for k in ('course','lesson','mission')):raise Missing()
             if r.revision!=value['revision']:return JsonResponse({'error':'stale_version'},status=409)
             r.revision+=1
-        if value['status']=='complete' and (not value['input'].strip() or not value['interpretation'].strip() or (not value['output'].strip() and (rid is None or not r.images.exists()))):
-            return JsonResponse({'error':'mission_incomplete','detail':'입력, 결과 텍스트 또는 캡처, 나의 해석을 모두 기록해 주세요.'},status=400)
+        if value['status']=='complete':
+            field=m.get('response_field')
+            if field:
+                incomplete=not value[field].strip() and not (field=='output' and rid is not None and r.images.exists())
+            else:
+                incomplete=not value['input'].strip() or not value['interpretation'].strip() or (not value['output'].strip() and (rid is None or not r.images.exists()))
+            if incomplete:
+                return JsonResponse({'error':'mission_incomplete','detail':'이번 미션의 답을 입력해 주세요.'},status=400)
         for k in ('input','output','interpretation','status'):setattr(r,k,value[k])
         r.save();record_snapshot(r)
         audit(request,'mission_save','allowed',str(r.id),after={'revision':r.revision,'status':r.status})

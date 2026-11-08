@@ -71,8 +71,13 @@ def endpoint(request, floor=None):
             return JsonResponse({'error':'not_found'},status=404)
         # No client tier/floor flags, query parameters or unverified license
         # strings can unlock a floor. Commercial providers follow C7 in K10.
-        if floor is not None and floor != '2F':
+        academy=any(c['id']=='academy-reader' for c in data['components'])
+        allowed=['2F']+(['6F'] if academy else [])
+        if floor is not None and floor not in allowed:
             return JsonResponse({'error':'floor_unavailable'},status=403)
+        if floor=='6F':
+            return JsonResponse({'floor':'6F','catalog_only':True,'entry_route':'/core/#academy','assets':[],
+                                 'commercial_execution':False})
         value = snapshot(data)
         value['assets'] = [a for a in value['assets'] if a['floor'] == '2F'
                            and a['tenant_id'] == 'community' and a['range_id'] == 'local']
@@ -84,12 +89,12 @@ def endpoint(request, floor=None):
         value.update(schema_version='xoc.datacenter/0.1.0', tier='community',
                      panels=available_panels, racks=[dict(r, asset_ids=[a['asset_id'] for a in value['assets'] if a['rack_id']==r['id']]) for r in RACKS],
                      host_access={'host':settings.CONFIG['public_host'], 'username_hint':ssh_username, 'port':22},
-                     floors=[dict(id=i,title=t,subtitle=s,minimum_tier=m,enabled=i=='2F',
-                                  access_requirement={'6F':'institution_content_purchase',
+                     floors=[dict(id=i,title=t,subtitle=s,minimum_tier=m,enabled=i in allowed,
+                                  access_requirement={'6F':'community_bundle_and_purchased_catalog',
                                                       '7F':'institution_scenario_purchase',
                                                       '8F':'joint_force_virtual_company'}.get(i,'edition'),
-                                  unavailable_reason=None if i=='2F' else 'not_licensed') for i,t,s,m in FLOORS],
-                     selected_floor=floor, allowed_floors=['2F'],
+                                  unavailable_reason=None if i in allowed else 'not_licensed') for i,t,s,m in FLOORS],
+                     selected_floor=floor, allowed_floors=allowed,
                      preview_floors=[f[0] for f in FLOORS if f[0]!='2F'] if request.user.profile.role=='admin' else [])
         return JsonResponse(value)
     except (OSError, ValueError, KeyError, TypeError):

@@ -1,7 +1,7 @@
 {
   "schema_version": "xoc.academy/0.1.0",
   "id": "wazuh-threat-hunting",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "title": "시스템 침투와 SIEM 분석",
   "subtitle": "Wazuh 위협 탐지 · 웹과 리눅스",
   "description": "입력부터 로그 검색, 증거 해석까지. 30개 사례로 보안관제의 흐름을 익힙니다.",
@@ -2068,5 +2068,6 @@
       ],
       "manuscript_file": "assets/screens/chapter10/archives.png"
     }
-  }
+  },
+  "scenario_catalog": "scenarios.json"
 }

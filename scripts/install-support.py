@@ -13,7 +13,7 @@ import tempfile
 
 FILES = ("install.sh", "pyproject.toml", "README.md", "requirements.lock", "NOTICE")
 DIRECTORIES = ("src/xocrange", "components", "presets", "contracts", "modules.d",
-               "scripts", "tests/fixtures/modules/security-probe", "assets/branding", "contents/academy")
+               "scripts", "tests/fixtures/modules/security-probe", "assets/branding", "contents/academy", "contents/battle-scenarios")
 
 
 def source_files(root):

@@ -1,0 +1,30 @@
+{
+  "status": "passed",
+  "reference_commit": "324d91fb22fee2c76051d5e73b58aa7f82de3e4c",
+  "scenarios": 15,
+  "missions": 105,
+  "purple_missions_preserved": 30,
+  "checks": {
+    "xoc-host-01": true,
+    "xoc-host-02": true,
+    "xoc-host-03": true,
+    "xoc-host-04": true,
+    "xoc-host-05": true,
+    "xoc-host-06": true,
+    "xoc-host-07": true,
+    "xoc-web-01": true,
+    "xoc-web-02": true,
+    "xoc-web-03": true,
+    "xoc-web-04": true,
+    "xoc-web-05": true,
+    "xoc-web-06": true,
+    "xoc-web-07": true,
+    "xoc-web-08": true
+  },
+  "verification": [
+    "reference _normalize",
+    "reference check compiler and validator",
+    "reference mission-to-grader context; answers and rubric reach semantic grading"
+  ],
+  "scope": "Static content/engine contract only. No AI inference, Assessor connection, live attack, or runtime import was performed."
+}

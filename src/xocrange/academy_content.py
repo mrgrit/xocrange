@@ -23,6 +23,13 @@ def catalog(root):
         if not isinstance(course.get('lessons'), list) or not 1 <= len(course['lessons']) <= 200:
             raise XocError('academy_catalog', 'Invalid lesson list.')
         expected = {path, package/'source-map.json'}; seen = set(); all_pages = []
+        if course.get('scenario_catalog'):
+            if course['scenario_catalog'] != 'scenarios.json':
+                raise XocError('academy_catalog','Unexpected scenario catalog path.')
+            public_path=within(package,'scenarios.json');expected.add(public_path)
+            from .livefire_content import public_catalog
+            if json_document(read_bytes(public_path)) != public_catalog(root):
+                raise XocError('academy_catalog','Run scripts/sync-livefire-catalog.py after editing scenarios.')
         source = json_document(read_bytes(within(package,'source-map.json')))
         last = course.get('public_pages')
         if type(last) is not int or source.get('approved_slide_range') != [1,last] or not 1 <= last <= 2000:
@@ -48,6 +55,8 @@ def catalog(root):
             for mission in missions:
                 if not re.fullmatch(r'[a-z][a-z0-9-]{0,95}',mission['id']) or not set(mission['source_pages']) <= set(pages):
                     raise XocError('academy_catalog', 'Invalid mission source mapping.')
+                if mission.get('response_field') not in (None,'input','output','interpretation'):
+                    raise XocError('academy_catalog','Unknown mission input field.')
             for slide in documents['lesson.json']['slides']:
                 for block in slide['blocks']:
                     if block['type']=='image' and block['asset'] not in course['assets']:

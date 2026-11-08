@@ -1,0 +1,240 @@
+{
+  "status": "passed",
+  "verified_at": "2026-11-08T08:54:39.303298+00:00",
+  "scope": "Academy v0.2 unified UI, personal records, floor links and authored Live Fire content contracts",
+  "content": {
+    "approved_pages": 339,
+    "academy_lessons": 36,
+    "academy_record_missions": 96,
+    "livefire_subjects": 2,
+    "livefire_scenarios": 15,
+    "livefire_missions": 105,
+    "roles_per_scenario": {
+      "red": 2,
+      "blue": 3,
+      "purple": 2
+    },
+    "points_per_scenario": 100,
+    "authored_evaluation_cases": 420
+  },
+  "tests": {
+    "full_suite_passed": 410,
+    "full_suite_seconds": 150.02,
+    "focused_passed": 16,
+    "red_shell_blocks_syntax_valid": 30,
+    "shell_blocks_executed": false
+  },
+  "local_browser": {
+    "checks": {
+      "floor6_enters_real_catalog": true,
+      "reading_and_practice_visible": true,
+      "no_reading_practice_tabs": true,
+      "one_mission_one_textarea": true,
+      "page_turn_keeps_answer": true,
+      "single_field_complete": true,
+      "next_mission_has_one_input": true,
+      "clipboard_image_single_response": true,
+      "evidence_mission_complete": true,
+      "lesson_links_correct_scenario": true,
+      "scenario_has_seven_missions": true,
+      "scenario_one_disabled_input": true,
+      "purple_displayed": true,
+      "two_subjects_fifteen_scenarios": true,
+      "no_overflow_1440": true,
+      "no_overflow_1024": true,
+      "floor7_real_scenarios": true,
+      "floor7_opens_mission": true,
+      "no_script_errors": true
+    },
+    "errors": []
+  },
+  "main_browser": {
+    "checks": {
+      "floor6_enters_real_catalog": true,
+      "reading_and_practice_visible": true,
+      "no_reading_practice_tabs": true,
+      "one_mission_one_textarea": true,
+      "page_turn_keeps_answer": true,
+      "single_field_complete": true,
+      "attack_text_saved_through_waf": true,
+      "stored_script_is_inert": true,
+      "next_mission_has_one_input": true,
+      "clipboard_image_single_response": true,
+      "evidence_mission_complete": true,
+      "lesson_links_correct_scenario": true,
+      "scenario_has_seven_missions": true,
+      "scenario_one_disabled_input": true,
+      "purple_displayed": true,
+      "two_subjects_fifteen_scenarios": true,
+      "no_overflow_1440": true,
+      "no_overflow_1024": true,
+      "floor7_real_scenarios": true,
+      "floor7_opens_mission": true,
+      "no_script_errors": true
+    },
+    "errors": []
+  },
+  "main_install": {
+    "status": "installed",
+    "release": "8a8f7793578914a7f2ea5b00f03c8cbf71d2f03bac79ed1062c03b1464f00331",
+    "started_at": "2026-11-08T08:42:57.149402+00:00",
+    "finished_at": "2026-11-08T08:52:32.613630+00:00",
+    "checks": {
+      "acceptance": {
+        "platform_health": true,
+        "landing_available": true,
+        "selected_target_available": true,
+        "source_ip_and_forwarded_header": true,
+        "fw_on_packet_path": true,
+        "ips_on_packet_path": true,
+        "fw_denies_other_port": true,
+        "no_direct_waf_bypass": true,
+        "no_direct_backend_bypass": true,
+        "waf_marker_blocked": true,
+        "ips_marker_blocked": true,
+        "ips_c1_block_evidence": true,
+        "waf_c1_block_evidence": true,
+        "ips_unavailable_blocks_path": true,
+        "path_recovers_after_ips_restart": true
+      },
+      "management_acceptance": {
+        "anonymous_session": true,
+        "login_page": true,
+        "javascript": true,
+        "anonymous_devices_denied": true,
+        "anonymous_users_denied": true,
+        "anonymous_audit_denied": true
+      },
+      "siem_acceptance": {
+        "nftables": true,
+        "suricata": true,
+        "modsecurity": true,
+        "osquery": true,
+        "sysmon": true,
+        "auditd": true,
+        "apache-access": true,
+        "apache-error": true
+      },
+      "siem_ui_acceptance": {
+        "http_redirect_preserves_path_query": true,
+        "anonymous_api_requires_login": true,
+        "rule_exception_preserves_authentication": true,
+        "wrong_password_rejected": true,
+        "login_through_waf": true,
+        "secure_httponly_session_cookie": true,
+        "authenticated_api": true,
+        "native_manager_version": true,
+        "native_manager_daemons": true,
+        "manager_anonymous_rejected": true,
+        "manager_default_password_rejected": true,
+        "manager_wrong_hostname_rejected": true,
+        "manager_wrong_ca_rejected": true,
+        "native_plugin_manager_connection": true,
+        "native_plugin_hides_service_password": true,
+        "native_plugin_session": true,
+        "native_plugin_manager_info": true,
+        "native_plugin_agents": true,
+        "native_plugin_xss_still_blocked": true,
+        "dashboard_html": true,
+        "static_javascript": true,
+        "discover_highlight_rule_exception": true,
+        "other_search_field_still_inspected": true,
+        "other_path_still_inspected": true,
+        "unrelated_put_still_blocked": true,
+        "xss_still_blocked": true,
+        "file_path_investigation_allowed": true,
+        "unrelated_field_keeps_lfi_detection": true,
+        "oversized_request_rejected": true,
+        "malformed_json_rejected": true,
+        "truncated_json_fails_closed_in_waf": true,
+        "waf_marker_blocks_siem": true,
+        "forwarded_client_header_cannot_be_spoofed": true,
+        "ips_inspects_decrypted_https": true,
+        "ui_recovers_after_block": true,
+        "create_index_pattern": true,
+        "field_definition_rule_exceptions": true,
+        "wrong_method_gets_no_field_exception": true,
+        "other_attribute_still_inspected": true,
+        "large_field_list_allowed": true,
+        "temporary_object_deleted": true,
+        "all_eight_fresh_sources_indexed": true,
+        "native_alerts_contain_all_eight_c1_links": true,
+        "raw_suricata_alert_indexed_with_evidence": true,
+        "raw_modsecurity_alert_indexed_with_evidence": true,
+        "raw_sysmon_alert_indexed_with_evidence": true,
+        "raw_apache-error_alert_indexed_with_evidence": true,
+        "stock_sshd_rule_indexes_original_alert": true,
+        "writer_cannot_read_events": true,
+        "writer_cannot_read_native_alerts": true,
+        "logout": true,
+        "logout_revokes_browser_session": true
+      },
+      "siem_native": {
+        "nftables": true,
+        "suricata": true,
+        "modsecurity": true,
+        "osquery": true,
+        "sysmon": true,
+        "auditd": true,
+        "apache-access": true,
+        "apache-error": true
+      }
+    },
+    "fresh_acceptance": true,
+    "services": {
+      "xocrange-core": "active",
+      "xocrange-collector": "active"
+    }
+  },
+  "test_data_cleanup": {
+    "test_records_removed": 2,
+    "rows_deleted": 7,
+    "baseline_unchanged": true,
+    "baseline_rows": {
+      "MissionRecord": 0,
+      "MissionRevision": 0,
+      "MissionEvidence": 0
+    }
+  },
+  "tw2_contract": {
+    "status": "passed",
+    "reference_commit": "324d91fb22fee2c76051d5e73b58aa7f82de3e4c",
+    "scenarios": 15,
+    "missions": 105,
+    "purple_missions_preserved": 30,
+    "checks": {
+      "xoc-host-01": true,
+      "xoc-host-02": true,
+      "xoc-host-03": true,
+      "xoc-host-04": true,
+      "xoc-host-05": true,
+      "xoc-host-06": true,
+      "xoc-host-07": true,
+      "xoc-web-01": true,
+      "xoc-web-02": true,
+      "xoc-web-03": true,
+      "xoc-web-04": true,
+      "xoc-web-05": true,
+      "xoc-web-06": true,
+      "xoc-web-07": true,
+      "xoc-web-08": true
+    },
+    "verification": [
+      "reference _normalize",
+      "reference check compiler and validator",
+      "reference mission-to-grader context; answers and rubric reach semantic grading"
+    ],
+    "scope": "Static content/engine contract only. No AI inference, Assessor connection, live attack, or runtime import was performed."
+  },
+  "deferred": [
+    "Live Fire target provisioning and live attack reproduction",
+    "Assessor integration in battle infrastructure",
+    "AI inference, semantic scoring evaluation and calibration",
+    "Academy source-to-runtime technical concordance review"
+  ],
+  "notes": [
+    "The main Academy DB was empty before this browser run; cleanup restored that baseline. Nonempty record and revision isolation is covered by the automated tests and earlier v0.1 acceptance.",
+    "Core serves only the answer-free preview. The teacher YAML includes reference answers and rubrics.",
+    "No Live Fire execution or AI grading is enabled in Core."
+  ]
+}

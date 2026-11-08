@@ -76,10 +76,29 @@ def test_record_versions_conflicts_progress_and_owner_boundary(academy):
     assert academy.get('/core/api/academy/history').json()['count']==0
 
 
-def test_complete_requires_input_result_and_interpretation(academy):
-    for missing in ('input','output','interpretation'):
-        assert send(academy,'academy/records',payload(status='complete',**{missing:''})).status_code==400
+def test_complete_requires_only_the_selected_mission_input(academy):
+    for mission,field in [('case-01-execute','input'),('case-01-investigate','output'),('case-01-interpret','interpretation')]:
+        fields={'input':'','output':'','interpretation':''}
+        lesson=academy.get('/core/api/academy/lessons/'+CID+'/case-01').json()
+        mission=next(m['id'] for m in lesson['missions'] if m['response_field']==field)
+        assert send(academy,'academy/records',payload(mission=mission,status='complete',**fields)).status_code==400
+        fields[field]='이번 미션의 답 하나'
+        assert send(academy,'academy/records',payload(mission=mission,status='complete',**fields)).status_code==201
     assert send(academy,'academy/records',payload(lesson='case-30',mission='case-01-execute')).status_code==404
+
+
+def test_training_catalog_has_all_roles_and_never_exposes_grading_answers(academy):
+    c=academy.get('/core/api/academy/courses/'+CID).json()
+    data=c['livefire'];assert len(data['subjects'])==2 and len(data['scenarios'])==15
+    for s in data['scenarios']:
+        assert s['total_points']==100 and len(s['missions'])==7
+        assert {m['learning_role'] for m in s['missions']}=={'red','blue','purple'}
+        assert s['execution_available'] is False
+        for m in s['missions']:
+            assert m['submission']['fields']==1
+            assert not {'verify','rubric','reference_answer','evaluation_cases'} & set(m)
+    assert '채점자 기준 답안' not in json.dumps(data,ensure_ascii=False)
+    assert academy.get('/core/api/academy/lessons/'+CID+'/case-01').json()['livefire_scenarios'][0]['id']=='xoc-web-02'
 
 
 def test_screenshot_is_persisted_normalized_and_private(academy):
