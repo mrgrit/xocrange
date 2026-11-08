@@ -1112,10 +1112,15 @@ function drawControlCenterRoom(fid,detail) {
 
  // Opaque in-room displays contain live catalog and owner-scoped learning data.
  function contentDisplay(x,y,z,w,h,title,accent,rows=[],footer=''){
+  const overview=svgHost.dataset.sceneMode==='building';if(overview)h=Math.min(h,1.65);
   const g=el('g',{class:'dc-room-screen','data-room-display':title}),[sx,sy]=iso(x,y,z+h);
   const face=el('g',{transform:`matrix(${XS},${YS*.48},0,${ZS},${sx},${sy})`});
   face.append(el('rect',{x:-.06,y:-.06,width:w+.12,height:h+.12,rx:.12,fill:'#11121e',stroke:'#080a12','stroke-width':.08}));
   face.append(el('rect',{width:w,height:h,rx:.075,fill:'#202137',stroke:accent,'stroke-width':.027}));
+  if(overview){
+   for(let i=0;i<3;i++){const xx=.18+i*(w-.3)/3;face.append(el('rect',{x:xx,y:.2,width:(w-.65)/3,height:h-.4,rx:.04,fill:i===0?'#51406b':'#313249',stroke:accent,'stroke-width':.014,opacity:.8}));face.append(el('path',{d:`M${xx+.1} ${h*.45} h${(w-.65)/3-.2} M${xx+.1} ${h*.65} h${(w-.65)/3-.3}`,stroke:accent,'stroke-width':.028,opacity:.65}));}
+   g.append(face);return g;
+  }
   face.append(el('path',{d:`M.18 .57 H${w-.18}`,stroke:accent,'stroke-width':.018,opacity:.6}));
   const text=(x,y,value,size=.25,color='#eee8fc')=>el('text',{x,y,text:value,'font-size':size,'font-family':'system-ui,sans-serif',fill:color,stroke:'none'});
   const wrap=(value,max,size)=>{const lines=[];let line='',length=0;for(const char of String(value)){const cw=/[\u0000-\u00ff]/.test(char)?.56:1;if(length+cw>max/size&&line){lines.push(line);line='';length=0;}line+=char;length+=cw;}if(line)lines.push(line);return lines;};
@@ -1235,9 +1240,9 @@ function drawControlCenterRoom(fid,detail) {
   if(academy){
    g.setAttribute('data-content-catalog','thumbnails');
    g.append(roomLettering(.65,.2,z+3.16,'xOC ACADEMY  /  KNOWLEDGE GALLERY',.23,'#d8c9fb'));
-   const course=learning?.courses[0],status=learning?.learning_status;
-   const courseRows=course?[{title:course.title,detail:course.public_pages+'쪽 · '+course.lessons+'개 차시',route:'#academy/course/'+course.id},{title:'교재 · 해설과 함께 실습 기록',detail:'글 · 명령과 출력 · 여러 캡처',route:'#academy'}]:[{title:'강좌 · 교재 · 실습',detail:'아카데미를 열어 시작하세요'}];
-   g.append(contentDisplay(.6,.55,z+.9,5.15,3.15,'ACADEMY / 강좌',accent,courseRows,'강좌를 선택해 교재와 실습 열기'));
+   const entries=learning?.offerings||[],status=learning?.learning_status;
+   const courseRows=entries.slice(0,2).map(c=>({title:c.title,detail:c.available?'이용 가능 · Core 번들':'미설치',route:c.available?c.route:null}));
+   g.append(contentDisplay(.6,.55,z+.9,5.15,3.15,'CONTENTS / 콘텐츠',accent,courseRows,entries.length+'개 콘텐츠 · 이용 가능 '+entries.filter(c=>c.available).length));
    const recent=status?.recent[0],noteRows=status?[{title:'노트 '+status.notebooks+'편 · 완료 '+status.completed_lessons+'차시',detail:'작성 중 '+status.drafts+'편',route:'#academy/history'},recent?{title:recent.title.replace(' · 실습 노트',''),detail:recent.status==='complete'?'최근 기록 · 작성 완료':'최근 기록 · 이어쓰기',route:'#academy/lesson/'+recent.course+'/'+recent.lesson}:{title:'아직 작성한 노트가 없습니다',detail:'첫 강좌에서 실습을 기록해 보세요',route:'#academy'}]:[{title:'나의 실습 노트',detail:'학습 과정과 결과 기록'}];
    g.append(contentDisplay(6.2,.55,z+.9,5.15,3.15,'MY LEARNING / 내 기록','#9ce8de',noteRows,'나의 실습 과정 · 결과 · 해석'));
    (learning?.subjects||[{id:'xoc-web-defense',title:'웹 침해 대응'},{id:'xoc-linux-defense',title:'리눅스·네트워크 침해 대응'}]).forEach((subject,i)=>{
@@ -1271,7 +1276,7 @@ function drawControlCenterRoom(fid,detail) {
   g.append(roomLine([0,GD,z+.02],[GW,GD,z+.02],accent,1.2));return g;
  }
  function prepare(host,data,building){
-  learning=data.learning_snapshot;svgHost=host;svgHost.dataset.sceneMode=building?'building':'room';YS=building?8:Math.max(5,Math.min(14,((GW+GD)*XS/(host.clientWidth/Math.max(1,host.clientHeight))-125)/16));
+  learning=building?null:data.learning_snapshot;svgHost=host;svgHost.dataset.sceneMode=building?'building':'room';YS=building?8:Math.max(5,Math.min(14,((GW+GD)*XS/(host.clientWidth/Math.max(1,host.clientHeight))-125)/16));
   ST={aisles:{},power:{},plant:{}};
   const core=data.racks||[];
   LAYOUT={...REFERENCE,racks:REFERENCE.racks.map(r=>({...r,design_kw:999})),it_assets:data.assets.map(a=>({...a,id:a.service,name:a.title,container:a.service,rack:a.rack_id,zone:a.zones[0],u:['siem','indexer'].includes(a.service)?2:1}))};

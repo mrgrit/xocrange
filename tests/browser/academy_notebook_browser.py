@@ -32,7 +32,7 @@ try:
   expect(page.locator('[data-dc-floor="6F"]')).to_be_visible(timeout=30000)
   checks['building_has_no_separate_learning_panel']=page.locator('#dc-learning').count()==0
   page.locator('[data-dc-floor="6F"]').click();expect(page.locator('#dc-stage')).to_have_attribute('data-mode','learning')
-  checks['floor6_actual_content_inside_displays']='36개 차시' in page.locator('.dc-room-screen').first.text_content()
+  expect(page.locator('.al-card')).to_have_count(24);checks['floor6_actual_catalog']=page.locator('a.al-card').count()==1;page.locator('[data-dc-design=space]').click();checks['floor6_actual_content_inside_displays']='24개 콘텐츠' in page.locator('.dc-room-screen').first.text_content()
   checks['floor6_large_display_type']=page.locator('.dc-room-screen text').first.evaluate('e=>parseFloat(getComputedStyle(e).fontSize)*Math.hypot(e.getScreenCTM().c,e.getScreenCTM().d)>=16')
   page.locator('[data-dc-learning-route="#academy/course/wazuh-threat-hunting"]').click();expect(page.locator('.ac-lesson-card').first).to_be_visible();checks['floor6_screen_opens_course']=True
   page.locator('a.ac-lesson-card[href$="/discover"]').click();expect(page.locator('#ac-notebook')).to_be_visible()
@@ -83,7 +83,7 @@ try:
   page.set_viewport_size({'width':1680,'height':1050});page.goto(origin+'/core/#academy/lesson/wazuh-threat-hunting/case-01');expect(page.locator('.ac-command').first).to_be_attached();checks['command_context_and_results']=page.locator('.ac-command dl').count()>0 and page.locator('.ac-command header').count()>0
   page.locator('.ac-compact-links a').first.click();expect(page.locator('.ac-range-mission')).to_be_visible();checks['livefire_single_submission_stays_disabled']=page.locator('.ac-range-mission textarea').count()==1 and page.locator('.ac-range-mission textarea').is_disabled()
   page.goto(origin+'/core/#datacenter');expect(page.locator('#dc-stage')).to_be_visible();page.locator('[data-dc-mode=building]').click();page.locator('[data-dc-floor="6F"]').click();expect(page.locator('#dc-stage')).to_have_attribute('data-floor','6F')
-  learning=page.locator('[data-room-display="MY LEARNING / 내 기록"]')
+  page.locator('[data-dc-design=space]').click();learning=page.locator('[data-room-display="MY LEARNING / 내 기록"]')
   checks['floor6_actual_saved_progress']='Discover' in learning.text_content() and '완료 1차시' in learning.text_content()
   page.screenshot(path=str(out/'academy-room.png'),full_page=True)
   page.locator('[data-dc-mode=building]').click();page.locator('[data-dc-floor="7F"]').click();expect(page.locator('#dc-stage')).to_have_attribute('data-floor','7F')

@@ -1,0 +1,18 @@
+{
+  "source_repository": "https://github.com/mrgrit/tw2",
+  "source_commit": "324d91fb22fee2c76051d5e73b58aa7f82de3e4c",
+  "source_file": "apps/api/app/routers/training.py",
+  "source_symbol": "TRACK_LABEL",
+  "source_directories": "contents/training/<track>",
+  "imported_tracks": 23,
+  "imported_fields": [
+    "id",
+    "title"
+  ],
+  "local_fields": [
+    "category",
+    "mark"
+  ],
+  "installed_bundle_count": 1,
+  "scope": "Catalog metadata only. Training material, target credentials and runtime code are not copied. Uninstalled titles do not grant access."
+}

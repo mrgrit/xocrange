@@ -25,7 +25,7 @@ function check(name,label,value){return `<label class="checkbox"><input type="ch
 function route(){const parts=location.hash.slice(1).split('/');view=labels[parts[0]]?parts[0]:(session.navigation?.some(p=>p.id==='datacenter')?'datacenter':session.navigation?.some(p=>p.id==='portal')?'portal':session.consoles?.[0]||'access');tab=['academy','module'].includes(view)&&/^(?:[a-z][a-z0-9-]{0,63}|M(?:[1-9]|1[0-9]))$/.test(parts[1]||'')?parts[1]:tabLabels[parts[1]]?parts[1]:'policies';search='';actionFilter='';act(load);}
 async function refreshSession(){
  try{session=await api('session');}finally{$('login-form').querySelector('button').disabled=false;}$('login').hidden=session.authenticated;$('account').hidden=!session.authenticated;
- if(!session.authenticated){Academy.clear();return;}
+ if(!session.authenticated){Academy.clear();DataCenter.clear();return;}
  $('identity').textContent=session.username+' · '+({admin:'관리자',operator:'운영자',viewer:'조회자'}[session.role]||session.role);
  $('siem-link').hidden=!session.siem_available;workspaceNavigation();
  for(const el of document.querySelectorAll('.admin-nav'))el.hidden=session.role!=='admin';

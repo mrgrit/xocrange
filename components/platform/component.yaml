@@ -45,6 +45,7 @@ build_inputs:
 - control/workspace.py
 - control/entitlements.py
 - control/academy.py
+- control/academy-catalog.json
 - control/academy.js
 - control/academy-markup.js
 - control/academy-notebook.js

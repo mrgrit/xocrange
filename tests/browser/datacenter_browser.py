@@ -67,8 +67,8 @@ with Server(('127.0.0.1',0),Proxy) as server:
             if academy_enabled:
                 checks['building_has_no_separate_learning_panel']=page.locator('#dc-learning').count()==0
                 page.locator('[data-dc-floor="6F"]').click();expect(page.locator('#dc-stage')).to_have_attribute('data-mode','learning')
-                checks['floor6_displays_real_catalog']='36개 차시' in page.locator('.dc-room-screen').first.text_content()
-                page.locator('[data-dc-learning-route="#academy/course/wazuh-threat-hunting"]').click();expect(page.locator('.ac-lesson-card').first).to_be_visible()
+                expect(page.locator('.al-card')).to_have_count(24);checks['floor6_displays_real_catalog']=page.locator('a.al-card').count()==1
+                page.locator('a.al-card.is-available').click();expect(page.locator('.ac-lesson-card').first).to_be_visible()
                 checks['floor6_screen_opens_course']=True
                 page.goto(base+'/core/#datacenter');expect(page.locator('#dc-stage')).to_have_attribute('data-mode','learning');page.locator('[data-dc-mode=building]').click();page.locator('.dc-level-active').first.wait_for()
             for fid in ['B1','1F','3F','4F','5F','7F','8F','XOC','SITE']:
@@ -141,7 +141,7 @@ with Server(('127.0.0.1',0),Proxy) as server:
             page.locator('[data-dc-back]').click();page.locator('[data-dc-asset="'+fw['asset_id']+'"]').click()
             page.locator('#dc-inspector a.workspace-link').click();page.locator('#tabs').wait_for(state='visible')
             checks['device_opens_existing_console']=page.locator('#page-title').inner_text()=='방화벽 정책'
-            page.locator('[data-nav=datacenter]').click();page.locator('.dc-interior').wait_for()
+            page.locator('[data-nav=datacenter]').click();expect(page.locator('#dc-stage')).to_have_attribute('data-mode','building');checks['datacenter_menu_always_opens_building']=True;page.locator('[data-dc-floor="2F"]').click();page.locator('.dc-interior').wait_for()
             page.locator('.dc-service-chip[data-dc-rack=R-2F-02]').click()
             dashboard=next(a for a in assets if a['service']=='dashboard')
             page.locator('[data-dc-asset="'+dashboard['asset_id']+'"]').click()

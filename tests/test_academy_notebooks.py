@@ -85,3 +85,16 @@ def test_floor_dashboard_reports_only_my_real_learning_state(academy):
     send(academy,'logout',{});login(academy,'viewer')
     other=academy.get('/core/api/academy').json()['learning_status']
     assert other['notebooks']==0 and other['recent']==[]
+
+
+def test_library_lists_metadata_without_enabling_uninstalled_courses(academy):
+    response=academy.get('/core/api/academy').json()
+    items=response['offerings'];assert len(items)==24
+    available=[c for c in items if c['available']]
+    assert len(available)==1 and available[0]['id']==CID
+    assert available[0]['route']=='#academy/course/'+CID
+    unavailable=[c for c in items if not c['available']]
+    assert all(c['route'] is None and set(c)=={'id','title','category','source','mark','available','route'} for c in unavailable)
+    assert len({c['id'] for c in items})==24
+    for cid in ('secuops','ai-security','agent-ir'):
+        assert academy.get('/core/api/academy/courses/'+cid).status_code==404
