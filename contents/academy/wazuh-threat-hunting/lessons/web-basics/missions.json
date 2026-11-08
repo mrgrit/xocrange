@@ -2,7 +2,7 @@
   {
     "id": "web-basics-investigate",
     "title": "검색과 증거",
-    "instruction": "앞 미션의 결과에서 판단 근거가 되는 로그 한 줄을 붙여넣으세요. 화면으로 확인했다면 캡처 한 장으로 대신할 수 있습니다.",
+    "instruction": "실습하며 나온 전체 출력과 로그, 여러 화면의 캡처를 노트에 이어 붙이세요. 각 결과에서 무엇을 확인했는지 설명을 덧붙이세요.",
     "source_pages": [
       47
     ],
@@ -13,6 +13,6 @@
     ],
     "evaluation": "self-record",
     "response_field": "output",
-    "response_label": "결과 한 줄 또는 캡처 한 장"
+    "response_label": "전체 결과와 캡처 기록"
   }
 ]

@@ -39,6 +39,8 @@ class MissionRecord(models.Model):
     course = models.CharField(max_length=64)
     lesson = models.CharField(max_length=64)
     mission = models.CharField(max_length=96)
+    scope = models.CharField(max_length=16, default='mission')
+    notebook = models.JSONField(default=list)
     content_version = models.CharField(max_length=24)
     title = models.CharField(max_length=200)
     input = models.TextField(default='')

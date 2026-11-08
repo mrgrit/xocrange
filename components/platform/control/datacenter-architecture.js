@@ -4,7 +4,7 @@
 'use strict';
 window.DataCenterArchitecture=(()=>{
  const SVGNS='http://www.w3.org/2000/svg',GW=12,GD=8,XS=28,ZS=32;
- let YS=14,LAYOUT,ST,svgHost;
+ let YS=14,LAYOUT,ST,svgHost,learning;
  const iso=(x,y,z)=>[(x-y)*XS,(x+y)*YS-z*ZS];
  const pts=a=>a.map(p=>p.join(',')).join(' ');
  const $=()=>svgHost;
@@ -1110,8 +1110,31 @@ function drawControlCenterRoom(fid,detail) {
 }
 
 
+ // Opaque in-room displays contain live catalog and owner-scoped learning data.
+ function contentDisplay(x,y,z,w,h,title,accent,rows=[],footer=''){
+  const g=el('g',{class:'dc-room-screen','data-room-display':title}),[sx,sy]=iso(x,y,z+h);
+  const face=el('g',{transform:`matrix(${XS},${YS*.48},0,${ZS},${sx},${sy})`});
+  face.append(el('rect',{x:-.06,y:-.06,width:w+.12,height:h+.12,rx:.12,fill:'#11121e',stroke:'#080a12','stroke-width':.08}));
+  face.append(el('rect',{width:w,height:h,rx:.075,fill:'#202137',stroke:accent,'stroke-width':.027}));
+  face.append(el('path',{d:`M.18 .57 H${w-.18}`,stroke:accent,'stroke-width':.018,opacity:.6}));
+  const text=(x,y,value,size=.25,color='#eee8fc')=>el('text',{x,y,text:value,'font-size':size,'font-family':'system-ui,sans-serif',fill:color,stroke:'none'});
+  const wrap=(value,max,size)=>{const lines=[];let line='',length=0;for(const char of String(value)){const cw=/[\u0000-\u00ff]/.test(char)?.56:1;if(length+cw>max/size&&line){lines.push(line);line='';length=0;}line+=char;length+=cw;}if(line)lines.push(line);return lines;};
+  face.append(text(.22,.37,title,.28,accent));
+  const top=.74,bottom=h-.36,rowHeight=Math.min(1.03,(bottom-top)/Math.max(1,rows.length));
+  rows.forEach((row,i)=>{
+   const yy=top+i*rowHeight,item=el('g',{'data-screen-entry':String(i)});
+   item.append(el('rect',{class:'dc-screen-card',x:.15,y:yy-.08,width:w-.3,height:rowHeight-.1,rx:.045,fill:row.route?'#302940':'#25283d',stroke:row.route?'#75618c':'#3b4156','stroke-width':.014}));
+   const lines=wrap(row.title,w-.66,.27).slice(0,2);lines.forEach((line,n)=>item.append(text(.31,yy+.22+n*.3,line,.27)));
+   if(row.detail)item.append(text(.31,yy+Math.min(rowHeight-.2,lines.length*.3+.2),row.detail,.2,'#c0b6d2'));
+   if(row.route&&learning&&svgHost.dataset.sceneMode!=='building'){item.dataset.dcLearningRoute=row.route;item.setAttribute('role','link');item.setAttribute('tabindex','0');item.setAttribute('aria-label',row.title+' 열기');}
+   face.append(item);
+  });
+  if(footer)face.append(text(.23,h-.12,footer,.19,'#9bded5'));
+  g.append(face);return g;
+ }
+
  // Thin optical glass: see-through faces, edge light, reflections and local HUD artwork.
- function holoDisplay(x,y,z,w,h,title,accent,kind='radar',yaw=0){
+ function holoDisplay(x,y,z,w,h,title,accent,kind='radar',yaw=0,details=[]){
   const g=el('g',{'data-holographic-display':kind}),[sx,sy]=iso(x,y,z+h);
   const face=el('g',{transform:`matrix(${XS*(1-yaw)},${YS*(1+yaw)},0,${ZS},${sx},${sy})`});
   const cut=.12,outline=`M${cut} 0 H${w-.28} L${w} .24 V${h-cut} L${w-cut} ${h} H.2 L0 ${h-.2} V${cut}Z`;
@@ -1119,11 +1142,12 @@ function drawControlCenterRoom(fid,detail) {
   face.append(el('path',{d:outline,fill:kind.startsWith('cover')?'url(#holoViolet)':'url(#holoGlass)',stroke:accent,'stroke-width':.022,'stroke-opacity':.75}));
   face.append(el('path',{d:`M.12 .1 H${w*.53} L${w*.28} ${h-.12} H.12Z`,fill:'#dbfff9',opacity:.035}));
   face.append(el('path',{d:`M.04 .38 V.15 L.15 .04 H.46 M${w-.46} ${h-.04} H${w-.15} L${w-.04} ${h-.15} V${h-.38}`,fill:'none',stroke:'#d5fffa','stroke-width':.04}));
-  face.append(el('text',{x:.15,y:.24,'font-size':Math.min(.15,w/10),'font-family':'system-ui,sans-serif',fill:'#e2fff9',stroke:'none','font-weight':600,text:title}));
+  face.append(el('text',{x:.15,y:.24,'font-size':Math.min(.15,(w-.3)/Math.max(1,[...title].length)),'font-family':'system-ui,sans-serif',fill:'#e2fff9',stroke:'none','font-weight':600,text:title}));
   face.append(el('path',{d:`M.15 .34 H${w-.15}`,stroke:accent,'stroke-width':.012,opacity:.5}));
   const line=(d,color=accent,width=.025)=>el('path',{d,fill:'none',stroke:color,'stroke-width':width});
   const label=(x,y,text,size=.11,color=accent)=>el('text',{x,y,text,'font-size':size,'font-family':'ui-monospace,monospace',fill:color,stroke:'none'});
-  if(kind==='radar'){
+  if(kind==='status'){details.forEach((text,i)=>face.append(label(.18,.65+i*.3,text,.17)));
+  }else if(kind==='radar'){
    const cx=w*.54,cy=h*.58,r=Math.min(w*.25,h*.31);
    for(const mult of [1,.73,.4])face.append(el('circle',{cx,cy,r:r*mult,fill:'none',stroke:accent,'stroke-width':.014,'stroke-dasharray':mult===.73?'.05 .06':'none',opacity:mult===1?.9:.5}));
    face.append(line(`M${cx-r-.16} ${cy} H${cx+r+.16} M${cx} ${cy-r-.14} V${cy+r+.14}`,accent,.012));
@@ -1170,7 +1194,7 @@ function drawControlCenterRoom(fid,detail) {
   // Projected rings and a swept glass HUD surround one pilot station.
   const ring=el('g',{transform:`translate(${iso(x+2.35,y+2.35,z+.19).join(' ')}) scale(1 ${YS/XS})`});
   for(const r of [27,39,46])ring.append(el('circle',{r,fill:'none',stroke:r===39?'#b09ae6':cyan,'stroke-width':r===39?1.2:.6,opacity:.55,'stroke-dasharray':r===46?'8 5':'none'}));g.append(ring);
-  g.append(holoDisplay(x+.9,y+.2,z+.92,3,1.78,'MISSION / TACTICAL HUD',cyan,'radar',-.08));
+  const hud=contentDisplay(x+.75,y+.2,z+.92,3.3,1.7,'CYBER COMBAT',cyan,[{title:'미션 준비',detail:'시나리오를 선택하세요'}]);hud.setAttribute('data-mission-panel','cockpit');g.append(hud);
   g.append(holoDisplay(x-.16,y+.72,z+.92,1.15,1.5,'RED','#ed92c7','scan',-.65));
   g.append(holoDisplay(x+3.93,y+.2,z+.92,1.25,1.5,'BLUE',cyan,'scan',.25));
   // Low consoles keep the transparent screen and pilot silhouette exposed.
@@ -1184,7 +1208,7 @@ function drawControlCenterRoom(fid,detail) {
   // The seat faces the HUD. Its opaque near-side back hides the occupant and far armrest.
   g.append(prism(x+1.77,y+1.98,z+.17,1.18,1.1,.4,'#232c40'));
   g.append(prism(x+1.83,y+2.03,z+.58,1.06,.93,.13,'#47445e'));
-  g.append(drawWorkerFigure({id:'red-instructor',name:'공방전 교관',facing:'rear'},3.7,5.03,z+.43,true));
+  g.append(drawWorkerFigure({id:'red-instructor',name:'공방전 교관',facing:'rear'},x+2.35,y+2.53,z+.43,true));
   g.append(prism(x+1.74,y+2.92,z+.45,1.24,.22,.8,'#343449'));
   g.append(prism(x+1.84,y+3.15,z+.56,1.04,.035,.57,'#292b3d'));
   for(const xx of [x+1.85,x+2.85])g.append(roomLine([xx,y+3.19,z+.61],[xx,y+3.19,z+1.15],cyan,.65));
@@ -1211,39 +1235,30 @@ function drawControlCenterRoom(fid,detail) {
   if(academy){
    g.setAttribute('data-content-catalog','thumbnails');
    g.append(roomLettering(.65,.2,z+3.16,'xOC ACADEMY  /  KNOWLEDGE GALLERY',.23,'#d8c9fb'));
-   const covers=[['보안 관제','#b9f5e1'],['공격 · 대응','#f2acd8'],['웹 보안','#8de9f1'],['클라우드','#bec3ff'],['AI 보안','#d3a6ff']];
-   covers.forEach(([title,color],i)=>{
-    const x=.7+i*2.15,y=.44;
-    g.append(prism(x+.55,y+.14,z,.7,.28,.12,'#42405f'));
-    g.append(roomLine([x+.9,y+.27,z+.18],[x+.9,y+.27,z+.65],color,.7,{'stroke-dasharray':'2 3',opacity:.4}));
-    const cover=holoDisplay(x,y,z+.72,1.83,1.94,title,color,'cover'+i);cover.setAttribute('data-content-thumbnail',String(i));g.append(cover);
+   const course=learning?.courses[0],status=learning?.learning_status;
+   const courseRows=course?[{title:course.title,detail:course.public_pages+'쪽 · '+course.lessons+'개 차시',route:'#academy/course/'+course.id},{title:'교재 · 해설과 함께 실습 기록',detail:'글 · 명령과 출력 · 여러 캡처',route:'#academy'}]:[{title:'강좌 · 교재 · 실습',detail:'아카데미를 열어 시작하세요'}];
+   g.append(contentDisplay(.6,.55,z+.9,5.15,3.15,'ACADEMY / 강좌',accent,courseRows,'강좌를 선택해 교재와 실습 열기'));
+   const recent=status?.recent[0],noteRows=status?[{title:'노트 '+status.notebooks+'편 · 완료 '+status.completed_lessons+'차시',detail:'작성 중 '+status.drafts+'편',route:'#academy/history'},recent?{title:recent.title.replace(' · 실습 노트',''),detail:recent.status==='complete'?'최근 기록 · 작성 완료':'최근 기록 · 이어쓰기',route:'#academy/lesson/'+recent.course+'/'+recent.lesson}:{title:'아직 작성한 노트가 없습니다',detail:'첫 강좌에서 실습을 기록해 보세요',route:'#academy'}]:[{title:'나의 실습 노트',detail:'학습 과정과 결과 기록'}];
+   g.append(contentDisplay(6.2,.55,z+.9,5.15,3.15,'MY LEARNING / 내 기록','#9ce8de',noteRows,'나의 실습 과정 · 결과 · 해석'));
+   (learning?.subjects||[{id:'xoc-web-defense',title:'웹 침해 대응'},{id:'xoc-linux-defense',title:'리눅스·네트워크 침해 대응'}]).forEach((subject,i)=>{
+    const x=.8+i*5.5,y=4.5,count=learning?.scenarios.filter(s=>s.category===subject.id).length;
+    const island=el('g',{'data-catalog-display':''});island.append(prism(x+.3,y+.35,z,4.1,.75,.55,'#36324d'));
+    island.append(contentDisplay(x,y,z+.66,4.8,1.78,'연계 공방전 · '+(i+1),'#bca6ef',[{title:subject.title,detail:count===undefined?'콘텐츠 조회':count+'개 시나리오 · Red / Blue / Purple',route:learning?'#academy/scenarios/'+subject.id:null}]));
+    put(x+2,y+.8,island);
    });
-   for(const [x,y] of [[1.2,3.85],[6.6,3.85]]){
-    const island=el('g',{'data-catalog-display':''});
-    island.append(prism(x+.48,y+.3,z,3.1,.63,.38,'#303047'));
-    island.append(quad(x+.35,y+.15,z+.42,3.35,.95,{fill:'#503f6b',stroke:'#b8a0e5','stroke-width':1}));
-    // Floating touch glass with upright miniature content covers.
-    island.append(quad(x,y,z+.86,4.2,1.35,{fill:'#8ee9e91b',stroke:'#a9f4ed','stroke-width':.9}));
-    island.append(roomLine([x+.1,y+1.31,z+.87],[x+4.1,y+1.31,z+.87],accent,1.5));
-    for(let i=0;i<3;i++)island.append(holoDisplay(x+.18+i*1.28,y+.18,z+.92,1.12,1.15,['강의','실습','워크북'][i],i===1?'#83e7e5':'#d3b9ff','cover'+i));
-    island.append(roomLettering(x+.12,y+1.36,z+.75,'BROWSE  /  SELECT  /  OPEN',.12,'#d7c7f3'));put(x+2,y+.8,island);
-   }
    put(3.3,6.3,drawRoomWorker({id:'content-curator',name:'콘텐츠 큐레이터'},3.3,6.3,z));
    put(8.7,6.3,drawRoomWorker({id:'learning-guide',name:'학습 안내'},8.7,6.3,z));
   }else if(live){
    g.setAttribute('data-training-mode','pilot');
    g.append(roomLettering(.55,.2,z+3.03,'LIVE FIRE  /  CYBER COMBAT RANGE',.23,'#c9fbf2'));
    g.append(roomLettering(.58,.2,z+2.68,'TRAIN CYBERSECURITY LIKE A FIGHTER PILOT',.13,'#baa4e2'));
-   g.append(holoDisplay(.55,.4,z+1.25,5.05,1.03,'SCENARIO  /  MISSION',accent,'modes'));
-   const cockpit=trainingCockpit(1.35,2.5,z);put(4,4.4,cockpit);
-   const panels=[['과정별 진척도',6.8,.45,3.8,1.45,'progress'],['전체 리더보드',7.4,2.45,3.8,1.45,'ranking'],['나의 레벨',7.05,4.9,1.7,1.5,'level'],['AI 피드백',9.05,4.9,2.45,1.5,'feedback']];
-   for(const [title,x,y,w,h,kind] of panels){
-    const panel=holoDisplay(x,y,z+.9,w,h,title,accent,kind);panel.setAttribute('data-mission-panel',title);
-    const base=el('g');base.append(quad(x+.2,y+.13,z+.03,w-.4,.36,{fill:'#4ce8e512',stroke:'#6ce9e366','stroke-width':.6}));
-    base.append(roomLine([x+w/2,y+.3,z+.06],[x+w/2,y+.3,z+.75],accent,.65,{opacity:.35,'stroke-dasharray':'2 3'}));
-    base.append(panel);put(x+w/2,y+.3,base);
-   }
-   put(10.55,6.8,drawRoomWorker({id:'blue-instructor',name:'방어 코치'},10.55,6.8,z));
+   const subjects=learning?.subjects||[],scenarios=learning?.scenarios||[],total=scenarios.reduce((n,s)=>n+s.missions,0);
+   const catalog=contentDisplay(.55,.5,z+.95,5.2,3.1,'SCENARIOS / 공방전','#81e9dd',subjects.length?subjects.map(subject=>({title:subject.title,detail:scenarios.filter(s=>s.category===subject.id).length+'개 시나리오',route:'#academy/scenarios/'+subject.id})):[{title:'등록 콘텐츠 조회'}],learning?scenarios.length+'개 시나리오 · '+total+'개 미션':'');
+   catalog.setAttribute('data-mission-panel','scenarios');g.append(catalog);
+   const state=contentDisplay(6.2,.5,z+.95,5.2,3.1,'TRAINING / 훈련 현황','#bda5f4',[{title:'개인 훈련',detail:'훈련 엔진 연결 전'},{title:'교수자 리그',detail:'리그 기능 연결 전'}],'현재 시나리오와 미션 열람 가능');state.setAttribute('data-mission-panel','training');g.append(state);
+   const cockpit=trainingCockpit(1.35,3.1,z);put(4,5,cockpit);
+   const missions=contentDisplay(6.7,4.7,z+.8,4.8,3.1,'MISSION BRIEF / 미션 보기','#81e9dd',scenarios.slice(0,2).map(s=>({title:s.title,detail:s.missions+'개 미션 · '+s.total_points+'점',route:'#academy/scenario/'+s.id})),'Red 공격 → Blue 대응 → Purple 보고');missions.setAttribute('data-mission-panel','missions');put(9.1,5.1,missions);
+   put(6.1,6.8,drawRoomWorker({id:'defense-coach',name:'대응 코치'},6.1,6.8,z));
   }else{
    g.append(roomLettering(.7,.2,z+1.98,'VIRTUAL COMPANY / AGENT OPERATIONS',.23,'#d0e2c9'));
    const staff=crewOf('4F').filter(w=>w.id!=='ops-lead');
@@ -1256,7 +1271,7 @@ function drawControlCenterRoom(fid,detail) {
   g.append(roomLine([0,GD,z+.02],[GW,GD,z+.02],accent,1.2));return g;
  }
  function prepare(host,data,building){
-  svgHost=host;YS=building?8:Math.max(5,Math.min(14,((GW+GD)*XS/(host.clientWidth/Math.max(1,host.clientHeight))-125)/16));
+  learning=data.learning_snapshot;svgHost=host;svgHost.dataset.sceneMode=building?'building':'room';YS=building?8:Math.max(5,Math.min(14,((GW+GD)*XS/(host.clientWidth/Math.max(1,host.clientHeight))-125)/16));
   ST={aisles:{},power:{},plant:{}};
   const core=data.racks||[];
   LAYOUT={...REFERENCE,racks:REFERENCE.racks.map(r=>({...r,design_kw:999})),it_assets:data.assets.map(a=>({...a,id:a.service,name:a.title,container:a.service,rack:a.rack_id,zone:a.zones[0],u:['siem','indexer'].includes(a.service)?2:1}))};

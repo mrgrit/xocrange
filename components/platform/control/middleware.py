@@ -16,7 +16,7 @@ class Boundary:
             if request.method not in ('GET', 'POST'):
                 return JsonResponse({'error': 'method_not_allowed'}, status=405)
             limit = 16384
-            if re.fullmatch(r'/core/api/academy/records(?:/[0-9a-f-]{36})?',request.path): limit=163840
+            if re.fullmatch(r'/core/api/academy/records(?:/[0-9a-f-]{36})?',request.path): limit=750000
             if re.fullmatch(r'/core/api/academy/records/[0-9a-f-]{36}/images',request.path): limit=750000
             if request.META.get('CONTENT_LENGTH', '0').isdigit() and int(request.META.get('CONTENT_LENGTH', '0')) > limit:
                 return JsonResponse({'error': 'body_too_large'}, status=413)

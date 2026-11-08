@@ -49,7 +49,8 @@ with Server(('127.0.0.1',0),Proxy) as server:
             page.locator('#dc-stage').wait_for()
             checks['datacenter_is_default']=page.locator('#page-title').inner_text()=='데이터센터'
             checks['floor_directory_removed']=page.locator('.dc-floor-rail').count()==0
-            checks['ten_admin_design_previews']=page.locator('.dc-level-preview').count()==10
+            academy_enabled=page.locator('.dc-level-active[data-dc-floor="6F"]').count()==1
+            checks['admin_design_previews_match_enabled_floors']=page.locator('.dc-level-preview').count()==(9 if academy_enabled else 10)
             checks['gray_preview_keyboard_access']=page.locator('.dc-level-preview').evaluate_all("nodes=>nodes.every(n=>n.getAttribute('aria-disabled')==='false'&&n.getAttribute('tabindex')==='0'&&getComputedStyle(n).filter.includes('grayscale(1)'))")
             checks['all_floors_named']=all(t in page.locator('.dc-world-labels').text_content() for t in ('아카데미','Live Fire','가상회사'))
             avatar_layout=page.locator('[data-dc-floor]').evaluate_all("nodes=>Object.fromEntries(nodes.map(n=>[n.dataset.dcFloor,[...n.querySelectorAll('[data-worker-figure]')].map(a=>({id:a.dataset.workerFigure,position:a.dataset.avatarPosition,width:Number(a.dataset.avatarWidth)}))]))")
@@ -63,7 +64,14 @@ with Server(('127.0.0.1',0),Proxy) as server:
             checks['no_tier_selector']=page.locator('#dc-stage select').count()==0
             checks['desktop_fills_view_without_page_scroll']=page.evaluate('document.documentElement.scrollHeight <= innerHeight+2')
             page.screenshot(path=str(a.output.with_suffix('.building.png')),full_page=True)
-            for fid in ['B1','1F','3F','4F','5F','6F','7F','8F','XOC','SITE']:
+            if academy_enabled:
+                checks['building_has_no_separate_learning_panel']=page.locator('#dc-learning').count()==0
+                page.locator('[data-dc-floor="6F"]').click();expect(page.locator('#dc-stage')).to_have_attribute('data-mode','learning')
+                checks['floor6_displays_real_catalog']='36개 차시' in page.locator('.dc-room-screen').first.text_content()
+                page.locator('[data-dc-learning-route="#academy/course/wazuh-threat-hunting"]').click();expect(page.locator('.ac-lesson-card').first).to_be_visible()
+                checks['floor6_screen_opens_course']=True
+                page.goto(base+'/core/#datacenter');expect(page.locator('#dc-stage')).to_have_attribute('data-mode','learning');page.locator('[data-dc-mode=building]').click();page.locator('.dc-level-active').first.wait_for()
+            for fid in ['B1','1F','3F','4F','5F','7F','8F','XOC','SITE']:
                 page.locator('[data-dc-floor="'+fid+'"]').focus();page.keyboard.press('Enter')
                 expect(page.locator('#dc-stage')).to_have_attribute('data-mode','design')
                 expect(page.locator('#dc-stage')).to_have_attribute('data-floor',fid)
@@ -71,36 +79,26 @@ with Server(('127.0.0.1',0),Proxy) as server:
                 checks['preview_large_'+fid]=page.locator('[data-camera]').evaluate('n=>{const b=n.getBoundingClientRect(),s=n.ownerSVGElement.getBoundingClientRect();return b.width/s.width>.80||b.height/s.height>.80}')
                 if fid in ('4F','6F','7F','8F'):
                     page.screenshot(path=str(a.output.with_suffix('.'+fid+'.png')),full_page=True)
-                if fid=='6F':
-                    checks['academy_is_content_library']=page.locator('[data-content-catalog]').count()==1 and page.locator('[data-content-thumbnail]').count()>=5
-                    page.locator('[data-dc-design=workspace]').click();expect(page.locator('.cw-content-card')).to_have_count(6)
-                    page.screenshot(path=str(a.output.with_suffix('.academy.png')),full_page=True)
-                    before=len(requests)
-                    page.locator('[data-cw-filter="방어·관제"]').click();expect(page.locator('.cw-content-card')).to_have_count(2)
-                    page.locator('#cw-search').fill('헌팅');expect(page.locator('.cw-content-card')).to_have_count(1)
-                    page.locator('.cw-content-card').click();expect(page.locator('.cw-content-detail')).to_be_visible()
-                    page.locator('[data-cw-unit="워크북"]').click();expect(page.locator('#cw-unit-title')).to_have_text('워크북')
-                    checks['catalog_filter_search_detail']=True
-                    checks['catalog_preview_uses_no_backend']=len(requests)==before
-                    page.locator('[data-cw-back]').click();page.locator('#cw-search').fill('');page.locator('[data-cw-filter="전체"]').click()
                 if fid=='7F':
                     checks['live_fire_one_seat']=page.locator('[data-training-cockpit=single-seat]').count()==1
                     checks['four_training_panels']=page.locator('[data-mission-panel]').count()==4
-                    page.locator('[data-dc-design=workspace]').click();expect(page.locator('.cw-flight-grid')).to_be_visible()
+                    page.locator('[data-dc-design=workspace]').click()
+                    if academy_enabled:
+                        expect(page.locator('.cw-real-card')).to_have_count(15)
+                        checks['real_scenario_catalog']=True
+                        page.locator('.cw-real-card').first.click();expect(page.locator('.ac-range-mission')).to_be_visible()
+                        checks['no_training_execution']=page.locator('.ac-range-mission textarea').is_disabled() and page.locator('.ac-range-actions button').is_disabled()
+                        page.goto(base+'/core/#datacenter');expect(page.locator('.cw-real-card')).to_have_count(15)
+                    else:
+                        checks['uninstalled_content_hidden']='아카데미 모듈을 선택 설치하면' in page.locator('.commercial-workspace').inner_text()
                     page.screenshot(path=str(a.output.with_suffix('.live-fire.png')),full_page=True)
-                    before=len(requests)
-                    page.locator('[data-cw-mode=DUEL]').click();page.locator('[data-cw-role=RED]').click();page.locator('[data-cw-scenario="1"]').click();page.locator('[data-cw-mission="2"]').click();page.locator('[data-cw-board="배틀별"]').click()
-                    expect(page.locator('.cw-objective h3')).to_have_text('차단 근거 검증')
-                    checks['mission_design_interactions']=page.locator('.cw-role-label').inner_text()=='RED' and page.locator('[data-cw-mode=DUEL]').get_attribute('aria-pressed')=='true'
-                    checks['no_training_execution']=page.locator('.cw-mission-actions button:disabled').count()==3 and len(requests)==before
-                    checks['training_dashboard_sections']=all(t in page.locator('.commercial-workspace').inner_text() for t in ('과정별 진척도','전체 리더보드','나의 레벨','AI 피드백'))
                     for width,height in [(1280,800),(430,900),(320,740)]:
                         page.set_viewport_size({'width':width,'height':height});page.wait_for_timeout(120)
                         checks['live_fire_'+str(width)+'_no_overflow']=page.evaluate('document.documentElement.scrollWidth<=innerWidth')
                     page.set_viewport_size({'width':1440,'height':1000})
                 if fid=='8F':checks['company_operations_rack']=page.locator('[data-company-rack=R-8F-01]').count()==1
-                page.locator('[data-dc-mode=building]').click();page.locator('.dc-level-active').wait_for()
-            page.locator('.dc-level-active').focus();page.keyboard.press('Enter');page.locator('.dc-interior').wait_for()
+                page.locator('[data-dc-mode=building]').click();page.locator('.dc-level-active').first.wait_for()
+            page.locator('.dc-level-active[data-dc-floor="2F"]').focus();page.keyboard.press('Enter');page.locator('.dc-interior').wait_for()
             checks['keyboard_enters_second_floor']=page.locator('#dc-stage').get_attribute('data-mode')=='floor'
             data=page.evaluate("async()=> (await (await fetch('/core/api/datacenter')).json())")
             assets=data['assets'];racks=data['racks']
@@ -165,7 +163,7 @@ with Server(('127.0.0.1',0),Proxy) as server:
                 page.set_viewport_size({'width':width,'height':height});page.wait_for_timeout(100)
                 checks[label+'_no_horizontal_overflow']=page.evaluate('document.documentElement.scrollWidth <= innerWidth')
                 checks[label+'_floor_labels_not_clipped']=page.locator('.dc-world-labels g').evaluate_all('nodes=>nodes.length===11&&nodes.every(n=>{const b=n.getBoundingClientRect();return b.left>=0&&b.right<=innerWidth})')
-                checks[label+'_active_floor_accessible']=page.locator('.dc-level-active').is_visible()
+                checks[label+'_active_floor_accessible']=page.locator('.dc-level-active').first.is_visible()
                 if label=='laptop':checks['laptop_no_page_scroll']=page.evaluate('document.documentElement.scrollHeight <= innerHeight+2')
                 page.screenshot(path=str(a.output.with_suffix('.'+label+'.png')),full_page=True)
             page.locator('[data-dc-mode=floor]').click();page.locator('.dc-interior').wait_for()
@@ -175,8 +173,8 @@ with Server(('127.0.0.1',0),Proxy) as server:
             checks['no_paid_endpoints_or_external_assets']=not any(any(t in u for t in ('/envsim','/injector','/agents','/roster')) or not u.startswith(base) for u in requests)
             async_contract=dict(data,preview_floors=[])
             page.route('**/core/api/datacenter',lambda route:route.fulfill(json=async_contract))
-            page.reload(wait_until='networkidle');page.locator('.dc-level-active').wait_for()
-            checks['nonadmin_contract_keeps_ten_floors_locked']=page.locator('.dc-level-locked').count()==10 and page.locator('.dc-level-preview').count()==0
+            page.reload(wait_until='networkidle');page.locator('.dc-level-active').first.wait_for()
+            checks['nonadmin_contract_keeps_commercial_floors_locked']=page.locator('.dc-level-locked').count()==(9 if academy_enabled else 10) and page.locator('.dc-level-preview').count()==0
             checks['nonadmin_locked_svg_inert']=page.locator('.dc-level-locked').evaluate_all("nodes=>nodes.every(n=>n.getAttribute('aria-disabled')==='true'&&!n.hasAttribute('tabindex')&&getComputedStyle(n).pointerEvents==='none')")
             before=len(requests)
             page.evaluate("()=>document.querySelectorAll('.dc-level-locked').forEach(n=>n.dispatchEvent(new MouseEvent('click',{bubbles:true})))")

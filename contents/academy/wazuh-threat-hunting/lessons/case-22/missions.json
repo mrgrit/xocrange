@@ -2,7 +2,7 @@
   {
     "id": "case-22-execute",
     "title": "입력과 실행",
-    "instruction": "교재의 해당 실습에서 직접 사용한 명령 또는 검색식 하나를 기록하세요. 결과와 해석은 다음 미션에서 작성합니다.",
+    "instruction": "실습에서 사용한 명령과 검색식, 실행 순서와 시행착오를 노트에 기록하세요. 관련 결과와 캡처도 함께 배치할 수 있습니다.",
     "source_pages": [
       260
     ],
@@ -13,12 +13,12 @@
     ],
     "evaluation": "self-record",
     "response_field": "input",
-    "response_label": "실행한 명령 또는 검색식 하나"
+    "response_label": "실습 과정과 실행 기록"
   },
   {
     "id": "case-22-investigate",
     "title": "검색과 증거",
-    "instruction": "앞 미션의 결과에서 판단 근거가 되는 로그 한 줄을 붙여넣으세요. 화면으로 확인했다면 캡처 한 장으로 대신할 수 있습니다.",
+    "instruction": "실습하며 나온 전체 출력과 로그, 여러 화면의 캡처를 노트에 이어 붙이세요. 각 결과에서 무엇을 확인했는지 설명을 덧붙이세요.",
     "source_pages": [
       262
     ],
@@ -29,12 +29,12 @@
     ],
     "evaluation": "self-record",
     "response_field": "output",
-    "response_label": "결과 한 줄 또는 캡처 한 장"
+    "response_label": "전체 결과와 캡처 기록"
   },
   {
     "id": "case-22-interpret",
     "title": "분석과 판단",
-    "instruction": "확인한 증거가 뜻하는 바를 한 문장으로 적으세요. 탐지 사실과 실제 실행·침해 성공을 구별하세요.",
+    "instruction": "관측한 사실과 판단 근거, 원인과 대응 방향을 충분히 기록하세요. 관련 명령, 결과와 캡처를 연결해 분석 과정을 완성하세요.",
     "source_pages": [
       267
     ],
@@ -45,6 +45,6 @@
     ],
     "evaluation": "self-record",
     "response_field": "interpretation",
-    "response_label": "근거에 맞는 해석 한 문장"
+    "response_label": "분석과 해석 기록"
   }
 ]

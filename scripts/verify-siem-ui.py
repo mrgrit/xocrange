@@ -102,6 +102,8 @@ r.on('error',e=>process.exit(['ERR_TLS_CERT_ALTNAME_INVALID','UNABLE_TO_VERIFY_L
     checks['malformed_json_rejected']=request(search,'POST',b'{"bad":not_json}')[0]==400
     # ModSecurity 2.x issue #2807 returns 500 for premature EOF before phase 2.
     # Verify that exact fail-closed parser path, rather than accepting any 500.
+    from xocrange.event_store import now
+    parser_since=now()
     code,headers,_=request(search,'POST',b'{"incomplete":')
     parser_request=headers.get('X-Xoc-Request-Id')
     from xocrange.event_store import Store
@@ -109,7 +111,9 @@ r.on('error',e=>process.exit(['ERR_TLS_CERT_ALTNAME_INVALID','UNABLE_TO_VERIFY_L
     deadline=time.monotonic()+30
     parser_evidence=None
     while parser_request and time.monotonic()<deadline:
-        parser_evidence=store.db.execute("SELECT ref FROM records WHERE source='apache-error' AND instr(CAST(raw AS TEXT),?)>0 AND instr(CAST(raw AS TEXT),'JSON parser error: parse error: premature EOF')>0",(parser_request,)).fetchone()
+        # Bound the lookup to this probe; scanning retained multi-GiB evidence
+        # can consume the entire deadline before a fresh error is collected.
+        parser_evidence=store.db.execute("SELECT ref FROM records INDEXED BY records_observed WHERE observed>=? AND source='apache-error' AND instr(CAST(raw AS TEXT),?)>0 AND instr(CAST(raw AS TEXT),'JSON parser error: parse error: premature EOF')>0 LIMIT 1",(parser_since,parser_request)).fetchone()
         if parser_evidence:break
         time.sleep(1)
     checks['truncated_json_fails_closed_in_waf']=code==500 and parser_evidence is not None

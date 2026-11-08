@@ -78,7 +78,7 @@ function arrangeBuilding(outlines,mainIds,frame) {
 
  function render(host,data,mode,selection,designFloor){
   const arch=DataCenterArchitecture,el=arch.el,building=mode==='building';
-  const svg=el('svg',{class:'dc-world',role:'group','aria-label':building?'층별 데이터센터 전체 배치':mode==='design'?designFloor+' 공간 디자인':'2층 일반 전산실 · 랙을 선택하세요'});
+  const svg=el('svg',{class:'dc-world',role:'group','aria-label':building?'층별 데이터센터 전체 배치':['design','learning'].includes(mode)?designFloor+' 콘텐츠와 공간':'2층 일반 전산실 · 랙을 선택하세요'});
   svg.setAttribute('role','group');
   host.replaceChildren(svg);arch.prepare(svg,data,building);svg.append(arch.defs());
   const root=el('g',{'data-camera':''});svg.append(root);
@@ -98,8 +98,9 @@ function arrangeBuilding(outlines,mainIds,frame) {
     const position=arch.iso(8.2,7.8,.22);labels.push({x:x+position[0],y:y+position[1]+20,title:f.id+' · '+f.title,active});
    }
   }else{
-   const room=arch.room(mode==='design'?designFloor:'2F');root.append(room);
-   for(const rack of (mode==='design'?[]:data.racks)){
+   const room=arch.room(['design','learning'].includes(mode)?designFloor:'2F');root.append(room);
+   for(const entry of room.querySelectorAll('[data-dc-learning-route]')){entry.setAttribute('role','link');entry.setAttribute('tabindex','0');}
+   for(const rack of (['design','learning'].includes(mode)?[]:data.racks)){
     const node=room.querySelector('[data-rack="'+rack.id+'"]');if(!node)continue;
     node.setAttribute('data-dc-rack',rack.id);node.setAttribute('role','button');node.setAttribute('tabindex','0');node.setAttribute('aria-label',rack.id+' · '+rack.title+' · 장비 '+rack.asset_ids.length+'개');
     node.classList.add('dc-rack');if(selection===rack.id)node.classList.add('selected');

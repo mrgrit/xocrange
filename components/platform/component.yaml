@@ -46,8 +46,11 @@ build_inputs:
 - control/entitlements.py
 - control/academy.py
 - control/academy.js
+- control/academy-markup.js
+- control/academy-notebook.js
 - control/academy.css
 - control/migrations/0002_academy_mission_records.py
+- control/migrations/0003_lesson_notebooks.py
 - control/workspace.js
 - control/workspace.css
 - health.py

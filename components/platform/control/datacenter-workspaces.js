@@ -9,5 +9,6 @@ window.DataCenterWorkspaces=(()=>{
   if(floor==='6F'){host.innerHTML=d.courses.map(c=>`<a class="cw-content-card cw-real-card" href="#academy/course/${c.id}"><div class="cw-card-copy"><span>CORE / ${c.public_pages}p · ${c.lessons}개 차시</span><h3>${esc(c.title)}</h3><p>${esc(c.description)}</p><footer><span>교재 + 미션</span><strong>강좌 열기 ↗</strong></footer></div></a>`).join('')+`<a class="cw-content-card cw-real-card" href="#academy/scenarios"><div class="cw-card-copy"><span>LIVE FIRE</span><h3>연계 공방전 15개</h3><p>2개 과목 · Red 공격, Blue 대응, Purple 분석·보고</p><footer><strong>시나리오 보기 ↗</strong></footer></div></a>`;}
   else host.innerHTML=d.scenarios.map(s=>`<a class="cw-content-card cw-real-card" href="#academy/scenario/${s.id}"><div class="cw-card-copy"><span>${s.category==='xoc-web-defense'?'웹 침해 대응':'리눅스·네트워크 침해 대응'}</span><h3>${esc(s.title)}</h3><p>Red 35 · Blue 45 · Purple 20</p><footer><span>7개 미션 · 100점</span><strong>미션 보기 ↗</strong></footer></div></a>`).join('');
  }
- return {render,hydrate};
+ async function snapshot(){return api('academy');}
+ return {render,hydrate,snapshot};
 })();

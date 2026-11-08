@@ -124,15 +124,15 @@ for slug,title,start,end,section,ref in items:
     for mission in mission_data:
         field='input' if mission['id'].endswith('-execute') else 'output' if mission['id'].endswith('-investigate') else 'interpretation'
         mission['response_field']=field
-        mission['response_label']={'input':'실행한 명령 또는 검색식 하나','output':'결과 한 줄 또는 캡처 한 장','interpretation':'근거에 맞는 해석 한 문장'}[field]
-        mission['instruction']={'input':'교재의 해당 실습에서 직접 사용한 명령 또는 검색식 하나를 기록하세요. 결과와 해석은 다음 미션에서 작성합니다.','output':'앞 미션의 결과에서 판단 근거가 되는 로그 한 줄을 붙여넣으세요. 화면으로 확인했다면 캡처 한 장으로 대신할 수 있습니다.','interpretation':'확인한 증거가 뜻하는 바를 한 문장으로 적으세요. 탐지 사실과 실제 실행·침해 성공을 구별하세요.'}[field]
+        mission['response_label']={'input': '실습 과정과 실행 기록', 'output': '전체 결과와 캡처 기록', 'interpretation': '분석과 해석 기록'}[field]
+        mission['instruction']={'input': '실습에서 사용한 명령과 검색식, 실행 순서와 시행착오를 노트에 기록하세요. 관련 결과와 캡처도 함께 배치할 수 있습니다.', 'output': '실습하며 나온 전체 출력과 로그, 여러 화면의 캡처를 노트에 이어 붙이세요. 각 결과에서 무엇을 확인했는지 설명을 덧붙이세요.', 'interpretation': '관측한 사실과 판단 근거, 원인과 대응 방향을 충분히 기록하세요. 관련 명령, 결과와 캡처를 연결해 분석 과정을 완성하세요.'}[field]
     write(folder/'missions.json',mission_data)
     write(folder/'lesson.json',{'id':slug,'title':title,'source_pages':[start,end],'slides':selected})
     lessons.append({'id':slug,'title':title,'section':section,'source_pages':[start,end],'missions':len(mission_data)})
     source_map.append({'lesson_id':slug,'slides':[start,end],'explanation':explanation['source']})
 
 assert sorted(p for _,_,s,e,_,_ in items for p in range(s,e+1))==list(range(1,340))
-course={'schema_version':'xoc.academy/0.1.0','id':'wazuh-threat-hunting','version':'0.2.0','title':'시스템 침투와 SIEM 분석',
+course={'schema_version':'xoc.academy/0.1.0','id':'wazuh-threat-hunting','version':'0.3.0','title':'시스템 침투와 SIEM 분석',
         'subtitle':'Wazuh 위협 탐지 · 웹과 리눅스','description':'입력부터 로그 검색, 증거 해석까지. 30개 사례로 보안관제의 흐름을 익힙니다.',
         'author':'전두용','commercial':False,'minimum_tier':'community','review_status':'pending-content-review',
         'public_pages':339,'lessons':lessons,'assets':assets}

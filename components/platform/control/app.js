@@ -34,7 +34,7 @@ async function refreshSession(){
 }
 async function load(){
  if(!session.authenticated||session.must_change_password)return;
- const sequence=++loadSequence;current=null;document.body.classList.toggle('datacenter-view',view==='datacenter');document.body.classList.toggle('academy-view',view==='academy');
+ const sequence=++loadSequence;current=null;document.body.classList.toggle('datacenter-view',view==='datacenter');document.body.classList.toggle('academy-view',view==='academy');document.body.classList.toggle('academy-study',view==='academy'&&tab==='lesson');
  for(const b of document.querySelectorAll('[data-nav]')){b.classList.toggle('active',b.dataset.nav===view);b.setAttribute('aria-label',labels[b.dataset.nav]);b.title=labels[b.dataset.nav];}
  $('crumb').textContent=labels[view];$('page-title').textContent=labels[view]+(['fw','ips','waf'].includes(view)?' 정책':'');$('page-description').textContent=descriptions[view];$('eyebrow').textContent=view==='fw'?'NETWORK SECURITY':view==='ips'?'THREAT PREVENTION':view==='waf'?'APPLICATION SECURITY':'SYSTEM MANAGEMENT';
  const device=['fw','ips','waf'].includes(view);$('device-view').hidden=!device;$('system-view').hidden=device;$('sync-status').textContent='상태를 불러오는 중…';$('refresh').disabled=true;
@@ -141,4 +141,4 @@ async function systemView(sequence){
 }
 $('login-form').onsubmit=e=>{e.preventDefault();const button=e.target.querySelector('button');if(button.disabled)return;button.disabled=true;act(async()=>{try{if(!csrf)await refreshSession();button.disabled=true;await api('login',Object.fromEntries(new FormData(e.target)));e.target.reset();await refreshSession();}finally{button.disabled=false;}});};
 $('password-form').onsubmit=e=>{e.preventDefault();act(async()=>{await api('password',Object.fromEntries(new FormData(e.target)));e.target.reset();$('password-panel').close();notice('비밀번호를 변경했습니다.');await refreshSession();});};
-$('password-open').onclick=()=>$('password-panel').showModal();$('logout').onclick=()=>act(async()=>{await api('logout',{});await refreshSession();});$('refresh').onclick=()=>act(load);window.addEventListener('hashchange',route);act(refreshSession);
+$('password-open').onclick=()=>$('password-panel').showModal();$('logout').onclick=()=>act(async()=>{await AcademyNotebook.flush();await api('logout',{});await refreshSession();});$('refresh').onclick=()=>act(load);window.addEventListener('hashchange',route);act(refreshSession);
