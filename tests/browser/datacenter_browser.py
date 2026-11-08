@@ -62,12 +62,13 @@ with Server(('127.0.0.1',0),Proxy) as server:
             checks['kt66_avatar_size_preserved']=page.locator('[data-worker-figure]').evaluate_all("nodes=>nodes.every(n=>{const a=n.querySelector('svg');return Number(n.dataset.avatarWidth)===(a.dataset.avatarSeated==='true'?22:24)&&parseFloat(getComputedStyle(a).width)===Number(n.dataset.avatarWidth)&&getComputedStyle(a).stroke==='none'})")
             checks['helmet_and_suit_variants']=page.locator('[data-avatar-design]').evaluate_all("nodes=>new Set(nodes.map(n=>n.dataset.avatarRole)).size===17&&new Set(nodes.map(n=>n.dataset.avatarRank)).size===6")
             checks['no_tier_selector']=page.locator('#dc-stage select').count()==0
+            checks['floor_toolbar_scope']=page.locator('[data-dc-mode=floor]').count()==0
             checks['desktop_fills_view_without_page_scroll']=page.evaluate('document.documentElement.scrollHeight <= innerHeight+2')
             page.screenshot(path=str(a.output.with_suffix('.building.png')),full_page=True)
             if academy_enabled:
                 checks['building_has_no_separate_learning_panel']=page.locator('#dc-learning').count()==0
                 page.locator('[data-dc-floor="6F"]').click();expect(page.locator('#dc-stage')).to_have_attribute('data-mode','learning')
-                expect(page.locator('.al-card')).to_have_count(24);checks['floor6_displays_real_catalog']=page.locator('a.al-card').count()==1
+                expect(page.locator('.al-card')).to_have_count(24);checks['floor_toolbar_scope'] &= page.locator('[data-dc-mode=floor]').count()==0;checks['floor6_displays_real_catalog']=page.locator('a.al-card').count()==1
                 page.locator('a.al-card.is-available').click();expect(page.locator('.ac-lesson-card').first).to_be_visible()
                 checks['floor6_screen_opens_course']=True
                 page.goto(base+'/core/#datacenter');expect(page.locator('#dc-stage')).to_have_attribute('data-mode','learning');page.locator('[data-dc-mode=building]').click();page.locator('.dc-level-active').first.wait_for()
@@ -75,6 +76,7 @@ with Server(('127.0.0.1',0),Proxy) as server:
                 page.locator('[data-dc-floor="'+fid+'"]').focus();page.keyboard.press('Enter')
                 expect(page.locator('#dc-stage')).to_have_attribute('data-mode','design')
                 expect(page.locator('#dc-stage')).to_have_attribute('data-floor',fid)
+                checks['floor_toolbar_scope'] &= page.locator('[data-dc-mode=floor]').count()==0
                 checks['admin_opens_'+fid]=page.locator('.dc-preview-badge').is_visible() and page.locator('[data-dc-asset],[data-dc-rack]').count()==0
                 checks['preview_large_'+fid]=page.locator('[data-camera]').evaluate('n=>{const b=n.getBoundingClientRect(),s=n.ownerSVGElement.getBoundingClientRect();return b.width/s.width>.80||b.height/s.height>.80}')
                 if fid in ('4F','6F','7F','8F'):
@@ -166,7 +168,7 @@ with Server(('127.0.0.1',0),Proxy) as server:
                 checks[label+'_active_floor_accessible']=page.locator('.dc-level-active').first.is_visible()
                 if label=='laptop':checks['laptop_no_page_scroll']=page.evaluate('document.documentElement.scrollHeight <= innerHeight+2')
                 page.screenshot(path=str(a.output.with_suffix('.'+label+'.png')),full_page=True)
-            page.locator('[data-dc-mode=floor]').click();page.locator('.dc-interior').wait_for()
+            page.locator('[data-dc-floor="2F"]').click();page.locator('.dc-interior').wait_for();checks['floor_toolbar_scope'] &= page.locator('[data-dc-mode=floor]').count()==1
             page.locator('.dc-service-chip').first.click();page.locator('.dc-rack-list button').first.click();expect(page.locator('#dc-inspector')).to_be_visible()
             checks['small_mobile_detail_no_overflow']=page.evaluate('document.documentElement.scrollWidth <= innerWidth')
             checks['no_defensive_copy']=all(t not in page.locator('#dc-stage').inner_text() for t in ('실제 랙 위치','논리 배치','의미하지 않습니다'))
