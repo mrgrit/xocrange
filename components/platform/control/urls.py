@@ -4,6 +4,7 @@ from . import views, console, workspace, datacenter, academy
 urlpatterns = [path('core/api/datacenter', datacenter.endpoint),
                path('core/api/academy', academy.catalog),
                path('core/api/academy/courses/<slug:cid>', academy.course_view),
+               path('core/api/academy/scenarios/<slug:cid>/<slug:sid>/records', academy.scenario_records),
                path('core/api/academy/lessons/<slug:cid>/<slug:lid>', academy.lesson_view),
                path('core/api/academy/assets/<slug:cid>/<str:name>', academy.asset),
                path('core/api/academy/history', academy.history),

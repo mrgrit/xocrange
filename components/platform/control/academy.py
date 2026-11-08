@@ -10,6 +10,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import Sum
+from django.utils import timezone
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.http import require_GET, require_POST
 from .models import MissionRecord, MissionRevision, MissionEvidence
@@ -67,6 +68,22 @@ def scenario_catalog(cid):
     c=course(cid)
     if c.get('scenario_catalog')!='scenarios.json':return {'subjects':[],'scenarios':[]}
     return read(content_root()/cid/'scenarios.json')
+
+
+def scenario(cid,sid):
+    c=course(cid)
+    item=next((s for s in scenario_catalog(cid)['scenarios'] if s['id']==sid),None)
+    if item is None:raise Missing()
+    return c,item
+
+
+@require_GET
+@protected('content.read')
+@boundary
+def scenario_records(request,cid,sid):
+    scenario(cid,sid)
+    rows=MissionRecord.objects.filter(user=request.user,course=cid,lesson=sid,scope='livefire')
+    return JsonResponse({'records':[detail(r) for r in rows]})
 
 
 def summary(record):
@@ -200,20 +217,22 @@ def record(request,rid=None):
         return JsonResponse(detail(owned(request,rid)))
     value=data(request,('course','lesson','mission','input','output','interpretation','status','revision'),('scope','notebook','save_mode'))
     scope=value.get('scope','mission');mode=value.get('save_mode','manual')
-    if scope not in ('mission','lesson') or mode not in ('manual','auto') or (mode=='auto' and (scope!='lesson' or value['status']!='draft')):raise ValidationError('invalid_input')
+    if scope not in ('mission','lesson','livefire') or mode not in ('manual','auto') or (mode=='auto' and (scope not in ('lesson','livefire') or value['status']!='draft')):raise ValidationError('invalid_input')
     if type(value['revision']) is not int or value['revision']<0 or value['status'] not in ('draft','complete'):raise ValidationError("invalid_input")
     for key in ('course','lesson','mission','input','output','interpretation'):
-        if not isinstance(value[key],str) or len(value[key].encode())>24000 or '\x00' in value[key]:raise ValidationError("invalid_input")
-    c,l,missions=lesson(value['course'],value['lesson'])
+        if not isinstance(value[key],str) or len(value[key].encode())>(180000 if scope=='livefire' and key in ('input','output','interpretation') else 24000) or '\x00' in value[key]:raise ValidationError("invalid_input")
+    if scope=='livefire':
+        c,l=scenario(value['course'],value['lesson']);missions=l['missions']
+    else:c,l,missions=lesson(value['course'],value['lesson'])
     m=next((m for m in missions if m['id']==value['mission']),None)
-    if scope=='mission' and m is None:raise Missing()
+    if scope in ('mission','livefire') and m is None:raise Missing()
     if scope=='lesson' and value['mission']!='':raise ValidationError('invalid_input')
-    if scope=='mission' and 'notebook' in value:raise ValidationError('invalid_input')
+    if scope!='lesson' and 'notebook' in value:raise ValidationError('invalid_input')
     with transaction.atomic():
         if rid is None:
             if value['revision']!=0:raise ValidationError("invalid_input")
             if MissionRecord.objects.filter(user=request.user).count()>=2000:raise ValidationError('record_quota')
-            r=MissionRecord(user=request.user,course=c['id'],lesson=l['id'],mission=value['mission'],scope=scope,content_version=c['version'],title=l['title']+' · '+('실습 노트' if scope=='lesson' else m['title']))
+            r=MissionRecord(user=request.user,course=c['id'],lesson=l['id'],mission=value['mission'],scope=scope,content_version=l.get('content_version',c['version']),title=(l['title']+' · '+('실습 노트' if scope=='lesson' else m['title']))[:200])
         else:
             r=owned(request,rid)
             if scope!=r.scope or any(value[k]!=getattr(r,k) for k in ('course','lesson','mission')):raise Missing()
@@ -230,9 +249,14 @@ def record(request,rid=None):
             else:
                 incomplete=not value['input'].strip() or not value['interpretation'].strip() or (not value['output'].strip() and (rid is None or not r.images.exists()))
             if incomplete:
-                return JsonResponse({'error':'mission_incomplete','detail':'이번 미션의 답을 입력해 주세요.'},status=400)
+                return JsonResponse({'error':'mission_incomplete','detail':'학습자 시도, 시스템 반응, 학습자의 해석을 모두 기록해 주세요.' if scope=='livefire' else '이번 미션의 답을 입력해 주세요.'},status=400)
         for k in ('input','output','interpretation','status'):setattr(r,k,value[k])
-        r.save()
+        if rid is not None and scope=='livefire':
+            changed=MissionRecord.objects.filter(id=r.id,user=request.user,revision=value['revision']).update(
+                **{k:getattr(r,k) for k in ('input','output','interpretation','status','revision')},updated_at=timezone.now())
+            if not changed:return JsonResponse({'error':'stale_version'},status=409)
+            r.refresh_from_db()
+        else:r.save()
         if mode=='manual':record_snapshot(r)
         audit(request,'mission_save','allowed',str(r.id),after={'revision':r.revision,'status':r.status,'save_mode':mode})
     return JsonResponse(detail(r),status=201 if rid is None else 200)
@@ -290,12 +314,18 @@ def attach(request,rid):
     with transaction.atomic():
         r=owned(request,rid)
         if r.revision!=value['revision']:return JsonResponse({'error':'stale_version'},status=409)
-        if r.images.count()>=(50 if r.scope=='lesson' else 3):raise ValidationError('image_limit')
+        if r.images.count()>=(50 if r.scope=='lesson' else 20 if r.scope=='livefire' else 3):raise ValidationError('image_limit')
         used=MissionEvidence.objects.filter(record__user=request.user).aggregate(n=Sum('bytes'))['n'] or 0
         if used+len(raw)>512*1024**2:raise ValidationError('image_quota')
         MissionEvidence.objects.create(record=r,image=raw,sha256=hashlib.sha256(raw).hexdigest(),bytes=len(raw),width=width,height=height,caption=value['caption'])
-        r.revision+=1;r.save()
-        if r.scope!='lesson':record_snapshot(r)
+        if r.scope=='livefire':
+            changed=MissionRecord.objects.filter(id=r.id,user=request.user,revision=value['revision']).update(revision=r.revision+1,status='draft',updated_at=timezone.now())
+            if not changed:
+                transaction.set_rollback(True)
+                return JsonResponse({'error':'stale_version'},status=409)
+            r.refresh_from_db()
+        else:r.revision+=1;r.save()
+        if r.scope=='mission':record_snapshot(r)
         audit(request,'mission_image','allowed',str(r.id),after={'revision':r.revision})
     return JsonResponse(detail(r),status=201)
 

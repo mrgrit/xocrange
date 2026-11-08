@@ -1110,11 +1110,15 @@ function drawControlCenterRoom(fid,detail) {
 }
 
 
+ // Room headings and content faces share the same display projection.
+ const contentHeight=h=>svgHost.dataset.sceneMode==='building'?Math.min(h,1.65):h;
+ function contentFace(x,y,z){const [sx,sy]=iso(x,y,z);return `matrix(${XS},${YS*.48},0,${ZS},${sx},${sy})`;}
+ function contentLettering(x,y,z,title,size,color){return roomLettering(x,y,z,title,size,color,{transform:contentFace(x,y,z)});}
  // Opaque in-room displays contain live catalog and owner-scoped learning data.
  function contentDisplay(x,y,z,w,h,title,accent,rows=[],footer=''){
-  const overview=svgHost.dataset.sceneMode==='building';if(overview)h=Math.min(h,1.65);
-  const g=el('g',{class:'dc-room-screen','data-room-display':title}),[sx,sy]=iso(x,y,z+h);
-  const face=el('g',{transform:`matrix(${XS},${YS*.48},0,${ZS},${sx},${sy})`});
+  const overview=svgHost.dataset.sceneMode==='building';h=contentHeight(h);
+  const g=el('g',{class:'dc-room-screen','data-room-display':title});
+  const face=el('g',{transform:contentFace(x,y,z+h)});
   face.append(el('rect',{x:-.06,y:-.06,width:w+.12,height:h+.12,rx:.12,fill:'#11121e',stroke:'#080a12','stroke-width':.08}));
   face.append(el('rect',{width:w,height:h,rx:.075,fill:'#202137',stroke:accent,'stroke-width':.027}));
   if(overview){
@@ -1239,7 +1243,7 @@ function drawControlCenterRoom(fid,detail) {
   const objects=[],put=(x,y,node)=>objects.push({depth:x+y,node});
   if(academy){
    g.setAttribute('data-content-catalog','thumbnails');
-   g.append(roomLettering(.65,.2,z+3.16,'xOC ACADEMY  /  KNOWLEDGE GALLERY',.23,'#d8c9fb'));
+   g.append(contentLettering(.65,.55,z+.9+contentHeight(3.15)+.45,'xOC ACADEMY  /  KNOWLEDGE GALLERY',.23,'#d8c9fb'));
    const entries=learning?.offerings||[],status=learning?.learning_status;
    const courseRows=entries.slice(0,2).map(c=>({title:c.title,detail:c.available?'이용 가능 · Core 번들':'미설치',route:c.available?c.route:null}));
    g.append(contentDisplay(.6,.55,z+.9,5.15,3.15,'CONTENTS / 콘텐츠',accent,courseRows,entries.length+'개 콘텐츠 · 이용 가능 '+entries.filter(c=>c.available).length));
@@ -1255,8 +1259,8 @@ function drawControlCenterRoom(fid,detail) {
    put(8.7,6.3,drawRoomWorker({id:'learning-guide',name:'학습 안내'},8.7,6.3,z));
   }else if(live){
    g.setAttribute('data-training-mode','pilot');
-   g.append(roomLettering(.55,.2,z+3.03,'LIVE FIRE  /  CYBER COMBAT RANGE',.23,'#c9fbf2'));
-   g.append(roomLettering(.58,.2,z+2.68,'TRAIN CYBERSECURITY LIKE A FIGHTER PILOT',.13,'#baa4e2'));
+   g.append(contentLettering(.55,.5,z+.95+contentHeight(3.1)+.68,'LIVE FIRE  /  CYBER COMBAT RANGE',.23,'#c9fbf2'));
+   g.append(contentLettering(.58,.5,z+.95+contentHeight(3.1)+.32,'TRAIN CYBERSECURITY LIKE A FIGHTER PILOT',.13,'#baa4e2'));
    const subjects=learning?.subjects||[],scenarios=learning?.scenarios||[],total=scenarios.reduce((n,s)=>n+s.missions,0);
    const catalog=contentDisplay(.55,.5,z+.95,5.2,3.1,'SCENARIOS / 공방전','#81e9dd',subjects.length?subjects.map(subject=>({title:subject.title,detail:scenarios.filter(s=>s.category===subject.id).length+'개 시나리오',route:'#academy/scenarios/'+subject.id})):[{title:'등록 콘텐츠 조회'}],learning?scenarios.length+'개 시나리오 · '+total+'개 미션':'');
    catalog.setAttribute('data-mission-panel','scenarios');g.append(catalog);
@@ -1265,7 +1269,7 @@ function drawControlCenterRoom(fid,detail) {
    const missions=contentDisplay(6.7,4.7,z+.8,4.8,3.1,'MISSION BRIEF / 미션 보기','#81e9dd',scenarios.slice(0,2).map(s=>({title:s.title,detail:s.missions+'개 미션 · '+s.total_points+'점',route:'#academy/scenario/'+s.id})),'Red 공격 → Blue 대응 → Purple 보고');missions.setAttribute('data-mission-panel','missions');put(9.1,5.1,missions);
    put(6.1,6.8,drawRoomWorker({id:'defense-coach',name:'대응 코치'},6.1,6.8,z));
   }else{
-   g.append(roomLettering(.7,.2,z+1.98,'VIRTUAL COMPANY / AGENT OPERATIONS',.23,'#d0e2c9'));
+   g.append(roomLettering(.7,.2,z+1.98,'AGENT OFFICE',.23,'#d0e2c9'));
    const staff=crewOf('4F').filter(w=>w.id!=='ops-lead');
    staff.forEach((w,i)=>{const x=1.85+(i%2)*3.15,y=2.55+Math.floor(i/2)*2.9;put(x+.7,y+1.1,drawWorkstation(w,x,y,z,false));});
    const rack=drawRoomRack({id:'R-8F-01',floor:'8F',aisle:'C',u:24,design_kw:999},8,2,z);

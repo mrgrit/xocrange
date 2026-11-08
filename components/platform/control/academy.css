@@ -22,3 +22,19 @@
 
 .ac-focus .ac-slide-page,.ac-focus .ac-explanation{font-size:17px;line-height:1.95;color:#34283e}.ac-focus .ac-reader p,.ac-focus .ac-reader li{font-size:inherit;line-height:1.95;color:inherit}.ac-focus .ac-reader h4{font-size:20px;line-height:1.6;margin:24px 0 12px}.ac-focus .ac-slide-title{font-size:25px;line-height:1.5;margin:0 0 20px}.ac-focus .ac-reader .ac-code{font-size:14px;line-height:1.85;padding:16px 18px}.ac-focus .ac-reader table{font-size:14px;line-height:1.8}.ac-focus .ac-reader .ac-command dl{font-size:14px}.ac-focus .ac-reader .ac-command header{font-size:12px}.ac-focus .ac-reader figure{margin:20px 0;padding:12px;background:#faf8fc;border:1px solid #e8dfed;border-radius:6px}.ac-focus .ac-reader figure a{display:block}.ac-focus .ac-reader figure img{display:block;width:auto!important;height:auto!important;max-width:min(100%,500px);max-height:280px;object-fit:contain;margin:0 auto;cursor:zoom-in}.ac-focus .ac-reader figcaption{font-size:12px;line-height:1.7;text-align:center;color:#7c658d;margin-top:10px}.ac-focus .ac-reader figure a::after{content:'클릭하여 원본 보기 ↗';display:block;text-align:center;font-size:10px;color:#947ba4;margin-top:8px}.ac-focus .ac-reader .ac-tasks{font-size:14px}.ac-focus .ac-reader .ac-callout{font-size:16px;line-height:1.9}
 @media(max-width:1200px){.ac-focus .ac-slide-page,.ac-focus .ac-explanation{font-size:16px}.ac-focus .ac-slide-title{font-size:22px}.ac-focus .ac-reader figure img{max-height:250px}}
+
+/* Three-part Live Fire reports stay editable independently of the grading engine. */
+.lf-report{margin-top:28px;padding-top:20px;border-top:1px solid var(--line,#d6dee7)}
+.lf-report header,.lf-report footer,.lf-capture-tools{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.lf-report header h3{margin:0}.lf-report>p{line-height:1.7;color:var(--muted,#627083)}
+.lf-section{margin:24px 0}.lf-section>label{display:flex;gap:10px;align-items:center;margin-bottom:10px;font-size:18px}
+.lf-section>label span{color:var(--accent,#ba3835);font:700 13px monospace}.lf-section textarea{width:100%;min-height:150px;padding:14px;font-size:16px;line-height:1.65;resize:vertical;box-sizing:border-box}
+.lf-capture-tools{justify-content:flex-start;margin-top:10px;font-size:13px;color:var(--muted,#627083)}
+.lf-report footer{padding:14px 0}.lf-report footer>div{display:flex;gap:8px;flex-wrap:wrap}#lf-status{font-size:14px}
+.lf-grading{font-size:13px}.ac-range-missions button small{grid-column:1/-1;color:var(--muted,#627083);font-size:12px}
+.lf-evidence figure{max-width:240px}.lf-evidence img{max-height:180px;object-fit:contain}
+@media(max-width:700px){.lf-section textarea{font-size:16px}.lf-report footer>div{width:100%}.lf-report footer button{flex:1}.lf-report header a{font-size:13px}}
+
+.ac-range-mission .ac-code{max-width:100%;overflow:auto;white-space:pre}.ac-range-mission .ac-code code{background:none;color:inherit;padding:0}
+.ac-range-mission p,.ac-range-mission li{font-size:16px;line-height:1.8}.ac-range-mission li{margin:5px 0}.ac-range-mission :not(pre)>code{overflow-wrap:anywhere}
+.ac-range-missions button{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:3px 8px}.ac-range-missions button span{overflow-wrap:anywhere}.ac-range-missions button small{grid-column:1/-1}

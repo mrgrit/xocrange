@@ -52,7 +52,7 @@ with Server(('127.0.0.1',0),Proxy) as server:
             academy_enabled=page.locator('.dc-level-active[data-dc-floor="6F"]').count()==1
             checks['admin_design_previews_match_enabled_floors']=page.locator('.dc-level-preview').count()==(9 if academy_enabled else 10)
             checks['gray_preview_keyboard_access']=page.locator('.dc-level-preview').evaluate_all("nodes=>nodes.every(n=>n.getAttribute('aria-disabled')==='false'&&n.getAttribute('tabindex')==='0'&&getComputedStyle(n).filter.includes('grayscale(1)'))")
-            checks['all_floors_named']=all(t in page.locator('.dc-world-labels').text_content() for t in ('아카데미','Live Fire','가상회사'))
+            checks['all_floors_named']=all(t in page.locator('.dc-world-labels').text_content() for t in ('아카데미','Live Fire','Agent Office'))
             avatar_layout=page.locator('[data-dc-floor]').evaluate_all("nodes=>Object.fromEntries(nodes.map(n=>[n.dataset.dcFloor,[...n.querySelectorAll('[data-worker-figure]')].map(a=>({id:a.dataset.workerFigure,position:a.dataset.avatarPosition,width:Number(a.dataset.avatarWidth)}))]))")
             counts={'B1':1,'1F':1,'2F':2,'3F':1,'4F':4,'5F':2,'XOC':2,'SITE':0,'6F':2,'7F':2,'8F':4}
             checks['original_and_extension_crew_counts']={f:len(v) for f,v in avatar_layout.items()}==counts
@@ -89,7 +89,7 @@ with Server(('127.0.0.1',0),Proxy) as server:
                         expect(page.locator('.cw-real-card')).to_have_count(15)
                         checks['real_scenario_catalog']=True
                         page.locator('.cw-real-card').first.click();expect(page.locator('.ac-range-mission')).to_be_visible()
-                        checks['no_training_execution']=page.locator('.ac-range-mission textarea').is_disabled() and page.locator('.ac-range-actions button').is_disabled()
+                        checks['editable_reports_without_grading']=page.locator('[data-lf-field]').count()==3 and page.locator('[data-lf-field]').evaluate_all('xs=>xs.every(x=>!x.disabled)') and page.locator('[data-lf-save=complete]').is_enabled() and '엔진 연결 후' in page.locator('.lf-grading').inner_text()
                         page.goto(base+'/core/#datacenter');expect(page.locator('.cw-real-card')).to_have_count(15)
                     else:
                         checks['uninstalled_content_hidden']='아카데미 모듈을 선택 설치하면' in page.locator('.commercial-workspace').inner_text()

@@ -95,7 +95,7 @@ def test_training_catalog_has_all_roles_and_never_exposes_grading_answers(academ
         assert {m['learning_role'] for m in s['missions']}=={'red','blue','purple'}
         assert s['execution_available'] is False
         for m in s['missions']:
-            assert m['submission']['fields']==1
+            assert m['submission']['fields']==3
             assert not {'verify','rubric','reference_answer','evaluation_cases'} & set(m)
     assert '채점자 기준 답안' not in json.dumps(data,ensure_ascii=False)
     assert academy.get('/core/api/academy/lessons/'+CID+'/case-01').json()['livefire_scenarios'][0]['id']=='xoc-web-02'

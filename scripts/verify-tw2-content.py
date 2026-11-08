@@ -31,7 +31,7 @@ compiler=importlib.util.module_from_spec(spec);spec.loader.exec_module(compiler)
 validator={'compile_mission_checks':compiler.compile_mission_checks,'ASSESSOR_TYPES':compiler.ASSESSOR_TYPES}
 definitions('scripts/validate_scenarios.py',{'check_mission','REQUIRED_PARAMS','VALID_TARGETS','LOG_ALIASES'},validator)
 contexts={'dataclass':dataclass,'field':field}
-definitions('apps/api/app/services/event_analyzer.py',{'MissionContext'},contexts)
+definitions('apps/api/app/services/event_analyzer.py',{'MissionContext','StudentReport'},contexts)
 router={'ea':SimpleNamespace(MissionContext=contexts['MissionContext'])}
 definitions('apps/api/app/routers/battles.py',{'_build_mission_context'},router)
 checks={};count=0;purple=0
@@ -46,10 +46,13 @@ for s,_ in scenarios(root):
             ctx=router['_build_mission_context'](obj,side,m['order'])
             assert m['reference_answer']['answer'] in '\n'.join(ctx.acceptable_methods)
             assert ctx.points==sum(c['points'] for c in m['rubric'])
+            mapping=s['runtime_contract']['report_fields'];values=m['reference_answer']['sections']
+            report=contexts['StudentReport'](user_name='fixture',event_type='mission',target=s['id'],points_claimed=0,**{mapping[k]:v for k,v in values.items()})
+            assert all(v.lower() in report.combined_text() for v in values.values())
             count+=1;purple+=m['learning_role']=='purple'
     checks[s['id']]=True
 result={'status':'passed','reference_commit':head,'scenarios':len(checks),'missions':count,'purple_missions_preserved':purple,
-        'checks':checks,'verification':['reference _normalize','reference check compiler and validator','reference mission-to-grader context; answers and rubric reach semantic grading'],
+        'checks':checks,'verification':['reference StudentReport preserves all three sections','reference _normalize','reference check compiler and validator','reference mission-to-grader context; answers and rubric reach semantic grading'],
         'scope':'Static content/engine contract only. No AI inference, Assessor connection, live attack, or runtime import was performed.'}
 if a.output:a.output.parent.mkdir(parents=True,exist_ok=True);a.output.write_text(json.dumps(result,indent=2)+'\n')
 print(json.dumps(result,indent=2))

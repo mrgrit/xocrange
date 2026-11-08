@@ -92,5 +92,5 @@ const AcademyNotebook=(()=>{
  document.addEventListener('drop',e=>{if(!e.target.closest('#ac-notebook')||!e.dataTransfer.files.length)return;e.preventDefault();act(()=>upload([...e.dataTransfer.files],e.target.closest('[data-nb-block]')?.dataset.nbBlock));});
  window.addEventListener('beforeunload',e=>{if(dirty()){e.preventDefault();e.returnValue='';}});
  window.addEventListener('hashchange',leave);
- return {select,render,bind,read,clear,leave,flush,dirty};
+ return {select,render,bind,read,clear,leave,flush,dirty,encode};
 })();

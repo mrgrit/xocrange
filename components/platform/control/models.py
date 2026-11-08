@@ -53,6 +53,7 @@ class MissionRecord(models.Model):
 
     class Meta:
         indexes = [models.Index(fields=['user','course','lesson','mission'], name='mission_owner_lookup')]
+        constraints = [models.UniqueConstraint(fields=['user','course','lesson','mission'], condition=models.Q(scope='livefire'), name='unique_livefire_record')]
 
 
 class MissionRevision(models.Model):

@@ -81,7 +81,7 @@ try:
   for width in (1440,1024,768):
    page.set_viewport_size({'width':width,'height':1000});page.goto(origin+'/core/#academy/lesson/wazuh-threat-hunting/discover');expect(page.locator('#ac-notebook')).to_be_visible();checks['no_overflow_'+str(width)]=page.evaluate('document.documentElement.scrollWidth<=innerWidth');page.screenshot(path=str(out/f'notebook-{width}.png'),full_page=True)
   page.set_viewport_size({'width':1680,'height':1050});page.goto(origin+'/core/#academy/lesson/wazuh-threat-hunting/case-01');expect(page.locator('.ac-command').first).to_be_attached();checks['command_context_and_results']=page.locator('.ac-command dl').count()>0 and page.locator('.ac-command header').count()>0
-  page.locator('.ac-compact-links a').first.click();expect(page.locator('.ac-range-mission')).to_be_visible();checks['livefire_single_submission_stays_disabled']=page.locator('.ac-range-mission textarea').count()==1 and page.locator('.ac-range-mission textarea').is_disabled()
+  page.locator('.ac-compact-links a').first.click();expect(page.locator('.ac-range-mission')).to_be_visible();checks['livefire_three_editable_fields']=page.locator('[data-lf-field]').count()==3 and page.locator('[data-lf-field]').evaluate_all('xs=>xs.every(x=>!x.disabled)')
   page.goto(origin+'/core/#datacenter');expect(page.locator('#dc-stage')).to_be_visible();page.locator('[data-dc-mode=building]').click();page.locator('[data-dc-floor="6F"]').click();expect(page.locator('#dc-stage')).to_have_attribute('data-floor','6F')
   page.locator('[data-dc-design=space]').click();learning=page.locator('[data-room-display="MY LEARNING / 내 기록"]')
   checks['floor6_actual_saved_progress']='Discover' in learning.text_content() and '완료 1차시' in learning.text_content()

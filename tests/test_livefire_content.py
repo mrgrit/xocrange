@@ -8,7 +8,7 @@ from xocrange.errors import XocError
 
 ROOT=Path(__file__).resolve().parents[1]
 
-def test_livefire_covers_courses_and_has_single_input_and_scored_answers():
+def test_livefire_covers_courses_and_has_three_part_report_and_scored_answers():
     rows=scenarios(ROOT)
     assert len(rows)==15
     assert len([s for s,_ in rows if s['category']=='xoc-web-defense'])==8
@@ -21,7 +21,7 @@ def test_livefire_covers_courses_and_has_single_input_and_scored_answers():
     for forbidden in ('reference_answer','acceptable_methods','evaluation_cases','채점자 기준 답안'):
         assert forbidden not in text
 
-@pytest.mark.parametrize('mutation',['points','purple','pages','grader','target'])
+@pytest.mark.parametrize('mutation',['points','purple','pages','grader','target','sections','rubric','cases'])
 def test_invalid_grading_or_mapping_fails_before_publication(tmp_path,mutation):
     shutil.copytree(ROOT/'contents/catalog',tmp_path/'contents/catalog')
     shutil.copytree(ROOT/'contents/battle-scenarios',tmp_path/'contents/battle-scenarios')
@@ -33,5 +33,8 @@ def test_invalid_grading_or_mapping_fails_before_publication(tmp_path,mutation):
     if mutation=='pages':s['academy']['source_pages'].append(340)
     if mutation=='grader':s['red_missions'][0]['verify']['semantic']['acceptable_methods']=['answer removed']
     if mutation=='target':s['red_missions'][0]['assess_target']='self'
+    if mutation=='sections':s['red_missions'][0]['submission']['sections'].pop()
+    if mutation=='rubric':s['red_missions'][0]['rubric'][0]['id']='unknown'
+    if mutation=='cases':s['red_missions'][0]['evaluation_cases'][0]['submission']='unstructured'
     p.write_text(yaml.safe_dump(s,allow_unicode=True))
     with pytest.raises(XocError):scenarios(tmp_path)

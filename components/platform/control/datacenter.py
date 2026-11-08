@@ -18,7 +18,7 @@ FLOORS = [
     ('5F', 'AI 연구소', 'RESEARCH LAB', 'live-fire'),
     ('6F', '아카데미', 'ACADEMY', 'community'),
     ('7F', 'Live Fire', 'CYBER RANGE', 'live-fire'),
-    ('8F', '가상회사', 'VIRTUAL COMPANY', 'joint-force'),
+    ('8F', 'Agent Office', 'AGENT OFFICE', 'joint-force'),
     ('XOC', 'xOC 관제센터', 'JOINT OPERATIONS', 'joint-force'),
     ('SITE', '옥외 설비', 'OUTDOOR INFRASTRUCTURE', 'live-fire'),
 ]

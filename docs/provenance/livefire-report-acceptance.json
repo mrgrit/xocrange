@@ -1,0 +1,629 @@
+{
+  "status": "passed",
+  "verified_at": "2026-11-08T14:12:05.372474+00:00",
+  "release_source_sha256": "a39d1d185032ad6b482d8b1ed25cdfdf7d53a48ec3d270b95deff60dba59aaff",
+  "content_module": {
+    "schema_version": "xoc.content-lock/0.1.0",
+    "repository": "https://github.com/mrgrit/xocrange_contents",
+    "commit": "85c45d6453e953d835cce9e60ccd957be976146e",
+    "manifest_sha256": "c3bc5236f40bf47f0c91faf856c7b631270715beea84b801f48c4d57fa9ab35f"
+  },
+  "scope": [
+    "Editable three-part mission records with automatic draft saves, manual checkpoints and registration snapshots",
+    "Owner-scoped record, revision and evidence access with stale-write rejection",
+    "All 105 mission instructions, references and rubrics use attempt/response/interpretation",
+    "6F and 7F headings align with their displays; 8F renamed Agent Office"
+  ],
+  "tests": {
+    "python": {
+      "unique_targeted_tests_passed": 88,
+      "suites": [
+        "livefire records",
+        "livefire content",
+        "academy",
+        "academy notebooks",
+        "datacenter",
+        "platform security",
+        "content module",
+        "academy markup"
+      ]
+    },
+    "tw2_contract": {
+      "status": "passed",
+      "reference_commit": "324d91fb22fee2c76051d5e73b58aa7f82de3e4c",
+      "scenarios": 15,
+      "missions": 105,
+      "purple_missions_preserved": 30,
+      "checks": {
+        "xoc-host-01": true,
+        "xoc-host-02": true,
+        "xoc-host-03": true,
+        "xoc-host-04": true,
+        "xoc-host-05": true,
+        "xoc-host-06": true,
+        "xoc-host-07": true,
+        "xoc-web-01": true,
+        "xoc-web-02": true,
+        "xoc-web-03": true,
+        "xoc-web-04": true,
+        "xoc-web-05": true,
+        "xoc-web-06": true,
+        "xoc-web-07": true,
+        "xoc-web-08": true
+      },
+      "verification": [
+        "reference StudentReport preserves all three sections",
+        "reference _normalize",
+        "reference check compiler and validator",
+        "reference mission-to-grader context; answers and rubric reach semantic grading"
+      ],
+      "scope": "Static content/engine contract only. No AI inference, Assessor connection, live attack, or runtime import was performed."
+    },
+    "vm_report_browser": {
+      "checks": {
+        "three_inputs_enabled": true,
+        "labels": true,
+        "partial_autosave": true,
+        "registration_requires_three_parts": true,
+        "long_literal_output_saved": true,
+        "reload_restores_all_fields": true,
+        "four_captures_saved": true,
+        "clipboard_capture_saved": true,
+        "registration_persisted": true,
+        "mission_switch_preserves_drafts": true,
+        "record_view_has_three_sections": true,
+        "script_remains_literal": true,
+        "registered_snapshot_immutable": true,
+        "continue_record_route": true,
+        "no_overflow_1024": true,
+        "no_overflow_430": true,
+        "stale_write_keeps_local_text": true,
+        "logout_flush_and_login_restore": true,
+        "no_javascript_errors": true
+      },
+      "errors": []
+    },
+    "vm_datacenter_browser": {
+      "status": "passed",
+      "checks": {
+        "datacenter_is_default": true,
+        "floor_directory_removed": true,
+        "admin_design_previews_match_enabled_floors": true,
+        "gray_preview_keyboard_access": true,
+        "all_floors_named": true,
+        "original_and_extension_crew_counts": true,
+        "kt66_original_positions_preserved": true,
+        "kt66_avatar_size_preserved": true,
+        "helmet_and_suit_variants": true,
+        "no_tier_selector": true,
+        "floor_toolbar_scope": true,
+        "desktop_fills_view_without_page_scroll": true,
+        "building_has_no_separate_learning_panel": true,
+        "floor6_displays_real_catalog": true,
+        "floor6_screen_opens_course": true,
+        "admin_opens_B1": true,
+        "preview_large_B1": true,
+        "admin_opens_1F": true,
+        "preview_large_1F": true,
+        "admin_opens_3F": true,
+        "preview_large_3F": true,
+        "admin_opens_4F": true,
+        "preview_large_4F": true,
+        "admin_opens_5F": true,
+        "preview_large_5F": true,
+        "admin_opens_7F": true,
+        "preview_large_7F": true,
+        "live_fire_one_seat": true,
+        "four_training_panels": true,
+        "real_scenario_catalog": true,
+        "editable_reports_without_grading": true,
+        "live_fire_1280_no_overflow": true,
+        "live_fire_430_no_overflow": true,
+        "live_fire_320_no_overflow": true,
+        "admin_opens_8F": true,
+        "preview_large_8F": true,
+        "company_operations_rack": true,
+        "admin_opens_XOC": true,
+        "preview_large_XOC": true,
+        "admin_opens_SITE": true,
+        "preview_large_SITE": true,
+        "keyboard_enters_second_floor": true,
+        "original_two_racks": true,
+        "rack_buttons_match_registry": true,
+        "devices_require_rack_selection": true,
+        "keyboard_opens_rack_inventory": true,
+        "keyboard_selects_actual_device": true,
+        "ssh_targets_deployed_host": true,
+        "ssh_clipboard_matches_display": true,
+        "ssh_options_rejected": true,
+        "custom_ssh_port": true,
+        "shell_clipboard_matches_registered_service": true,
+        "automatic_refresh_preserves_selection_and_camera": true,
+        "real_observation_visible": true,
+        "back_restores_rack_inventory": true,
+        "no_console_device_has_no_link": true,
+        "device_opens_existing_console": true,
+        "datacenter_menu_always_opens_building": true,
+        "siem_device_link_uses_new_tab": true,
+        "fullscreen_enter": true,
+        "fullscreen_exit": true,
+        "camera_pan": true,
+        "reduced_motion": true,
+        "laptop_no_horizontal_overflow": true,
+        "laptop_floor_labels_not_clipped": true,
+        "laptop_active_floor_accessible": true,
+        "laptop_no_page_scroll": true,
+        "mobile_no_horizontal_overflow": true,
+        "mobile_floor_labels_not_clipped": true,
+        "mobile_active_floor_accessible": true,
+        "small_mobile_no_horizontal_overflow": true,
+        "small_mobile_floor_labels_not_clipped": true,
+        "small_mobile_active_floor_accessible": true,
+        "small_mobile_detail_no_overflow": true,
+        "no_defensive_copy": true,
+        "no_paid_endpoints_or_external_assets": true,
+        "nonadmin_contract_keeps_commercial_floors_locked": true,
+        "nonadmin_locked_svg_inert": true,
+        "nonadmin_click_cannot_request_preview": true,
+        "logout_hides_scene": true,
+        "no_invalid_svg_attributes": true,
+        "no_javascript_errors": true,
+        "no_csp_violations": true
+      },
+      "javascript_errors": [],
+      "csp_violations": [],
+      "svg_errors": [],
+      "avatar_layout": {
+        "B1": [
+          {
+            "id": "facility-engineer",
+            "position": "4.8,3.5,0.22",
+            "width": 24
+          }
+        ],
+        "1F": [
+          {
+            "id": "physical-security",
+            "position": "5.15,5.9,0.22",
+            "width": 24
+          }
+        ],
+        "2F": [
+          {
+            "id": "network-engineer",
+            "position": "2.3,7,0.22",
+            "width": 24
+          },
+          {
+            "id": "systems-engineer",
+            "position": "10.3,7,0.22",
+            "width": 24
+          }
+        ],
+        "3F": [
+          {
+            "id": "gpu-platform-engineer",
+            "position": "3.3,6.2,0.22",
+            "width": 24
+          }
+        ],
+        "4F": [
+          {
+            "id": "service-desk",
+            "position": "2.38,3.65,0.22",
+            "width": 22
+          },
+          {
+            "id": "application-developer",
+            "position": "2.38,6.549999999999999,0.22",
+            "width": 22
+          },
+          {
+            "id": "compliance-auditor",
+            "position": "5.53,3.65,0.22",
+            "width": 22
+          },
+          {
+            "id": "ops-lead",
+            "position": "9.629999999999999,6.619999999999999,0.22",
+            "width": 22
+          }
+        ],
+        "5F": [
+          {
+            "id": "skill-researcher",
+            "position": "2.58,4.550000000000001,0.22",
+            "width": 22
+          },
+          {
+            "id": "skill-evaluator",
+            "position": "8.33,4.550000000000001,0.22",
+            "width": 22
+          }
+        ],
+        "6F": [
+          {
+            "id": "content-curator",
+            "position": "3.3,6.3,0.22",
+            "width": 24
+          },
+          {
+            "id": "learning-guide",
+            "position": "8.7,6.3,0.22",
+            "width": 24
+          }
+        ],
+        "7F": [
+          {
+            "id": "red-instructor",
+            "position": "3.7,5.63,0.65",
+            "width": 22
+          },
+          {
+            "id": "defense-coach",
+            "position": "6.1,6.8,0.22",
+            "width": 24
+          }
+        ],
+        "8F": [
+          {
+            "id": "service-desk",
+            "position": "2.38,3.65,0.22",
+            "width": 22
+          },
+          {
+            "id": "application-developer",
+            "position": "2.38,6.549999999999999,0.22",
+            "width": 22
+          },
+          {
+            "id": "compliance-auditor",
+            "position": "5.53,3.65,0.22",
+            "width": 22
+          },
+          {
+            "id": "ops-lead",
+            "position": "9.629999999999999,6.619999999999999,0.22",
+            "width": 22
+          }
+        ],
+        "XOC": [
+          {
+            "id": "agent-supervisor",
+            "position": "2.6799999999999997,4.800000000000001,0.22",
+            "width": 22
+          },
+          {
+            "id": "soc-analyst",
+            "position": "8.53,4.800000000000001,0.22",
+            "width": 22
+          }
+        ],
+        "SITE": []
+      }
+    },
+    "vm_display_geometry": {
+      "checks": {
+        "building_6F_parallel": true,
+        "building_6F_above_display": true,
+        "building_7F_parallel": true,
+        "building_7F_above_display": true,
+        "building_agent_office": true,
+        "room_6F_parallel": true,
+        "room_6F_above_display": true,
+        "room_6F_1024_parallel": true,
+        "room_6F_1024_above_display": true,
+        "room_6F_430_parallel": true,
+        "room_6F_430_above_display": true,
+        "room_7F_parallel": true,
+        "room_7F_above_display": true,
+        "room_7F_1024_parallel": true,
+        "room_7F_1024_above_display": true,
+        "room_7F_430_parallel": true,
+        "room_7F_430_above_display": true,
+        "office_title": true,
+        "office_sign": true,
+        "no_js_errors": true
+      },
+      "geometry": {
+        "building_6F": [
+          {
+            "text": "xOC ACADEMY  /  KNOWLEDGE GALLERY",
+            "heading_angle": 7.808992766768757,
+            "display_angle": 7.808992766768757,
+            "bottom": -0.40437355925355867
+          }
+        ],
+        "building_7F": [
+          {
+            "text": "LIVE FIRE  /  CYBER COMBAT RANGE",
+            "heading_angle": 7.808992766768757,
+            "display_angle": 7.808992766768757,
+            "bottom": -0.6408736258745211
+          },
+          {
+            "text": "TRAIN CYBERSECURITY LIKE A FIGHTER PILOT",
+            "heading_angle": 7.808992766768757,
+            "display_angle": 7.808992766768757,
+            "bottom": -0.27697357430458247
+          }
+        ],
+        "room_6F": [
+          {
+            "text": "xOC ACADEMY  /  KNOWLEDGE GALLERY",
+            "heading_angle": 11.003525286317046,
+            "display_angle": 11.003525286317046,
+            "bottom": -0.39178115934547497
+          }
+        ],
+        "room_6F_1024": [
+          {
+            "text": "xOC ACADEMY  /  KNOWLEDGE GALLERY",
+            "heading_angle": 13.495732874851997,
+            "display_angle": 13.495732874851997,
+            "bottom": -0.39211726245283973
+          }
+        ],
+        "room_6F_430": [
+          {
+            "text": "xOC ACADEMY  /  KNOWLEDGE GALLERY",
+            "heading_angle": 13.495732874851997,
+            "display_angle": 13.495732874851997,
+            "bottom": -0.3718824839293954
+          }
+        ],
+        "room_7F": [
+          {
+            "text": "LIVE FIRE  /  CYBER COMBAT RANGE",
+            "heading_angle": 11.095638231443658,
+            "display_angle": 11.095638231443658,
+            "bottom": -0.6298622190952294
+          },
+          {
+            "text": "TRAIN CYBERSECURITY LIKE A FIGHTER PILOT",
+            "heading_angle": 11.095638231443658,
+            "display_angle": 11.095638231443658,
+            "bottom": -0.2809977298040367
+          }
+        ],
+        "room_7F_1024": [
+          {
+            "text": "LIVE FIRE  /  CYBER COMBAT RANGE",
+            "heading_angle": 13.495732874851997,
+            "display_angle": 13.495732874851997,
+            "bottom": -0.633528441190719
+          },
+          {
+            "text": "TRAIN CYBERSECURITY LIKE A FIGHTER PILOT",
+            "heading_angle": 13.495732874851997,
+            "display_angle": 13.495732874851997,
+            "bottom": -0.28993906597495067
+          }
+        ],
+        "room_7F_430": [
+          {
+            "text": "LIVE FIRE  /  CYBER COMBAT RANGE",
+            "heading_angle": 13.495732874852,
+            "display_angle": 13.495732874852,
+            "bottom": -0.6117558330297452
+          },
+          {
+            "text": "TRAIN CYBERSECURITY LIKE A FIGHTER PILOT",
+            "heading_angle": 13.495732874852,
+            "display_angle": 13.495732874852,
+            "bottom": -0.31317475209832146
+          }
+        ]
+      },
+      "errors": []
+    },
+    "vm_catalog_browser": {
+      "checks": {
+        "initial_no_status_panels": true,
+        "initial_no_learning_text_on_building": true,
+        "initial_full_width_canvas": true,
+        "initial_all_eleven_floors": true,
+        "floor6_stays_in_catalog": true,
+        "one_available_among_24": true,
+        "bundle_has_no_expanded_details": true,
+        "uninstalled_cards_inert": true,
+        "uninstalled_click_keeps_catalog": true,
+        "uninstalled_api_denied": true,
+        "thumbnail_loaded": true,
+        "title_search": true,
+        "combined_filter_empty_state": true,
+        "available_filter_one": true,
+        "category_filter": true,
+        "bundle_opens_course_not_lesson": true,
+        "floor6_display_real_titles": true,
+        "floor6_personal_status_inside": true,
+        "return_from6_no_status_panels": true,
+        "return_from6_no_learning_text_on_building": true,
+        "return_from6_full_width_canvas": true,
+        "return_from6_all_eleven_floors": true,
+        "floor7_actual_missions": true,
+        "floor7_screen_opens_mission": true,
+        "return_from7_no_status_panels": true,
+        "return_from7_no_learning_text_on_building": true,
+        "return_from7_full_width_canvas": true,
+        "return_from7_all_eleven_floors": true,
+        "sidebar_same_catalog": true,
+        "sidebar_home_no_status_panels": true,
+        "sidebar_home_no_learning_text_on_building": true,
+        "sidebar_home_full_width_canvas": true,
+        "sidebar_home_all_eleven_floors": true,
+        "catalog_1440_no_overflow": true,
+        "catalog_1024_no_overflow": true,
+        "catalog_768_no_overflow": true,
+        "catalog_430_no_overflow": true,
+        "catalog_320_no_overflow": true,
+        "login_home_no_status_panels": true,
+        "login_home_no_learning_text_on_building": true,
+        "login_home_full_width_canvas": true,
+        "login_home_all_eleven_floors": true,
+        "no_script_errors": true
+      },
+      "errors": []
+    },
+    "installer_acceptance": {
+      "status": "installed",
+      "release": "a39d1d185032ad6b482d8b1ed25cdfdf7d53a48ec3d270b95deff60dba59aaff",
+      "started_at": "2026-11-08T13:59:52.016827+00:00",
+      "finished_at": "2026-11-08T14:10:22.805882+00:00",
+      "checks": {
+        "acceptance": {
+          "platform_health": true,
+          "landing_available": true,
+          "selected_target_available": true,
+          "source_ip_and_forwarded_header": true,
+          "fw_on_packet_path": true,
+          "ips_on_packet_path": true,
+          "fw_denies_other_port": true,
+          "no_direct_waf_bypass": true,
+          "no_direct_backend_bypass": true,
+          "waf_marker_blocked": true,
+          "ips_marker_blocked": true,
+          "ips_c1_block_evidence": true,
+          "waf_c1_block_evidence": true,
+          "ips_unavailable_blocks_path": true,
+          "path_recovers_after_ips_restart": true
+        },
+        "management_acceptance": {
+          "anonymous_session": true,
+          "login_page": true,
+          "javascript": true,
+          "anonymous_devices_denied": true,
+          "anonymous_users_denied": true,
+          "anonymous_audit_denied": true
+        },
+        "siem_acceptance": {
+          "nftables": true,
+          "suricata": true,
+          "modsecurity": true,
+          "osquery": true,
+          "sysmon": true,
+          "auditd": true,
+          "apache-access": true,
+          "apache-error": true
+        },
+        "siem_ui_acceptance": {
+          "http_redirect_preserves_path_query": true,
+          "anonymous_api_requires_login": true,
+          "rule_exception_preserves_authentication": true,
+          "wrong_password_rejected": true,
+          "login_through_waf": true,
+          "secure_httponly_session_cookie": true,
+          "authenticated_api": true,
+          "native_manager_version": true,
+          "native_manager_daemons": true,
+          "manager_anonymous_rejected": true,
+          "manager_default_password_rejected": true,
+          "manager_wrong_hostname_rejected": true,
+          "manager_wrong_ca_rejected": true,
+          "native_plugin_manager_connection": true,
+          "native_plugin_hides_service_password": true,
+          "native_plugin_session": true,
+          "native_plugin_manager_info": true,
+          "native_plugin_agents": true,
+          "native_plugin_xss_still_blocked": true,
+          "dashboard_html": true,
+          "static_javascript": true,
+          "discover_highlight_rule_exception": true,
+          "other_search_field_still_inspected": true,
+          "other_path_still_inspected": true,
+          "unrelated_put_still_blocked": true,
+          "xss_still_blocked": true,
+          "file_path_investigation_allowed": true,
+          "unrelated_field_keeps_lfi_detection": true,
+          "oversized_request_rejected": true,
+          "malformed_json_rejected": true,
+          "truncated_json_fails_closed_in_waf": true,
+          "waf_marker_blocks_siem": true,
+          "forwarded_client_header_cannot_be_spoofed": true,
+          "ips_inspects_decrypted_https": true,
+          "ui_recovers_after_block": true,
+          "create_index_pattern": true,
+          "field_definition_rule_exceptions": true,
+          "wrong_method_gets_no_field_exception": true,
+          "other_attribute_still_inspected": true,
+          "large_field_list_allowed": true,
+          "temporary_object_deleted": true,
+          "all_eight_fresh_sources_indexed": true,
+          "native_alerts_contain_all_eight_c1_links": true,
+          "raw_suricata_alert_indexed_with_evidence": true,
+          "raw_modsecurity_alert_indexed_with_evidence": true,
+          "raw_sysmon_alert_indexed_with_evidence": true,
+          "raw_apache-error_alert_indexed_with_evidence": true,
+          "stock_sshd_rule_indexes_original_alert": true,
+          "writer_cannot_read_events": true,
+          "writer_cannot_read_native_alerts": true,
+          "logout": true,
+          "logout_revokes_browser_session": true
+        },
+        "siem_native": {
+          "nftables": true,
+          "suricata": true,
+          "modsecurity": true,
+          "osquery": true,
+          "sysmon": true,
+          "auditd": true,
+          "apache-access": true,
+          "apache-error": true
+        }
+      },
+      "fresh_acceptance": true,
+      "external_content": {
+        "lock": {
+          "schema_version": "xoc.content-lock/0.1.0",
+          "repository": "https://github.com/mrgrit/xocrange_contents",
+          "commit": "85c45d6453e953d835cce9e60ccd957be976146e",
+          "manifest_sha256": "c3bc5236f40bf47f0c91faf856c7b631270715beea84b801f48c4d57fa9ab35f"
+        },
+        "fresh_download": true,
+        "verified_files": 360
+      },
+      "services": {
+        "xocrange-core": "active",
+        "xocrange-collector": "active"
+      }
+    }
+  },
+  "learning_records": {
+    "test_records_removed": true,
+    "before": {
+      "control_missionrecord": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "control_missionrevision": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "control_missionevidence": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      }
+    },
+    "after": {
+      "control_missionrecord": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "control_missionrevision": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "control_missionevidence": {
+        "rows": 0,
+        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      }
+    }
+  },
+  "limits": {
+    "text_bytes_per_section": 180000,
+    "captures_per_mission": 20,
+    "ai_grading_connected": false,
+    "league_execution_connected": false,
+    "content_concordance_review": "separate work"
+  }
+}

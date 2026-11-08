@@ -51,7 +51,12 @@ def scenarios(root):
                 role=m['learning_role'];require(role in totals and (role=='red')==(side=='red'),'role mapping')
                 require(m['assess_target']==('opponent' if side=='red' else 'self'),'evidence target differs')
                 require(m['id'] not in mission_ids,'duplicate mission');mission_ids.add(m['id'])
-                require(m['submission']['fields']==1 and m['submission']['type']=='text','one text input required')
+                require(m['submission']['fields']==3 and m['submission']['type']=='report','three-part report required')
+                require([x['id'] for x in m['submission']['sections']]==['input','output','interpretation'],'report section order differs')
+                require(all(x['required'] is True and x['max_bytes']==180000 for x in m['submission']['sections']),'required bounded sections missing')
+                require(set(m['reference_answer']['sections'])=={'input','output','interpretation'},'reference sections missing')
+                require([x['id'] for x in m['rubric']]==['input','output','interpretation'],'per-section rubric missing')
+                require(all(set(x['submission'])=={'input','output','interpretation'} for x in m['evaluation_cases']),'structured evaluation cases required')
                 require(m['points']>0 and sum(c['points'] for c in m['rubric'])==m['points'],'rubric points differ')
                 require(len(m['reference_answer']['answer'])>=8 and len(m['reference_answer']['explanation'])>=20,'reference answer too short')
                 sem=m['verify']['semantic']
@@ -59,7 +64,7 @@ def scenarios(root):
                 require(m['reference_answer']['answer'] in '\n'.join(sem['acceptable_methods']),'reference answer does not reach tw2 grader')
                 checks=m['verify']['checks'];require(bool(checks),'missing assessor context')
                 require(all(c['type']=='wazuh_alert' and c['target']=='siem' and c['params'].get('pattern') for c in checks),'invalid context check')
-                require('### 따라 하기' in m['instruction'] and '### 제출은 하나' in m['instruction'],'learner guidance missing')
+                require('### 따라 하기' in m['instruction'] and '### 세 항목으로 기록하기' in m['instruction'],'learner guidance missing')
                 require({x['kind'] for x in m['evaluation_cases']} >= {'full','wrong','empty'},'evaluation cases missing')
                 totals[role]+=m['points']
         require(totals=={'red':35,'blue':45,'purple':20},'role score differs')
@@ -80,7 +85,7 @@ def public_catalog(root):
         missions=[]
         for m in s['red_missions']+s['blue_missions']:
             missions.append({k:m[k] for k in ('id','order','title','learning_role','points','instruction','hint','submission')})
-        items.append({k:s[k] for k in ('id','category','title','description','difficulty','time_limit','briefing','academy')}|{
+        items.append({k:s[k] for k in ('id','category','title','description','difficulty','time_limit','briefing','academy','content_version')}|{
             'missions':missions,'total_points':100,'source_sha256':hashlib.sha256(path.read_bytes()).hexdigest(),
             'execution_available':False,'minimum_tier':'live-fire'})
     return {'schema_version':'xoc.livefire-preview/0.1.0','subjects':subjects(root),'scenarios':items}
