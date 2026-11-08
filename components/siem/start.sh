@@ -11,7 +11,7 @@ trap stop TERM INT
 while sleep 10 & wait $!; do
     # Upstream returns 1 when optional (disabled) daemons are stopped as well.
     status=$(/var/ossec/bin/wazuh-control status) || true
-    for daemon in wazuh-apid wazuh-analysisd wazuh-db wazuh-remoted wazuh-logcollector wazuh-modulesd; do
+    for daemon in wazuh-apid wazuh-authd wazuh-analysisd wazuh-db wazuh-remoted wazuh-logcollector wazuh-modulesd; do
         if ! grep -q "^$daemon is running" <<< "$status"; then
             printf 'Required Manager daemon stopped: %s\n' "$daemon" >&2
             /var/ossec/bin/wazuh-control stop

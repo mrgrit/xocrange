@@ -1,0 +1,795 @@
+{
+  "schema": "xoc.k06-k07.acceptance/1",
+  "validated_at": "2026-11-08T00:10:33.158752+00:00",
+  "release_sha256": "1f426ab45380828da888532a6def0fc9762760443acdd9e994b83f3aef79ca30",
+  "host": {
+    "hostname": "xoc",
+    "os_release": "Ubuntu 26.04.1 LTS"
+  },
+  "installation": {
+    "status": "installed",
+    "selected": [
+      "platform",
+      "security-path",
+      "fixture-security-probe",
+      "management",
+      "siem",
+      "siem-ui"
+    ],
+    "security_path": {
+      "status": "passed",
+      "checks": {
+        "platform_health": true,
+        "landing_available": true,
+        "selected_target_available": true,
+        "source_ip_and_forwarded_header": true,
+        "fw_on_packet_path": true,
+        "ips_on_packet_path": true,
+        "fw_denies_other_port": true,
+        "no_direct_waf_bypass": true,
+        "no_direct_backend_bypass": true,
+        "waf_marker_blocked": true,
+        "ips_marker_blocked": true,
+        "ips_c1_block_evidence": true,
+        "waf_c1_block_evidence": true,
+        "ips_unavailable_blocks_path": true,
+        "path_recovers_after_ips_restart": true
+      },
+      "report": "/opt/xocrange/releases/1f426ab45380828da888532a6def0fc9762760443acdd9e994b83f3aef79ca30/.local/lab-results/20261107T235825859686Z.json"
+    }
+  },
+  "management_gateway": {
+    "status": "passed",
+    "checks": {
+      "anonymous_session": true,
+      "login_page": true,
+      "javascript": true,
+      "anonymous_devices_denied": true,
+      "anonymous_users_denied": true,
+      "anonymous_audit_denied": true
+    }
+  },
+  "core_security": {
+    "status": "passed",
+    "checks": {
+      "anonymous_read_denied": true,
+      "anonymous_write_denied": true,
+      "login_csrf_denied": true,
+      "login_via_waf": true,
+      "secure_session_cookie": true,
+      "authenticated_devices_read": true,
+      "wrong_origin_denied": true,
+      "missing_csrf_denied": true,
+      "admin_change_allowed": true,
+      "stale_change_denied": true,
+      "policy_restored": true,
+      "password_field_waf_exception": true,
+      "viewer_login": true,
+      "viewer_password_change": true,
+      "viewer_read": true,
+      "viewer_write_denied": true,
+      "viewer_users_denied": true,
+      "viewer_audit_denied": true,
+      "disable_account": true,
+      "disable_revokes_session": true,
+      "other_field_waf_inspection": true,
+      "other_route_waf_inspection": true,
+      "query_credentials_rejected": true,
+      "admin_audit_read": true,
+      "audit_has_before_after": true,
+      "direct_tcp_cannot_bypass": true,
+      "no_management_host_port": true,
+      "logout": true,
+      "logout_revokes": true,
+      "no_plaintext_secrets_in_logs": true
+    },
+    "scope": "Real HTTPS/WAF and Django; no K08 device configuration implementation claim."
+  },
+  "siem_sources": {
+    "status": "passed",
+    "checks": {
+      "nftables": true,
+      "suricata": true,
+      "modsecurity": true,
+      "osquery": true,
+      "sysmon": true,
+      "auditd": true,
+      "apache-access": true,
+      "apache-error": true
+    },
+    "native_checks": {
+      "nftables": true,
+      "suricata": true,
+      "modsecurity": true,
+      "osquery": true,
+      "sysmon": true,
+      "auditd": true,
+      "apache-access": true,
+      "apache-error": true
+    },
+    "since": "2026-11-08T00:06:15.593745Z",
+    "scope": "Fresh local records: C1 alerts and independently decoded raw inputs with Manager archive receipts; dashboard/indexer acceptance is separate."
+  },
+  "siem_https": {
+    "status": "passed",
+    "checks": {
+      "http_redirect_preserves_path_query": true,
+      "anonymous_api_requires_login": true,
+      "rule_exception_preserves_authentication": true,
+      "wrong_password_rejected": true,
+      "login_through_waf": true,
+      "secure_httponly_session_cookie": true,
+      "authenticated_api": true,
+      "native_manager_version": true,
+      "native_manager_daemons": true,
+      "manager_anonymous_rejected": true,
+      "manager_default_password_rejected": true,
+      "manager_wrong_hostname_rejected": true,
+      "manager_wrong_ca_rejected": true,
+      "native_plugin_manager_connection": true,
+      "native_plugin_hides_service_password": true,
+      "native_plugin_session": true,
+      "native_plugin_manager_info": true,
+      "native_plugin_agents": true,
+      "native_plugin_xss_still_blocked": true,
+      "dashboard_html": true,
+      "static_javascript": true,
+      "discover_highlight_rule_exception": true,
+      "other_search_field_still_inspected": true,
+      "other_path_still_inspected": true,
+      "unrelated_put_still_blocked": true,
+      "xss_still_blocked": true,
+      "file_path_investigation_allowed": true,
+      "unrelated_field_keeps_lfi_detection": true,
+      "oversized_request_rejected": true,
+      "malformed_json_rejected": true,
+      "truncated_json_fails_closed_in_waf": true,
+      "waf_marker_blocks_siem": true,
+      "forwarded_client_header_cannot_be_spoofed": true,
+      "ips_inspects_decrypted_https": true,
+      "ui_recovers_after_block": true,
+      "create_index_pattern": true,
+      "field_definition_rule_exceptions": true,
+      "wrong_method_gets_no_field_exception": true,
+      "other_attribute_still_inspected": true,
+      "large_field_list_allowed": true,
+      "temporary_object_deleted": true,
+      "all_eight_fresh_sources_indexed": true,
+      "native_alerts_contain_all_eight_c1_links": true,
+      "raw_suricata_alert_indexed_with_evidence": true,
+      "raw_modsecurity_alert_indexed_with_evidence": true,
+      "raw_sysmon_alert_indexed_with_evidence": true,
+      "raw_apache-error_alert_indexed_with_evidence": true,
+      "stock_sshd_rule_indexes_original_alert": true,
+      "writer_cannot_read_events": true,
+      "writer_cannot_read_native_alerts": true,
+      "logout": true,
+      "logout_revokes_browser_session": true
+    },
+    "scope": "Real HTTPS ingress -> fw -> IPS -> ModSecurity CRS -> authenticated Dashboards; C1 in Indexer.",
+    "known_limitations": [
+      "ModSecurity 2.x #2807 rejects truncated JSON with HTTP 500 before phase 2; ordinary malformed JSON returns 400."
+    ]
+  },
+  "siem_advanced": {
+    "status": "passed",
+    "checks": {
+      "login": true,
+      "native_session": true,
+      "rules": true,
+      "decoders": true,
+      "manager_config": true,
+      "configuration_validation": true,
+      "anonymous_rule_edit_denied": true,
+      "rule_create_via_waf": true,
+      "rule_readback": true,
+      "rule_update_via_waf": true,
+      "edited_rules_validate": true,
+      "malformed_xml_rejected_by_manager": true,
+      "invalid_edit_preserves_file": true,
+      "logtest_via_waf": true,
+      "unrelated_field_still_blocked": true,
+      "unrelated_api_still_blocked": true,
+      "temporary_rule_removed": true
+    }
+  },
+  "agent": {
+    "status": "passed",
+    "checks": {
+      "agent_registered_and_active": true,
+      "agent_key_private": true,
+      "reenroll_preserves_identity": true,
+      "agent_event_indexes_with_true_identity": true,
+      "stock_sshd_detection": true,
+      "disconnected_event_not_falsely_delivered": true,
+      "reconnect_delivers_queued_event": true,
+      "reconnect_unique_event": true,
+      "agent_restart_preserves_registration": true,
+      "post_restart_event": true,
+      "restart_does_not_duplicate_prior_events": true,
+      "no_agent_host_ports": true,
+      "test_agent_removed": true
+    },
+    "scope": "Real Linux agent in an isolated container on the dedicated xoc VM; no separate physical/Windows host claim."
+  },
+  "collector": {
+    "sources": [
+      {
+        "source": "fw-nftables",
+        "checked": "2026-11-08T00:10:30.348560Z",
+        "status": "ready"
+      },
+      {
+        "source": "host-auditd",
+        "checked": "2026-11-08T00:10:30.552783Z",
+        "status": "ready"
+      },
+      {
+        "source": "host-osquery-results",
+        "checked": "2026-11-08T00:10:30.551846Z",
+        "status": "ready"
+      },
+      {
+        "source": "host-osquery-snapshots",
+        "checked": "2026-11-08T00:10:30.552252Z",
+        "status": "ready"
+      },
+      {
+        "source": "host-sysmon",
+        "checked": "2026-11-08T00:10:31.059255Z",
+        "status": "ready"
+      },
+      {
+        "source": "indexer",
+        "checked": "2026-11-08T00:10:31.756214Z",
+        "status": "ready"
+      },
+      {
+        "source": "ips-suricata",
+        "checked": "2026-11-08T00:10:30.349120Z",
+        "status": "ready"
+      },
+      {
+        "source": "native-indexer",
+        "checked": "2026-11-08T00:10:31.874995Z",
+        "status": "ready"
+      },
+      {
+        "source": "retention",
+        "checked": "2026-11-08T00:06:57.002433Z",
+        "status": "ready"
+      },
+      {
+        "source": "sensor-auditd",
+        "checked": "2026-11-08T00:10:30.209263Z",
+        "status": "ready"
+      },
+      {
+        "source": "sensor-sysmon",
+        "checked": "2026-11-08T00:10:30.208957Z",
+        "status": "ready"
+      },
+      {
+        "source": "sensor-xocrange-osquery",
+        "checked": "2026-11-08T00:10:30.209476Z",
+        "status": "ready"
+      },
+      {
+        "source": "wazuh",
+        "checked": "2026-11-08T00:10:31.462042Z",
+        "status": "ready"
+      },
+      {
+        "source": "wazuh-native",
+        "checked": "2026-11-08T00:10:31.639893Z",
+        "status": "ready"
+      },
+      {
+        "source": "wazuh-process",
+        "checked": "2026-11-08T00:10:30.305345Z",
+        "status": "ready"
+      },
+      {
+        "source": "web-access",
+        "checked": "2026-11-08T00:10:30.550542Z",
+        "status": "ready"
+      },
+      {
+        "source": "web-error",
+        "checked": "2026-11-08T00:10:30.551336Z",
+        "status": "ready"
+      },
+      {
+        "source": "web-modsecurity",
+        "checked": "2026-11-08T00:10:30.438578Z",
+        "status": "ready"
+      }
+    ],
+    "counts": [
+      {
+        "producer": "apache-access",
+        "events": 8172,
+        "decoded": 8103
+      },
+      {
+        "producer": "apache-error",
+        "events": 2256,
+        "decoded": 2256
+      },
+      {
+        "producer": "auditd",
+        "events": 54235,
+        "decoded": 54235
+      },
+      {
+        "producer": "modsecurity",
+        "events": 9862,
+        "decoded": 9793
+      },
+      {
+        "producer": "nftables",
+        "events": 4869,
+        "decoded": 4865
+      },
+      {
+        "producer": "osquery",
+        "events": 32251,
+        "decoded": 32251
+      },
+      {
+        "producer": "suricata",
+        "events": 205,
+        "decoded": 205
+      },
+      {
+        "producer": "sysmon",
+        "events": 1373867,
+        "decoded": 1373556
+      }
+    ],
+    "quarantined": 0,
+    "pending": 453,
+    "oldest_pending_seconds": 4,
+    "sysmon_source_lag_seconds": 3,
+    "status": "ready",
+    "native_input_pending": 453,
+    "native_input_errors": 0,
+    "oldest_native_input_pending_seconds": 4,
+    "index_pending": 0,
+    "oldest_index_pending_seconds": 0,
+    "native_alerts_pending": 0,
+    "analysis_quarantined": 0,
+    "storage": {
+      "allocated_bytes": 13161631744,
+      "used_bytes": 13161623552,
+      "filesystem_free_bytes": 227957284864,
+      "policy": {
+        "days": 1,
+        "ingest_bytes": 25769803776,
+        "database_bytes": 34359738368,
+        "reserve_bytes": 2147483648,
+        "index_days": 7,
+        "archive_days": 2
+      }
+    }
+  },
+  "collector_restarts": "0",
+  "selection_reports": {
+    "cleanup.20261108T000906261720Z.json": {
+      "status": "cleaned",
+      "retained": [
+        "checkpoint",
+        "reports",
+        "all_evidence",
+        "all_volumes"
+      ]
+    },
+    "excluded.20261107T235622629974Z.json": {
+      "status": "passed",
+      "checks": {
+        "installation_succeeded": true,
+        "siem_unselected": true,
+        "siem_containers_absent": true,
+        "management_gateway_kept": true,
+        "common_accounts_keys_policies_kept": true,
+        "security_path_running": true,
+        "collection_services_stopped": true,
+        "collection_services_disabled": true,
+        "os_auditd_kept": true,
+        "owned_audit_rules_removed": true,
+        "owned_persistent_rules_removed": true,
+        "unrelated_audit_watch_kept": true,
+        "all_existing_volumes_kept": true,
+        "credentials_and_cas_kept": true,
+        "raw_and_c1_anchors_kept": true,
+        "core_login_without_siem": true,
+        "siem_link_disabled": true,
+        "core_policies_read_without_siem": true,
+        "core_logout_without_siem": true
+      },
+      "evidence_counts": {
+        "records": 1441417,
+        "events": 1442982,
+        "wazuh_alerts": 1345991,
+        "native_inputs": 783387
+      },
+      "install_log": "/var/log/xocrange/install-20261107T235451-34551.log"
+    },
+    "excluded.20261107T235732684448Z.json": {
+      "status": "passed",
+      "checks": {
+        "installation_succeeded": true,
+        "siem_unselected": true,
+        "siem_containers_absent": true,
+        "management_gateway_kept": true,
+        "common_accounts_keys_policies_kept": true,
+        "security_path_running": true,
+        "collection_services_stopped": true,
+        "collection_services_disabled": true,
+        "os_auditd_kept": true,
+        "owned_audit_rules_removed": true,
+        "owned_persistent_rules_removed": true,
+        "unrelated_audit_watch_kept": true,
+        "all_existing_volumes_kept": true,
+        "credentials_and_cas_kept": true,
+        "raw_and_c1_anchors_kept": true,
+        "core_login_without_siem": true,
+        "siem_link_disabled": true,
+        "core_policies_read_without_siem": true,
+        "core_logout_without_siem": true,
+        "excluded_reinstall_did_not_change_evidence_counts": true
+      },
+      "evidence_counts": {
+        "records": 1441417,
+        "events": 1442982,
+        "wazuh_alerts": 1345991,
+        "native_inputs": 783387
+      },
+      "install_log": "/var/log/xocrange/install-20261107T235622-40608.log"
+    },
+    "outage.final.json": {
+      "status": "passed",
+      "wazuh_confirmation_continued": true,
+      "indexer_failure_reported": true,
+      "queued_events_checked": 100,
+      "recovered_unique_documents": 100,
+      "native_alerts_recovered_without_duplicates": 100,
+      "raw_source_alerts_recovered_without_duplicates": 100
+    },
+    "reboot.20261108T000905Z.json": {
+      "status": "passed",
+      "after": "reboot",
+      "release": "1f426ab45380828da888532a6def0fc9762760443acdd9e994b83f3aef79ca30",
+      "checks": {
+        "credentials_preserved": true,
+        "ca_preserved": true,
+        "saved_object_preserved": true,
+        "raw_evidence_preserved": true,
+        "c1_events_preserved": true,
+        "all_anchors_acknowledged": true,
+        "index_documents_preserved_without_duplicates": true,
+        "core_active": true,
+        "collector_active": true,
+        "common_accounts_keys_policies_preserved": true,
+        "boot_id_changed": true,
+        "native_alerts_preserved": true,
+        "native_index_documents_preserved": true,
+        "custom_manager_api_user_preserved": true,
+        "eight_raw_processing_receipts_preserved": true,
+        "manager_credentials_preserved": true,
+        "manager_ca_preserved": true
+      },
+      "evidence": {
+        "total": 24,
+        "raw_matches": 24,
+        "event_matches": 24,
+        "indexed": 24
+      },
+      "fresh_security_path_checks": 15,
+      "fresh_source_checks": 8,
+      "fresh_https_checks": 52
+    },
+    "restored.20261108T000235765819Z.json": {
+      "status": "passed",
+      "after": "reinstall",
+      "release": "1f426ab45380828da888532a6def0fc9762760443acdd9e994b83f3aef79ca30",
+      "checks": {
+        "credentials_preserved": true,
+        "ca_preserved": true,
+        "saved_object_preserved": true,
+        "raw_evidence_preserved": true,
+        "c1_events_preserved": true,
+        "all_anchors_acknowledged": true,
+        "index_documents_preserved_without_duplicates": true,
+        "core_active": true,
+        "collector_active": true,
+        "common_accounts_keys_policies_preserved": true,
+        "native_alerts_preserved": true,
+        "native_index_documents_preserved": true,
+        "custom_manager_api_user_preserved": true,
+        "eight_raw_processing_receipts_preserved": true,
+        "manager_credentials_preserved": true,
+        "manager_ca_preserved": true,
+        "unrelated_audit_watch_kept": true,
+        "owned_audit_rules_restored": true,
+        "all_existing_volumes_kept": true
+      },
+      "evidence": {
+        "total": 24,
+        "raw_matches": 24,
+        "event_matches": 24,
+        "indexed": 24
+      },
+      "fresh_security_path_checks": 15,
+      "fresh_source_checks": 8,
+      "fresh_https_checks": 52
+    }
+  },
+  "remaining_agents": [
+    {
+      "id": "000",
+      "name": "xoc-manager",
+      "status": "active",
+      "version": "Wazuh v4.14.10",
+      "lastKeepAlive": "9999-12-31T23:59:59+00:00",
+      "os": {
+        "arch": "x86_64",
+        "major": "2023",
+        "name": "Amazon Linux",
+        "platform": "amzn",
+        "uname": "Linux |xoc-manager |7.0.0-43-generic |#43-Ubuntu SMP PREEMPT_DYNAMIC Fri Oct 23 13:25:25 UTC 2026 |x86_64",
+        "version": "2023"
+      }
+    }
+  ],
+  "engine_comparison": {
+    "legacy": {
+      "image": "wazuh/wazuh-manager@sha256:77fc060a380dd995b541fd525034f4f8f58c6efa7a625b15f4c9251f0353a69c",
+      "cases": 26,
+      "passed": true
+    },
+    "candidate": {
+      "image": "wazuh/wazuh-manager@sha256:dcda4869e2f792e92f03bce93f85b4bdf103756ea61cfca8ba9f3eabeb05365b",
+      "cases": 26,
+      "passed": true
+    }
+  },
+  "windows_readiness": {
+    "kvm_api": 12,
+    "empty_vm_create_and_close": true,
+    "windows_guest_installed_or_tested": false,
+    "planned_module": "M6"
+  },
+  "apache_timeout_recovery": {
+    "confirmed": true,
+    "decoder": "xoc-apache-empty-request",
+    "error_cleared": true,
+    "original_bytes_intact": true
+  },
+  "limits": [
+    "Linux transport checked in an isolated container on this VM, not a separate host or Windows guest.",
+    "Windows KVM capability checked; evaluation bundle remains M6.",
+    "Actual device configuration apply/rollback is K08.",
+    "Full-host disk pressure, long-term load, backup and restore are K11 release gates.",
+    "Core and Wazuh retain separate accounts and sessions."
+  ],
+  "core_browser": {
+    "status": "passed",
+    "checks": {
+      "login_form": true,
+      "readme_logo_loaded": true,
+      "admin_identity": true,
+      "three_device_policies": true,
+      "accounts_and_audit_visible": true,
+      "siem_link_separate_account": true,
+      "reload_keeps_session": true,
+      "logout": true,
+      "no_javascript_errors": true
+    }
+  },
+  "wazuh_browser": {
+    "status": "passed",
+    "checks": {
+      "login_form": true,
+      "four_dashboard_panels": true,
+      "secure_httponly_cookie": true,
+      "custom_logo_loaded": true,
+      "session_survives_reload": true,
+      "source_filter": true,
+      "file_path_search": true,
+      "all_events": true,
+      "discover_deep_link_reload": true,
+      "no_authenticated_http_errors": true,
+      "no_search_error_notice": true,
+      "native_wazuh_home": true,
+      "native_server_status": true,
+      "native_threat_hunting": true,
+      "native_requests_without_http_errors": true
+    },
+    "http_errors": []
+  },
+  "runtime_source_manifest": {
+    "README.md": "ddbf7201159c4cb4a89c1f6b2519df6fd7e44dfc9be6f13d8328911751190cd2",
+    "assets/branding/provenance.json": "aa39d38e72afe6da927edcf4436917c79588b642207f9441d8f63f25f196d965",
+    "assets/branding/xoc-range-logo.png": "a0c2c8e51cabea13b3db61856fea613878c352675b4c05fa52238eb356b63afd",
+    "components/academy-reader/component.yaml": "77b391e23990d93f9d48948ab1893e87aaea1b9b4521230fa450fc645a5a67d0",
+    "components/console-fw/component.yaml": "f12d319f30ca086fbf6a17e84cb16173d5c970bdcd56b7217c522350acb413e8",
+    "components/console-ips/component.yaml": "91e675687d162e8e35468d8f3708fa6b54316db3614ebdec7e660be53858ef5d",
+    "components/console-waf/component.yaml": "22558b7c8d2686da80c84f9af731325d62744c91c5a4cafd613a23f00ca1f947",
+    "components/management/.dockerignore": "cf9143fdfce145f9234e589317912e7c9fad341276064294f22da3946d23758e",
+    "components/management/component.yaml": "4546c915cd621ad2789b49cc3a99adc4563638daf3c20670d0995324cad5b608",
+    "components/management/compose.yaml": "a0bb33d479e026e3246073169d086d4540f91d8236238bbecead8d0ebd514de6",
+    "components/management/ingress.Dockerfile": "cfe96b92c747387cd7ddfec8090b6ec35db117b0fa14bbe32bfadbb4b61ce43d",
+    "components/noc/component.yaml": "01408bb2c08c7d1dbfd03a7eda1c5a50ea7910de2c8b68761cac087a28953457",
+    "components/platform/.dockerignore": "fd9b5f2230be3ae0bc93c66740f110ed8fc5475c6401cec635e8671565af71a4",
+    "components/platform/Dockerfile": "346345c2b1e2d60e988d318b9c5fdb50fe5813b180cf4bdac50f2aa6fcfabe1f",
+    "components/platform/component.yaml": "9219cc171b75b55319a3c21bd4e0d105baeaa352f73ee807f0111dad6b30e7b0",
+    "components/platform/compose.yaml": "8fe683f740090556b2b1db536ed3f6bcb231cebc63a7ca51b58344d19b92af0b",
+    "components/platform/control/__init__.py": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+    "components/platform/control/app.js": "caef921b97d27e66615b92af0d61b6cb9d2f55e6cbe4c73749650cf4da315ff3",
+    "components/platform/control/middleware.py": "f769dfd9f85293409c8ee7d99524721e6ac8d8e8989c255b80de814f9771ecfa",
+    "components/platform/control/migrations/0001_initial.py": "5521066d71569f4f29ecc7346883a69a1f8fd4e28c9c166064b135b26959ffaf",
+    "components/platform/control/migrations/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "components/platform/control/models.py": "005e6ab705f9e45b6a5d5bb0980564e1ee4ab3317f3846e7ae222d88bef7f6ea",
+    "components/platform/control/page.html": "d6a506b3f450f2514e79ecd459be29b3034162aa73f0627a2f4660bf7a273ffd",
+    "components/platform/control/security.py": "8a9c9443c1356fb8c4d9d9146145213bd231c9967b6b434e960580d727b7b273",
+    "components/platform/control/style.css": "0e3b4162a007cb9327fe4a0227daadb2a89b77dee856290c1be41074ae8492a3",
+    "components/platform/control/urls.py": "a20b99192c97e867d7d8589ce248fdb53ed8d6c08df4a494f820f07cd8d5eb39",
+    "components/platform/control/views.py": "61536eb18a64c4299a604785e4a060dd16a3389633a9b78394df9e0b589de49e",
+    "components/platform/health.py": "dbe97e1faba3173763c88994304daf0deca9ea80628cf8325d711283c61702b3",
+    "components/platform/settings.py": "c4ec73c589bc5c8b0608a6866330e5259aece53b741789a3e60b669b855aec0e",
+    "components/platform/start.py": "26f373add85b54e39cdc8012488bee97ce01521f6c1e6dc2eac9db58522c5d7d",
+    "components/platform/wsgi.py": "bac73a2efe2c8275d5770870f152fe8125161b455831bc821635b5eb467bdeb9",
+    "components/portal/component.yaml": "a74fde47fd999e076c69ea138db8aba3e268b132f29f1cf9712b0e34a7998ad2",
+    "components/security-path/.dockerignore": "b1d7b8370aca4743ba5812511ede5cd651f64e412f8fe3c26e338138faaf7359",
+    "components/security-path/component.yaml": "f32d392fd179017ae11b31e08ebe58ee432724669eed30eaa0738fc742cb8506",
+    "components/security-path/compose.yaml": "165206a5be837478a707afa57aa98a4632ed0d12dd5057ddfe26c200b260606f",
+    "components/security-path/fw/Dockerfile": "c5d7b4e0a5f147195559676ff8a6b9bf3fbce370d22cd312b4802e798a3645d9",
+    "components/security-path/fw/nflog.py": "24f730dbdfe3c56e23496ca3f185b8ba1fef0c7a210f77ed5c4ba6a1d4d3d1fc",
+    "components/security-path/fw/rules.nft": "8ea4867fd7b20a279e9675dd89f92272d817b01e2c2495c4b58b82d0df19ffb9",
+    "components/security-path/ips/Dockerfile": "0ec662226301958d089679aad5869e8b88bd6f2940e75db62928ca18900eff2b",
+    "components/security-path/ips/configure.py": "16f65391cf2a879576843c7924dc4a99f938ca288ce22499c1ae3409f168257f",
+    "components/security-path/ips/probe.rules": "ce8e7e92b2cb0d8802f377e1692da8251c9534525064ea2f62644394a44a8a93",
+    "components/security-path/ips/rules.nft": "3caf3ca8a8aa315c392229eb5d51b6d8d7e587a2ce2a3200b5944f2649059bfc",
+    "components/security-path/runtime/entrypoint.sh": "bee9dadec0d0c0395d24836d422d63555382a7554e522a3a163e1f5f50de5eb4",
+    "components/security-path/web/Dockerfile": "96c43027a1d7d22ef2a0b851aff0c96408e5fd699b2dfd11ca443accf8cde550",
+    "components/security-path/web/apache.conf": "2f410b5ca3e787229f56fd0eac6d23810dbf791ac33d322476bf821fbb1f071c",
+    "components/security-path/web/envvars": "b3409b5c0909fd982d5b12c34fe4770968131d7134cd82f89c01ca3fcf45158f",
+    "components/security-path/web/management.conf": "41be5037a5d37542701d8db5baac3223d0cab15d4eb5631c040c213c45089892",
+    "components/security-path/web/modsecurity.conf": "5de6aeaf96dcbe71b2e4d9bbda87c40f0e1c4bb31f27dca2fb0efb16a3925595",
+    "components/security-path/web/siem.conf": "3bebf33372030fafa490b9cd035751f0f3d87f48669b3292b26be341e2a9b994",
+    "components/security-path/web/start.py": "3db34d08c2b86c12b0aa8fe3ec0ef4132f01581eda6ad71d44d6166a0799cc69",
+    "components/siem/.dockerignore": "05cc6ae53cfd6129f1d7010aa874c6cf0a6019b1adfeff3f4fab27f2d04f43ca",
+    "components/siem/Dockerfile": "6a3cf47332b68ea6aefd8bbec7e459e6485299fdb31f6e3c34503e7204a72c30",
+    "components/siem/audit.rules": "e70ca018045191e045b4e23b30f2c199d8e443c200675d2c0473668a4e5835e6",
+    "components/siem/bootstrap.py": "ecc876399c04a3b10087f912a77f1bec4caa84569e9bf17441491884855689dc",
+    "components/siem/c1-decoder.xml": "c91ebedd504bfeac9bd5fe2f32dfc4f058897996bb2608790582e1d5cd4f7291",
+    "components/siem/c1-rules.xml": "3f4489e60661a94b01e21e0c10c9c3a5faf392e5b16d38a6fd372ee1ebae0fa7",
+    "components/siem/component.yaml": "5d93a47c2aa45dea15426d0cbd0c049b8e3b26c5d3d63a3d858c603dcd760122",
+    "components/siem/compose.yaml": "37ac0276471a24aafa7ee9864d16397e54dacb2f35068262e67f8b60f864b080",
+    "components/siem/native-decoders.xml": "1bd366a47dd1f17a590bc0f00bca548f1a53043d926affa719c807344573dc76",
+    "components/siem/native-queue.py": "8e0d5e27db02dc72c299037589aab44f90a4797faa2e6422413ff9cbc2b01ec6",
+    "components/siem/native-rules.xml": "d85b48fb641d838dfd1fc72faf04ea408086ba23e376d5e31708a628dc82efeb",
+    "components/siem/osquery.conf": "d5769b01e6a0b1fdb3b44f382eac668e3461e310fa4f520f50926e82bc4787a2",
+    "components/siem/ossec.conf": "29c063fcfaccaafb74f2b7f2649d27085a0046843a783d18f5be87d1d2d9b1a9",
+    "components/siem/queue.py": "7b39ea31d94019c65d94099b24bdea7de811fa0c3533d4023e375a3840022a9f",
+    "components/siem/start.sh": "51a0f71f33b59875b94776a4e258aa8847be066cbdd9902ac557e49c1924f3f3",
+    "components/siem/sysmon.xml": "d0dcbeee5f010574938ea441d33e899ec068c1eea326fb2fbd6065937b52179b",
+    "components/siem-ui/.dockerignore": "05cc6ae53cfd6129f1d7010aa874c6cf0a6019b1adfeff3f4fab27f2d04f43ca",
+    "components/siem-ui/component.yaml": "b7fa6bb86c1bfbac65a680b794638d77a98d9bd7dc12651bd0f63c01a5773006",
+    "components/siem-ui/compose.yaml": "09fe6cc985432068689de27ca395a818220175da8ec142d423c8a843c3a4a5e5",
+    "components/siem-ui/dashboard-start.sh": "a07a43637658af8c731bdb52da2b6657ba620913b924b5a7cd99a8dfdc13fb32",
+    "components/siem-ui/dashboard.Dockerfile": "ff4eab09a366dcdea7bd7394329794069b687a54ba6f89700326216a0b5f380c",
+    "components/siem-ui/index-template.json": "8aee3246a878163f92c5099b9248c38b891579b265fc518fa982ef12866378da",
+    "components/siem-ui/indexer-start.sh": "e99a29db83d1765fdc07744d8bd7854c0e61693ab47a40af1224952e3d044742",
+    "components/siem-ui/indexer.Dockerfile": "cb21388bc9fbc58949ddea7be9fae8c5fe96f4cc66484b8341f531b2ce33f46a",
+    "components/siem-ui/saved-objects.ndjson": "713e95b7abcdb2e238249515d56e64390faa49fa2cf70a3a5c70bf862f02aacd",
+    "components/siem-ui/wait-manager.js": "dca67b066f3600da32668e26f513104fa9e080114b30293704c1a9b8de1fa785",
+    "components/siem-ui/wazuh-template.json": "b2d182f49cc68957849e77fd2d79528fd2273ebaec1106c9661c9e320577a089",
+    "components/ssh-lab/component.yaml": "dadb52c0c3c894df4fab746272176cc5b9cd4f62f9ffe9dec68d660f2b3d64a7",
+    "components/target-dvwa/component.yaml": "e7d4e9bc06f5a63a6bc617338db4d9a49c3afa8fa4c2451adf7ce531043dc6f7",
+    "components/target-juice/component.yaml": "9f2b9271f4af8aac48abdfde3ecf35b8b202575fb16c5390ea55f8269c0f70b2",
+    "install.sh": "0953116daca7e00ac81065009ab0442fb955b1cd541afa1983e0ccd228e35e29",
+    "modules.d/README.md": "3768e369f2359f6ae5a0c3dd41329b06656e32a8fae3f6603b76103b9ae3344f",
+    "presets/bootstrap.yaml": "641e4e4f339ad93918d86d2663ea495bee4f6d33c1bb1a520464b551cc3d58eb",
+    "presets/community-security.yaml": "fe5c616c5095cb465e0f96dd2f08164a2d52ef3c1feb9ab4a1623731740bb3b1",
+    "presets/security-path.yaml": "551fbeb9efb87a83f2283f316a1e2517fd9e78c173225aed75d01777bc4fdce9",
+    "pyproject.toml": "20917745d5c1f8abac55a7dedce8f8986be50ac25951a2fe45615ca8446508ae",
+    "scripts/configure-audit.py": "94de302f691aa03513a17f7da8caff34a7ef854fb48d0b529fd092bacb2a93fc",
+    "scripts/install-support.py": "979e6855bdb513c73eb97dbd1ae95dd0967eb5f9c47bcd79af2e87bb4ee6b5d8",
+    "scripts/install-telemetry.sh": "544b29df01692481b230c5dc725d8ef8b23c28663aa4e4b4881571336ef06bfa",
+    "scripts/setup-platform.py": "0c5d10bc244517c0121ae41ef534cadffc469b6befa4028022a9f7f26f5dc574",
+    "scripts/setup-siem-manager.py": "8a2cfff2f53029dcf8a3425232e717e411a15c7e9ae0248519ab43e599e70a33",
+    "scripts/setup-siem-ui.py": "517388731ea51f2a74ebb6967e85c8f2c53d1ca0064d1e7235e985a3d1ab786e",
+    "scripts/verify-management.py": "5b339544ee39bd1464d2b377dd23ed98e135645a03a7ba308a1f3edf948904cd",
+    "scripts/verify-platform.py": "0a18a733272c966d7cf57965e4d0d80a17eff802f55c9462d63ca577292bd292",
+    "scripts/verify-siem-ui.py": "f7589c1195092e59c3b87cb76b35f5187c63392649a1892d57bd9a99b32ab631",
+    "scripts/verify-siem.py": "79aaa48f33e5214687bda64115e1373e8730f7697899bb70e5d45f387cbc2fc1",
+    "src/xocrange/__init__.py": "afaeb6ac0f022264cb628babda0c61a8ab35bb30e889f05c22d2e369f67e2884",
+    "src/xocrange/__main__.py": "935a1c1166b0c1ea35a82256345000bf2c73ded718d77773bc27a71ecce28f7d",
+    "src/xocrange/agents.py": "b76ca783d6a3aa068a4eef582d41713c172d978599c690c59fd8cfaa101b1455",
+    "src/xocrange/cli.py": "70ff093bab4eacde80649cae4db1eb4a9def8f557fe561e722ea2f45681f7ba9",
+    "src/xocrange/collector.py": "18c160223a73492c84f912a831738d0a08cc20a4a9c7fc999aeeedfc324bc613",
+    "src/xocrange/contracts/c1-event.json": "2f0a8e7c7062ea6faef4438a6bd42701b5cab5014e5c396b639220a250f39edb",
+    "src/xocrange/contracts/compose-fragment.json": "bf389ca042c77ec824199384cbed6d90a5c7dd69b56fe8fb1f26c4dee6d989e9",
+    "src/xocrange/contracts/management-compose-fragment.json": "a4bc997d3ae27ce366470c01cc95a44fa821fe4ed011e55a51d939d52fdabea8",
+    "src/xocrange/contracts/manifest.json": "8d87a7181f6fb641d71847addee985ded1a1062e96c2840fe43e3d6cab9dcd80",
+    "src/xocrange/contracts/preset.json": "411c9f90d81d82d53d2de4a6473b6463cfc067f1d992590cc91c690c6125a43d",
+    "src/xocrange/contracts/security-compose-fragment.json": "1b31721639a82e00e872ba9f11727c3530c37eb487a279ad266b92398ea1a6e5",
+    "src/xocrange/contracts/siem-compose-fragment.json": "8486f4b88bc9b8736b407dcdbfc88debc813420922531decbdeb3c759da82754",
+    "src/xocrange/contracts/siem-ui-compose-fragment.json": "a7a62100b2aaff56667f3e21cd25ee1d91cc63c6f0c825cecdecbf4f326b913a",
+    "src/xocrange/documents.py": "ec94e87799f4c2c45bbc132703864a7c0dc5e4178659a601309d3919cfddb64f",
+    "src/xocrange/endpoint_events.py": "9b4d298126fc212a91b37bafa76a4e77160ceaba6a4052c0d4ad07d5da01c77c",
+    "src/xocrange/errors.py": "24633a9963a11493b1bc60db8bfc0568060920a5f2556dd3c9fab0c40c2a5080",
+    "src/xocrange/event_store.py": "02f3334766de9a85ed844f4e2270bfe154ff4e1b40f92286666cbced2dbc6012",
+    "src/xocrange/events.py": "6b9d9162f056bbfcb3fc431dc8b8b8009d006f302b269c3645f4df170f7f870c",
+    "src/xocrange/indexer.py": "d65c32059a054d8f9a03a61d46c78eb544caa012c940d56f467269cdbf59dbeb",
+    "src/xocrange/lab.py": "bf8b55311d33b193555d29a1f154e6359d1092fd7d4d9197c92e44148d3625a8",
+    "src/xocrange/manager_api.py": "5bc56314027caba3b393085305bb44057a25450011327e4afdb5bb87f8602132",
+    "src/xocrange/manager_setup.py": "8367e9761845e0c5e393adbe8f2896871fa973a11adf1313851198a0b48a92f9",
+    "src/xocrange/native_alerts.py": "38bd0ee9ef2a5d26448f18a09a580f3e7527ec69971545a48e4bee36f38edeb6",
+    "src/xocrange/native_input.py": "4045d6697eb522be5da54d1ad955990946b74fb2ceca03f21d7d3c43afb7785e",
+    "src/xocrange/network_policy.py": "e54349f0a5ed84315d53771fb1473c36772a63d2cc85494c90c1202f92b11107",
+    "src/xocrange/planner.py": "480ca3bd3c056480e40eb81a7d415b77dcfcc2231241d2525ec3c6e4e761e44c",
+    "src/xocrange/platform_setup.py": "58f6479f9b3347e93e3281553504f2ace5d1c6f5ac4866710830503b69ba050c",
+    "src/xocrange/retention.py": "676e76fb337f1e0829b4e93d2bab361e3c51fbbe274376eb631b34e984937a55",
+    "src/xocrange/timestamps.py": "e1a8fe0662d10671cef732a9408f763b13afdb8c98513c45379482bfacb6aed3",
+    "src/xocrange/ui_setup.py": "9a78c66640c609cf680e26db98bc54fbb5862300cb9a4f16ae59110b97b09eaf",
+    "tests/fixtures/modules/security-probe/.dockerignore": "b17789aab1494cbb80717fde91069165ef3825dae0ba9f14cf1ae7a3d3927889",
+    "tests/fixtures/modules/security-probe/Dockerfile": "2c85c288dd43355be57fc0c3a9d3ceba766fbdcbb507647ef5c0ff0d5ac4e77e",
+    "tests/fixtures/modules/security-probe/compose.yaml": "fd31c4d952d3da28a04512832c1226ee34df8138db860993850b8328e8e19f3b",
+    "tests/fixtures/modules/security-probe/module.yaml": "a134a08e1d5018747abfd65a63bce0acaa2b7ad089381e002dfde1c828039045",
+    "tests/fixtures/modules/security-probe/probe.py": "cd701a7b729ba8b479bcf309a229989fda983646bed03716484288f3b7ba6bcd",
+    "tests/fixtures/modules/security-probe/target.py": "ae88093ac41eba838c3e8e2116ee052266ee670c5fc0dcfa80d02aa9c2169fa0"
+  },
+  "runtime_hash_recipe": "SHA-256 of json.dumps(runtime_source_manifest, sort_keys=True).encode(); the installer source_files() scope excludes docs and tests.",
+  "verification_source_sha256": {
+    "tests/browser/platform_browser.py": "85c410ff68e2339b635f2622fdcda40ae3a3370d01274916a5d6ded38ba3917f",
+    "tests/browser/siem.py": "d9fbe41a9e28f491eb7d0fc0fd9990302f13669c6be850698a7e4806e27d3dac",
+    "tests/conftest.py": "97bb9d6393fda66d4c7d1bfce01a00106c12a918bdc16b6906b307f426cb831e",
+    "tests/fixtures/modules/security-probe/probe.py": "cd701a7b729ba8b479bcf309a229989fda983646bed03716484288f3b7ba6bcd",
+    "tests/fixtures/modules/security-probe/target.py": "ae88093ac41eba838c3e8e2116ee052266ee670c5fc0dcfa80d02aa9c2169fa0",
+    "tests/integration/agent/ossec.conf": "6bfd71a09a2cd4f36b13d79382aecea91ad8ac89b7b6a882d7091e42f20f030d",
+    "tests/integration/agent/start.sh": "239f1117c74778305a2f0ed61f5fe8b253a381e1af33337fc50c92775d5df308",
+    "tests/integration/agent_transport.py": "f09e9e36c025ae8ff41b9ea55f151c8ab5cb0188faaba06ebb3856fde2406c2d",
+    "tests/integration/native_replay.py": "327bf9fac016f9c6fe8df9b54e18effc3aedb38ac5551253c893108c33b91a6a",
+    "tests/integration/native_rules.py": "e223795cd0539c4a3b9f83fad07ce5598d2032e6ed5c5be3a5874210d980ea2c",
+    "tests/integration/siem_advanced.py": "9ae41224c037d7c3fb8249e4a34e18b4c5218de9ad3b3b9cc68cb29395456e01",
+    "tests/integration/siem_lifecycle.py": "17ab25825e70c433453cd0385d381077553bcf52efcdc7c8163a09e2c54afaae",
+    "tests/integration/siem_selection.py": "55612a514849e657bc7bdb566e4c5061203db7727b355e5f1678ac2ac648c2ac",
+    "tests/test_agents.py": "d02a560d0605c5cf89d8dfbc150a078d74a85de0d743a05883f56a47cb96eecb",
+    "tests/test_cli.py": "5c2823c0687ac39bbeafd18b0d1bbf46f44e0dc865d75b388925bc19a49e309e",
+    "tests/test_events.py": "77cc9edc67f2f02bbb084edabf4561333459c479c65e85e35e6a8c3598f7648f",
+    "tests/test_installer.py": "f70835fa3ed87880c7fea47d2353a710b2f2eaa5c9768057ab525349c3df7fee",
+    "tests/test_lab.py": "e6480c571a8a99762b42590a3eb19dc135e7940e116479cdd7937c5f7c212178",
+    "tests/test_native_alerts.py": "f2e1da98ae43f6dd2fea999deacdcce5627b22df53977494649249a75d89ff55",
+    "tests/test_native_input.py": "b1841f5c11c0f00fbe3e8daf92ec4c453fc189230cd6c0c9f8be2ad998761459",
+    "tests/test_planner.py": "7f02891f7893c73b4325983e447c4fc3b854e2cdf74d032dd6afa84c0f913a18",
+    "tests/test_platform_security.py": "3a5d4381b055ff5c39ce56a346bb8c0c801e0e3bf89bce4f9d2c61740d48f963",
+    "tests/test_retention.py": "629c4ac9fe9354b34912f43e6bbc09bd86c642f913aea350b6dd2f421f5c25cd",
+    "tests/test_security_path.py": "07b3baf8663113d6ca3294d43885eb0a807b2a99c0ec4911c5da5b089707d84e",
+    "tests/test_siem_lifecycle.py": "0c16d6f92a04c45d9ca0e0afc9f8c84d6e12221d86912dacce281faaa77c432d",
+    "tests/test_siem_plan.py": "54b90311313eb831c651d3b8609d2f6f510115150573c718ea88be7a78ea3407",
+    "tests/test_siem_ui.py": "5181dd6379d46c13bd332487b5888d3c6f5a35a45247edc52d6673e6a43e5b85",
+    "tests/test_telemetry.py": "d86be26474e0142dc29cb6c07c49694dbc0ce739c06b19d28bbbd38111e3c75e"
+  },
+  "unit_tests": {
+    "development_host": {
+      "status": "passed",
+      "passed": 275,
+      "seconds": 39.53
+    },
+    "ubuntu_26_04_vm": {
+      "status": "passed",
+      "passed": 275,
+      "seconds": 14.91
+    },
+    "later_lifecycle_test_guard_regression": {
+      "status": "passed",
+      "passed": 19,
+      "seconds": 2.51,
+      "scope": "Test-only change waits for the boot unit to finish before disruptive checks; no runtime source change."
+    }
+  },
+  "status": "passed"
+}

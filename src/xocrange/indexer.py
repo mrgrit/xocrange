@@ -55,6 +55,8 @@ class Client:
                  'Content-Type':content_type,'osd-xsrf':'xoc-setup'}
         if body is not None and not isinstance(body,(str,bytes)):
             body=json.dumps(body)
+        if isinstance(body,str):
+            body=body.encode('utf-8')
         connection=Connection(self.address(service),service,9200 if service=='indexer' else 5601,self.context)
         try:
             connection.request(method,path,body,headers)
@@ -93,7 +95,7 @@ def bulk_payload(rows, limit=4*1024**2):
 
 def export(store, client):
     # Recent observations stay visible while an upgrade backfills older evidence.
-    rows=store.db.execute('SELECT id,event,observed,confirmed,rule_id FROM events WHERE confirmed IS NOT NULL AND indexed IS NULL ORDER BY observed DESC LIMIT 2048').fetchall()
+    rows=store.index_batch(limit=4096)
     if not rows: return 'ready'
     payload, rows=bulk_payload(rows)
     status,result=client.request('POST','/_bulk',payload,content_type='application/x-ndjson')
@@ -158,21 +160,24 @@ def initialize(client, root, timeout=240):
             store.set_cursor('indexer-mapping',digest)
             store.set_cursor('indexer-cluster',cluster)
     store.db.close()
-    # ISM persists and runs inside Indexer, including when the host collector is down.
-    policy={'policy':{'description':'xOC normalized events: seven-day index retention','default_state':'hot','states':[{'name':'hot','actions':[],'transitions':[{'state_name':'delete','conditions':{'min_index_age':'7d'}}]},{'name':'delete','actions':[{'delete':{}}],'transitions':[]}],'ism_template':[{'index_patterns':['xoc-events-*'],'priority':100}]}}
-    status,_=client.request('GET','/_plugins/_ism/policies/xoc-events-retention')
-    if status==404:
-        status,_=client.request('PUT','/_plugins/_ism/policies/xoc-events-retention',policy)
-        if status!=201: raise XocError('indexer_retention','Cannot install the index retention policy.')
-    elif status!=200: raise XocError('indexer_retention','Cannot inspect the index retention policy.')
-    native_policy=json.loads(json.dumps(policy))
-    native_policy['policy']['description']='xOC native Wazuh alerts: seven-day index retention'
-    native_policy['policy']['ism_template'][0]['index_patterns']=['wazuh-alerts-4.x-*']
-    status,_=client.request('GET','/_plugins/_ism/policies/xoc-native-retention')
-    if status==404:
-        status,_=client.request('PUT','/_plugins/_ism/policies/xoc-native-retention',native_policy)
-        if status!=201:raise XocError('native_retention','Cannot install native alert retention.')
-    elif status!=200:raise XocError('native_retention','Cannot inspect native alert retention.')
+    # Host retention can see pending delivery state; age-only ISM cannot.
+    # Detach only the two policies installed by earlier xOC releases.
+    for policy_id, pattern in [('xoc-events-retention','xoc-events-*'),('xoc-native-retention','wazuh-alerts-4.x-*')]:
+        code, data = client.request('GET','/_plugins/_ism/policies/'+policy_id)
+        if code == 404: continue
+        if code != 200: raise XocError('indexer_retention','Cannot inspect the previous retention policy.')
+        code, explained = client.request('GET','/_plugins/_ism/explain/'+pattern)
+        if code != 200: raise XocError('indexer_retention','Cannot inspect managed index state.')
+        for name, metadata in explained.items():
+            if not isinstance(metadata,dict): continue
+            current = metadata.get('policy_id') or metadata.get('index.plugins.index_state_management.policy_id') or metadata.get('index.opendistro.index_state_management.policy_id')
+            if current != policy_id: continue
+            import re
+            if not re.fullmatch(r'(?:xoc-events-|wazuh-alerts-4\.x-)20\d\d\.\d\d\.\d\d',name): continue
+            code, reply = client.request('POST','/_plugins/_ism/remove/'+name)
+            if code != 200 or reply.get('failures'): raise XocError('indexer_retention','Cannot detach the previous retention policy.')
+        code,_ = client.request('DELETE','/_plugins/_ism/policies/'+policy_id)
+        if code not in (200,404): raise XocError('indexer_retention','Cannot retire the previous retention policy.')
     today=datetime.now(timezone.utc).strftime('%Y.%m.%d')
     status,result=client.request('PUT','/xoc-events-'+today,{})
     if status not in (200,400) or status==400 and result.get('error',{}).get('type')!='resource_already_exists_exception':

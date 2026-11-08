@@ -9,7 +9,7 @@ import sqlite3
 
 from .documents import canonical
 from .errors import XocError
-from .events import Context, normalize
+from .events import Context, normalize, SOURCES
 
 
 def now():
@@ -34,6 +34,9 @@ class Store:
         self.db.execute("PRAGMA journal_mode=WAL")
         self.db.execute("PRAGMA synchronous=FULL")
         self.db.execute("PRAGMA foreign_keys=ON")
+        from .retention import policy
+        self.policy = policy(self.directory)
+        self.db.execute('PRAGMA max_page_count=' + str(self.policy['database_bytes']//self.db.execute('PRAGMA page_size').fetchone()[0]))
         self.db.executescript('''
         CREATE TABLE IF NOT EXISTS records (
           ref TEXT PRIMARY KEY, source TEXT NOT NULL, observed TEXT NOT NULL,
@@ -45,6 +48,9 @@ class Store:
         CREATE INDEX IF NOT EXISTS events_pending ON events(confirmed, sent);
         CREATE TABLE IF NOT EXISTS cursors (name TEXT PRIMARY KEY, value TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS health (source TEXT PRIMARY KEY, checked TEXT NOT NULL, status TEXT NOT NULL);
+        CREATE TABLE IF NOT EXISTS processing_errors (
+          id TEXT PRIMARY KEY, observed TEXT NOT NULL, source TEXT NOT NULL,
+          error TEXT NOT NULL, raw BLOB NOT NULL);
         CREATE TABLE IF NOT EXISTS wazuh_alerts (
           id TEXT PRIMARY KEY, observed TEXT NOT NULL, raw BLOB NOT NULL, sha256 TEXT NOT NULL,
           document TEXT NOT NULL, event_id TEXT, indexed TEXT);
@@ -55,7 +61,9 @@ class Store:
           event_id TEXT, frame_sha256 TEXT, sent TEXT, confirmed TEXT, decoder TEXT, error TEXT);
         CREATE INDEX IF NOT EXISTS native_inputs_pending ON native_inputs(confirmed,sent,observed);
         CREATE INDEX IF NOT EXISTS native_inputs_ref ON native_inputs(ref);
+        CREATE INDEX IF NOT EXISTS native_inputs_source_pending ON native_inputs(source,confirmed,observed);
         CREATE INDEX IF NOT EXISTS native_alerts_event ON wazuh_alerts(event_id,indexed);
+        CREATE INDEX IF NOT EXISTS native_alerts_unlinked_pending ON wazuh_alerts(indexed,event_id,observed);
         ''')
         if 'source_id' not in {r[1] for r in self.db.execute('PRAGMA table_info(records)')}:
             self.db.execute('ALTER TABLE records ADD COLUMN source_id TEXT')
@@ -79,10 +87,8 @@ class Store:
             if existing[0] != digest:
                 raise XocError("evidence_conflict", "An existing evidence reference has different bytes.")
             return ref
-        pages = self.db.execute("PRAGMA page_count").fetchone()[0] - self.db.execute("PRAGMA freelist_count").fetchone()[0]
-        size = pages * self.db.execute("PRAGMA page_size").fetchone()[0]
-        if size > 8 * 1024**3:
-            raise XocError("store_full", "Evidence storage reached its 8 GiB ingestion budget; ingestion is paused.")
+        from .retention import check_write
+        check_write(self)
         error, events = None, []
         try:
             events = normalize(source, raw, Context("community", "local", source_id, ref, observed))
@@ -110,13 +116,22 @@ class Store:
         with self.db:
             self.db.execute("INSERT OR REPLACE INTO health VALUES (?,?,?)", (source, now(), status))
 
+    def processing_error(self, source, raw, code):
+        from .retention import check_write
+        ident = hashlib.sha256(canonical([source, code])+raw).hexdigest()
+        if self.db.execute('SELECT 1 FROM processing_errors WHERE id=?',(ident,)).fetchone():return
+        check_write(self, analysis=True)
+        self.db.execute('INSERT OR IGNORE INTO processing_errors VALUES (?,?,?,?,?)',(ident,now(),source,code,raw))
+
     def pending(self, limit=4096):
         cutoff = (datetime.now(timezone.utc) - timedelta(seconds=30)).isoformat().replace("+00:00", "Z")
         if limit<1:return []
         # Reserve a quarter for fresh observations during recovery, while the
         # remaining slots drain oldest evidence. Neither stream can starve.
         query="SELECT id,event FROM events WHERE confirmed IS NULL AND (sent IS NULL OR sent<?) ORDER BY observed {} LIMIT ?"
-        recent=self.db.execute(query.format('DESC'),(cutoff,max(1,limit//4))).fetchall()
+        recent=[]
+        for source in SOURCES:
+            recent.extend(self.db.execute('SELECT id,event FROM events WHERE producer=? AND confirmed IS NULL AND (sent IS NULL OR sent<?) ORDER BY observed DESC LIMIT ?', (source,cutoff,max(1,limit//32))).fetchall())
         oldest=self.db.execute(query.format('ASC'),(cutoff,limit)).fetchall()
         result=[];seen=set()
         for row in [*recent,*oldest]:
@@ -127,7 +142,7 @@ class Store:
     def confirm(self, alert):
         # Raw-source alerts may themselves contain user-supplied event_id keys.
         # They cannot acknowledge or invalidate the separate C1 outbox.
-        if not str(alert.get('rule', {}).get('id', '')).startswith('110'):
+        if alert.get('agent', {}).get('id') != '000' or alert.get('location') != 'xoc-c1' or not str(alert.get('rule', {}).get('id', '')).startswith('110'):
             return
         data = alert.get("data", {})
         if not isinstance(data, dict) or not isinstance(data.get("event_id"), str):
@@ -150,6 +165,26 @@ class Store:
         clause = " WHERE " + " AND ".join(where) if where else ""
         rows = self.db.execute("SELECT event,confirmed,rule_id FROM events" + clause + " ORDER BY observed DESC,id LIMIT ?", (*args, max(1, min(limit, 1000))))
         return [{"event": json.loads(r[0]), "wazuh_confirmed_at": r[1], "wazuh_rule_id": r[2]} for r in rows]
+
+    def index_batch(self, native=False, limit=4096):
+        table, fields, where = ('wazuh_alerts', 'id,observed,document', 'indexed IS NULL') if native else ('events', 'id,event,observed,confirmed,rule_id', 'confirmed IS NOT NULL AND indexed IS NULL')
+        query = f'SELECT {fields} FROM {table} WHERE {where} ORDER BY observed {{}} LIMIT ?'
+        if native:
+            # External agents and stock detections must not be crowded out by
+            # high-rate C1/Sysmon observations during archive recovery.
+            recent = self.db.execute('SELECT id,observed,document FROM wazuh_alerts WHERE indexed IS NULL AND event_id IS NULL ORDER BY observed DESC LIMIT ?', (max(1,limit//8),)).fetchall()
+            recent += self.db.execute(query.format('DESC'), (max(1,limit//8),)).fetchall()
+        else:
+            recent=[]
+            for source in SOURCES:
+                recent.extend(self.db.execute(f'SELECT {fields} FROM events WHERE producer=? AND {where} ORDER BY observed DESC LIMIT ?', (source,max(1,limit//32))).fetchall())
+        oldest = self.db.execute(query.format('ASC'), (limit,)).fetchall()
+        result = []; seen = set()
+        for row in [*recent, *oldest]:
+            if row['id'] in seen: continue
+            result.append(row); seen.add(row['id'])
+            if len(result)==limit: break
+        return result
 
     def retry(self, source=None):
         rows = self.db.execute('SELECT * FROM records WHERE error IS NOT NULL AND source_id IS NOT NULL AND (? IS NULL OR source=?) LIMIT 10000', (source, source)).fetchall()
@@ -182,7 +217,7 @@ class Store:
         journal = self.cursor('sysmon-journal') or {}
         result['sysmon_source_lag_seconds'] = max(0, int(current.timestamp() - journal['source_time'])) if journal.get('source_time') else None
         healthy = result['sources'] and all(r['status'] in ('ready', 'awaiting-file') and
-            (current - datetime.fromisoformat(r['checked'].replace('Z', '+00:00'))).total_seconds() < 60 for r in result['sources'])
+            (current - datetime.fromisoformat(r['checked'].replace('Z', '+00:00'))).total_seconds() < (600 if r['source']=='retention' else 60) for r in result['sources'])
         result['status'] = 'ready' if healthy and not result['quarantined'] and result['oldest_pending_seconds'] < 120 else 'degraded'
         if self.cursor('native-input-enabled'):
             row=self.db.execute('SELECT COUNT(*),MIN(observed),SUM(error IS NOT NULL) FROM native_inputs WHERE confirmed IS NULL').fetchone()
@@ -198,13 +233,21 @@ class Store:
             row=self.db.execute('SELECT COUNT(*),MIN(observed) FROM wazuh_alerts WHERE indexed IS NULL').fetchone()
             result['native_alerts_pending']=row[0]
             if row[1] and (current-datetime.fromisoformat(row[1].replace('Z','+00:00'))).total_seconds()>=120:result['status']='degraded'
+        from .retention import usage
+        result['analysis_quarantined'] = self.db.execute('SELECT COUNT(*) FROM processing_errors').fetchone()[0]
+        if result['analysis_quarantined']: result['status'] = 'degraded'
+        result['storage'] = {**usage(self), 'policy': self.policy}
+        if result['storage']['used_bytes'] >= self.policy['ingest_bytes'] or result['storage']['filesystem_free_bytes'] < self.policy['reserve_bytes']:
+            result['status'] = 'degraded'
         return result
 
-    def prune(self, days=7):
+    def prune(self, days=None):
+        days = self.policy['days'] if days is None else days
         cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat().replace("+00:00", "Z")
         with self.db:
             enabled=int(bool(self.cursor('indexer-enabled')))
             self.db.execute("DELETE FROM events WHERE observed<? AND confirmed IS NOT NULL AND (?=0 OR indexed IS NOT NULL) AND NOT EXISTS (SELECT 1 FROM native_inputs n WHERE n.ref=events.ref AND n.confirmed IS NULL) AND (?=0 OR NOT EXISTS (SELECT 1 FROM wazuh_alerts a WHERE a.event_id=events.id AND a.indexed IS NULL))", (cutoff,enabled,enabled))
             self.db.execute("DELETE FROM records WHERE observed<? AND ref NOT IN (SELECT ref FROM events) AND NOT EXISTS (SELECT 1 FROM native_inputs n WHERE n.ref=records.ref AND n.confirmed IS NULL)", (cutoff,))
             self.db.execute('DELETE FROM wazuh_alerts WHERE observed<? AND (?=0 OR indexed IS NOT NULL)',(cutoff,int(bool(self.cursor('indexer-enabled')))))
+            self.db.execute('DELETE FROM processing_errors WHERE observed<?', (cutoff,))
         self.db.execute("PRAGMA wal_checkpoint(TRUNCATE)")

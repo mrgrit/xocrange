@@ -6,7 +6,7 @@
 
 선택한 기능으로 구성하는 보안 운영 실습 환경. Core의 공통 계약 위에 Live Fire·Joint Force 모듈을 연결한다.
 
-**개발 초기 단계:** Ubuntu 26.04 VM에서 자동 설치와 fw·IPS·WAF의 실제 통신·차단을 검증했다. 8종 보안 로그의 C1 정규화·원본 보관·Wazuh Manager/API·Indexer·전용 Dashboard와 C1 통합 검색을 연결했다. 장비 콘솔·포털과 전체 Community 배포본은 개발 중이다. `bootstrap`은 설치 기반 확인용 health 서비스다.
+**개발 초기 단계:** Ubuntu 26.04 VM에서 자동 설치와 fw·IPS·WAF의 실제 통신·차단을 검증했다. 공통 관리 로그인·역할·세션·감사와 8종 보안 로그의 C1 정규화·원본 보관·Wazuh Manager/API·Indexer·전용 Dashboard와 C1 통합 검색을 연결했다. 장비 콘솔·포털과 전체 Community 배포본은 개발 중이다. `bootstrap`은 설치 기반 확인용 health 서비스다.
 
 ## 지금 실행할 수 있는 것
 
@@ -15,9 +15,10 @@
 | C1 이벤트 계약 | v0.2 JSON Schema, nftables·Suricata·ModSecurity·osquery·Sysmon·auditd·Apache access/error 정규화 |
 | SIEM 백엔드 | 8종 원본 직접 분석과 C1 독립 전송, 원본 SHA-256, 처리 확인·재전송, Wazuh Manager/API·기본/보완 규칙, 원본 경보·증거 연결 |
 | SIEM 웹 관제 | Wazuh Indexer + 전용 Dashboard, 8종 통합 검색·차트·필터, HTTPS 인증, 범위를 제한한 WAF Rule 예외 |
+| 공통 보안 | `/core/` 관리 화면, 관리자·운영자·조회자 역할, 서버 세션·CSRF, 장비 쓰기 정책·변경 감사 |
 | 설치 계획 | manifest 검증, 의존성·충돌·포트 검사, Compose·입력 해시 생성 |
 | 구성 진단 | `xoc doctor`: 로컬 구성과 Docker CLI 존재 확인 |
-| 구성요소 목록 | 필수 platform + 선택 기능 12개; 준비된 기능과 계획 단계 구분 |
+| 구성요소 목록 | 필수 platform + 선택 기능; 준비된 기능과 계획 단계 구분 |
 | 확장 경계 | 명시적으로 선택한 테스트 fixture 조합; C7 구현 전 상용 모듈 거부 |
 | 보안 경로 실험 | fw DNAT·Suricata NFQUEUE·WAF, 선택 타깃 등록, 전용 VM 검사·기동·검증 명령 |
 | 단일 실행 설치기 | OS 검사 → 의존성 설치 → 모듈 구성 → 빌드·기동 → 통신 검사 → 부팅 서비스 등록; 실제 VM에서 실행 완료 |
@@ -32,9 +33,11 @@ Ubuntu Server 26.04 LTS amd64 전용 VM에서 저장소 또는 별도로 받은 
 sudo bash install.sh
 ```
 
-**현재 개발 버전의 설치 범위는 platform + 방화벽 + IPS + WAF + SIEM 백엔드·웹 관제 + 호스트 관측 도구 + 통신 검증용 타깃이다.** 웹 관제를 포함하면 최소 8 GiB RAM을 요구하며 실제 검증 VM은 16 GiB다. `--without siem-ui`로 웹 관제만 제외하거나 `--without siem`으로 SIEM 전체를 제외할 수 있다. 콘솔·포털까지 완성된 Core 전체 설치를 뜻하지 않는다. [웹 관제 구성·WAF 예외·검증](docs/development/SIEM-WEB.md)
+**현재 개발 버전의 설치 범위는 공통 관리 화면 + platform + 방화벽 + IPS + WAF + SIEM 백엔드·웹 관제 + 호스트 관측 도구 + 통신 검증용 타깃이다.** 웹 관제를 포함하면 최소 8 GiB RAM을 요구하며 실제 검증 VM은 16 GiB다. `--without siem-ui`로 웹 관제만 제외하거나 `--without siem`으로 SIEM 전체를 제외할 수 있다. 콘솔·포털까지 완성된 Core 전체 설치를 뜻하지 않는다. [웹 관제 구성·WAF 예외·검증](docs/development/SIEM-WEB.md)
 
-설치 후 `sudo xoc siem credentials`로 HTTPS 주소와 생성된 관리자 비밀번호를 확인한다. 기본 주소는 `https://VM주소/siem/`이며 `--public-host siem.example.test`로 DNS 이름을 지정할 수 있다. 설치기가 만든 로컬 CA(`/etc/xocrange/ca.crt`)는 접속 PC에 한 번 신뢰 등록해야 브라우저 인증서 경고가 없어진다. 인증서와 비밀번호는 재설치 시 유지한다.
+설치 후 `sudo xoc platform credentials`로 `https://VM주소/core/`의 초기 관리자 계정을 확인하고 첫 로그인에서 비밀번호를 변경한다. 이 관리 화면은 SIEM 제외 시에도 유지된다. SIEM은 자체 Wazuh 계정을 사용하며, Core 역할을 SIEM에 자동 적용하는 SSO는 포함하지 않는다. [공통 보안과 권한](docs/development/COMMON-SECURITY.md)
+
+`sudo xoc siem credentials`로 HTTPS 주소와 생성된 관리자 비밀번호를 확인한다. 기본 주소는 `https://VM주소/siem/`이며 `--public-host siem.example.test`로 DNS 이름을 지정할 수 있다. 설치기가 만든 로컬 CA(`/etc/xocrange/ca.crt`)는 접속 PC에 한 번 신뢰 등록해야 브라우저 인증서 경고가 없어진다. 인증서와 비밀번호는 재설치 시 유지한다.
 
 설치기는 필요한 패키지를 설치하고 Docker와 containerd의 데이터 경로를 함께 구성한다. 기동 후 실제 차단·우회 방지·출처 보존·장애 복구 검사에 실패하면 비정상 종료하며 완료 상태를 기록하지 않는다. [설치 동작·선택 옵션·재실행](docs/development/INSTALLER.md)
 
@@ -92,7 +95,7 @@ xoc events normalize \
 xoc events validate --input /tmp/xoc-events.json
 ```
 
-출력은 이벤트 JSON 배열이다. 원본의 tenant/range 주장은 사용하지 않으며, 요청·응답 본문과 인증 헤더를 출력에 복사하지 않는다. 이 명령은 오프라인 변환용이다. 설치된 로컬 수집기는 고정된 수집원 등록부와 관리자 권한으로 동작한다. 원격 에이전트 등록·다중 사용자 접근 제어는 후속 범위다.
+출력은 이벤트 JSON 배열이다. 원본의 tenant/range 주장은 사용하지 않으며, 요청·응답 본문과 인증 헤더를 출력에 복사하지 않는다. 이 명령은 오프라인 변환용이다. 설치된 로컬 수집기는 고정된 수집원 등록부와 관리자 권한으로 동작한다. 관리자는 내부 Manager API를 사용하는 `xoc agents enroll/list`로 Wazuh 에이전트를 등록·조회할 수 있다. 현재 에이전트 수집 포트는 내부망에 한정되며, Windows 번들의 티어 경계는 정본 계획을 따른다.
 
 ## 설치된 SIEM 확인
 
@@ -108,6 +111,8 @@ sudo xoc siem retry --source auditd
 
 ## 개발 문서
 
+- [공통 인증·권한·감사](docs/development/COMMON-SECURITY.md) · [에이전트와 Windows 번들](docs/development/AGENTS-AND-WINDOWS.md)
+- [현재 로드맵 상태](docs/development/ROADMAP-STATUS.md) · [kt66 규칙 이식 범위](docs/development/KT66-RULE-DISPOSITION.md)
 - [SIEM 백엔드와 8종 디코더](docs/development/SIEM.md)
 - [SIEM 웹 관제와 WAF Rule 예외](docs/development/SIEM-WEB.md) · [정식 Wazuh 연동 범위](docs/development/WAZUH-NATIVE.md)
 - [첫 구현 결과와 다음 작업](docs/development/IMPLEMENTATION-01.md)

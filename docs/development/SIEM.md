@@ -1,6 +1,6 @@
 # Core SIEM 수집·디코딩 백엔드
 
-원본을 보관한 뒤 `C1 정규화 → Wazuh C1 규칙`과 `원본 형식 변환 → Wazuh native 규칙` 두 경로를 독립적으로 실행한다. Wazuh Manager/API 4.14.10의 기본 규칙과 C1 규칙을 함께 사용한다. 선택형 `siem-ui`가 같은 버전의 Wazuh Indexer와 전용 Dashboard를 연결하며 원본 경보도 별도로 보존·색인한다. [웹 관제·WAF 예외](SIEM-WEB.md)와 [정식 연동 범위](WAZUH-NATIVE.md)를 함께 참고한다. 원격 에이전트 관리·전체 K06/Community 완료를 뜻하지 않는다.
+원본을 보관한 뒤 `C1 정규화 → Wazuh C1 규칙`과 `원본 형식 변환 → Wazuh native 규칙` 두 경로를 독립적으로 실행한다. Wazuh Manager/API 4.14.10의 기본 규칙과 C1 규칙을 함께 사용한다. 선택형 `siem-ui`가 같은 버전의 Wazuh Indexer와 전용 Dashboard를 연결하며 원본 경보도 별도로 보존·색인한다. [웹 관제·WAF 예외](SIEM-WEB.md)와 [정식 연동 범위](WAZUH-NATIVE.md)를 함께 참고한다. [에이전트 등록·Windows 범위](AGENTS-AND-WINDOWS.md), [공통 보안](COMMON-SECURITY.md)을 별도로 정의한다. Community 전체 출시 완료를 뜻하지 않는다.
 
 ## 소스와 매핑
 
@@ -44,7 +44,7 @@ Docker·Python·Microsoft Ubuntu 26.04 저장소·osquery 저장소·auditd를 �
 
 오류 레코드는 원본을 남기고 격리한다. 디코더를 수정한 뒤 `siem retry`로 같은 증거·최초 관측 시각을 유지하며 재처리한다. 원본에 명령행·사용자 입력 등 민감한 값이 있을 수 있다. 정규화 출력에는 본문·인증 헤더·URL query·명령행·임의 osquery 컬럼을 복사하지 않는다. Native 경보에는 분석에 사용한 원본 필드와 `full_log`가 포함될 수 있으므로 관리자용 검색 데이터로 다룬다. Apache common access의 요청 URI는 원본/native 분석에 남고 C1에서는 제거한다. ModSecurity는 AHZ 부분만 기록하여 요청/응답 헤더와 본문을 새로 수집하지 않는다.
 
-원본과 정규화의 기본 보존 기간은 7일이다. 미분석 outbox는 기간만으로 삭제하지 않는다. 저장소의 사용 페이지가 8 GiB를 넘으면 신규 수집을 중지하고 오류 상태를 남긴다. 이 값은 신규 수집 중단 기준이며 이미 진행 중인 분석/경보 쓰기와 다른 볼륨을 포함한 전체 디스크 상한은 아니다. Wazuh alerts/archives 로그는 1시간/10 MiB 기준으로 회전한다. 원천 볼륨과 OS journal의 전체 수명주기·보존 용량 자동 관리, 장기 부하 및 디스크 고갈 복구는 RC 전 후속 검증 항목이다. 입력·처리량이 작은 전용 개발 VM을 대상으로 검증한다.
+원본과 정규화의 기본 로컬 보존 기간은 1일이다. 미분석 outbox는 기간만으로 삭제하지 않는다. 신규 수집 예산은 24 GiB, SQLite 한도는 32 GiB이며 파일시스템 여유 2 GiB를 확보하지 못하면 쓰기를 중지한다. 분석 확인·재전송에 여유 공간을 남기고 오류 상태를 표시한다. 이 값은 신규 수집 중단 기준이며 이미 진행 중인 분석/경보 쓰기와 다른 볼륨을 포함한 전체 디스크 상한은 아니다. Wazuh alerts/archives 로그는 1시간/10 MiB 기준으로 회전한다. 원천 볼륨과 OS journal의 전체 수명주기·보존 용량 자동 관리, 장기 부하 및 디스크 고갈 복구는 RC 전 후속 검증 항목이다. 입력·처리량이 작은 전용 개발 VM을 대상으로 검증한다.
 
 Wazuh queue에 넣었다고 바로 성공 처리하지 않는다. 실제 `alerts.json`에 같은 event ID·producer·원본 hash가 나타나야 `--confirmed` 조회 대상이 된다. 전송 중 재시작 시 재전송할 수 있지만 검색 저장소는 event ID로 중복 제거한다. `status`는 파싱 격리 건수, 소스 상태, 미분석 건수와 가장 오래 대기한 시간, Sysmon journal의 실제 발생 시각 대비 지연을 표시한다. 누적 journal은 한 회차 최대 5초/4096건씩 처리하며 120초 이상 뒤처지면 `lagging`으로 표시한다.
 
@@ -58,6 +58,14 @@ Native 입력은 별도 ID·frame hash·전송/처리 상태를 갖는다. `arch
 
 소프트웨어 기준은 Ubuntu 26.04.1/kernel 7.0, Wazuh 4.14.10, osquery 5.24.1, Sysmon for Linux 1.6.0, auditd 4.1.2다. 이미지 digest와 모든 패키지 버전이 고정된 재현 배포본은 아직 아니다.
 
-웹 관제를 선택하면 Wazuh가 확인한 C1만 `xoc-events-*` 색인으로 전송한다. 각 문서의 `_id`는 원래 event ID이며 원본 로그 본문은 전송하지 않는다. 개별 bulk 응답이 성공해야 SQLite에 색인 완료를 기록한다. 최근 이벤트를 우선 보내면서 과거 데이터를 채우고, Indexer 중단·429 응답은 다음 회차에 재시도한다. 매핑 또는 Indexer cluster UUID 변경을 감지하면 보존 중인 확인 이벤트를 재전송한다. 아직 색인되지 않은 증거는 기본 보존 기간만으로 지우지 않는다. Indexer의 일별 색인에는 7일 수명 정책을 적용한다.
+웹 관제를 선택하면 Wazuh가 확인한 C1만 `xoc-events-*` 색인으로 전송한다. 각 문서의 `_id`는 원래 event ID이며 원본 로그 본문은 전송하지 않는다. 개별 bulk 응답이 성공해야 SQLite에 색인 완료를 기록한다. 최근 이벤트를 우선 보내면서 과거 데이터를 채우고, Indexer 중단·429 응답은 다음 회차에 재시도한다. 매핑 또는 Indexer cluster UUID 변경을 감지하면 보존 중인 확인 이벤트를 재전송한다. 아직 색인되지 않은 증거는 기본 보존 기간만으로 지우지 않는다. 호스트 collector가 미전송 상태를 확인한 뒤 7일보다 오래된 일별 색인을 정리한다. 나이만 보고 삭제하던 이전 ISM 정책은 제거한다. collector 중지 중에는 이 정리도 실행되지 않는다.
 
 공식 형식·설치 근거: [Wazuh JSON decoder](https://documentation.wazuh.com/current/user-manual/ruleset/decoders/json-decoder.html), [Wazuh 규칙 검증](https://documentation.wazuh.com/current/user-manual/ruleset/testing.html), [Wazuh 로그 회전](https://documentation.wazuh.com/current/user-manual/reference/ossec-conf/global.html), [osquery 로그](https://osquery.readthedocs.io/en/stable/deployment/logging/), [Sysmon Linux 설치](https://github.com/microsoft/Sysmon-Linux/blob/main/INSTALL.md), [NFLOG/ulogd](https://www.netfilter.org/projects/ulogd/).
+
+## 보존과 복구 설정
+
+root 전용 `/var/lib/xocrange/siem/retention.json`에서 `days`, `ingest_bytes`, `database_bytes`, `reserve_bytes`, `index_days`, `archive_days`를 조정할 수 있다. 기본값은 각각 1일·24 GiB·32 GiB·2 GiB·7일·2일이다. collector 재시작 때 설정을 검증한다. 미확인 입력·미색인 증거는 나이만으로 제거하지 않으며, 여유가 부족하면 cursor를 보존하고 수집을 중지한다. 여유 확보 후 다시 수집한다.
+
+Wazuh의 날짜별 hardlink 회전을 인식하고, 압축된 파일도 이전 논리 offset부터 이어 읽는다. archive 정리는 읽기가 끝났고 활성 hardlink가 아닌 닫힌 파일에만 적용한다. SQLite의 빈 페이지는 재사용하며 매 정리마다 파일 크기가 줄어드는 것은 아니다. `status.storage`로 할당량·사용량·파일시스템 여유를 구분한다.
+
+이 정책은 모든 로그 볼륨과 호스트 디스크의 상한을 보장하지 않는다. 원천 로그가 읽히기 전에 외부 회전으로 제거되는 경우와 장기 장애·전체 디스크 고갈 복구는 K11의 필수 검증이다. 운영 사양을 단기 테스트 결과만으로 확정하지 않는다.

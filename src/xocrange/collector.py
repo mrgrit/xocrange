@@ -3,6 +3,7 @@ import base64
 from datetime import datetime, timezone, timedelta
 import fcntl
 import hashlib
+import gzip
 import json
 import os
 from pathlib import Path
@@ -29,25 +30,45 @@ FILES = (
 
 # Used on the host and via docker exec; only immutable registry paths are passed.
 # Read each inode once across rename rotation. Offset resets detect copy-truncate.
-def read_snapshots(path, owner, states, limit=262144):
+def read_snapshots(path, owner, states, limit=262144, history=()):
     result = []
-    for name in (path + '.2', path + '.1', path):
+    seen = set()
+    remaining = limit
+    for name in (*history, path + '.2', path + '.1', path):
         try:
             fd = os.open(name, os.O_RDONLY | os.O_NOFOLLOW)
         except FileNotFoundError:
             continue
-        with os.fdopen(fd, 'rb') as stream:
-            stat = os.fstat(stream.fileno())
+        with os.fdopen(fd, 'rb') as raw_stream:
+            stat = os.fstat(raw_stream.fileno())
+            compressed = str(name).endswith('.gz')
+            stream = gzip.GzipFile(fileobj=raw_stream) if compressed else raw_stream
             key = f'{owner}:{stat.st_dev}:{stat.st_ino}'
+            logical = str(name).removesuffix('.gz')
+            if compressed:
+                key = next((k for k,v in states.items() if v.get('file')==logical), key)
+            if key in seen:
+                continue
+            seen.add(key)
             prior = states.get(key, {})
+            signature = [stat.st_ino, stat.st_size, stat.st_mtime_ns] if compressed else None
+            if compressed and prior.get('complete') and prior.get('compressed_signature') == signature:
+                stream.close()
+                continue
             head = stream.read(64)
             old = base64.b64decode(prior.get('anchor', ''))
-            reset = stat.st_size < prior.get('offset', 0) or not head.startswith(old)
+            reset = (not compressed and stat.st_size < prior.get('offset', 0)) or not head.startswith(old)
             offset = 0 if reset else prior.get('offset', 0)
             stream.seek(offset)
-            data = stream.read(limit)
+            requested = max(0, remaining)
+            data = stream.read(requested)
+            remaining -= len(data)
             result.append(dict(key=key, reset=reset, offset=offset,
-                               anchor=base64.b64encode(head).decode(), data=base64.b64encode(data).decode()))
+                               anchor=base64.b64encode(head).decode(), data=base64.b64encode(data).decode(),
+                               file=logical, complete=len(data)<requested, compressed_signature=signature))
+            if compressed: stream.close()
+            if remaining <= 0:
+                break
     return result
 
 
@@ -155,7 +176,16 @@ class Collector:
         else:
             owner = source_id + ':host'
         states = {row[0]: json.loads(row[1]) for row in self.store.db.execute('SELECT name,value FROM cursors WHERE name LIKE ?', (owner + ':%',))}
-        return read_snapshots(path, owner, states, 32 * MAX_BYTES if service == 'siem' else 262144)
+        from .retention import retained_manager_paths
+        history = retained_manager_paths(path) if service == 'siem' else ()
+        if service == 'siem':
+            live = read_snapshots(path, owner, states, 8*MAX_BYTES)
+            live_keys = {chunk['key'] for chunk in live}
+            history = [p for p in history if f'{owner}:{p.stat().st_dev}:{p.stat().st_ino}' not in live_keys]
+            # Preserve low latency for current input while draining rotated files.
+            older = read_snapshots(path, owner, states, 24*MAX_BYTES, history)
+            return live + [chunk for chunk in older if chunk['key'] not in live_keys]
+        return read_snapshots(path, owner, states, 262144)
 
     def accept_audit_line(self, source_id, position, raw):
         try:
@@ -193,13 +223,25 @@ class Collector:
             position = f"{key}:{previous['generation']}:{base+start}"
             if source == 'auditd':
                 self.accept_audit_line(source_id, position, raw)
-            elif source == 'wazuh':
-                self.store.confirm(json.loads(raw))
-                from .native_alerts import accept
-                accept(self.store,raw)
-            elif source == 'wazuh-archive':
-                from .native_input import confirm
-                confirm(self.store, json.loads(raw))
+            elif source in ('wazuh', 'wazuh-archive'):
+                if not store.db.in_transaction: store.db.execute('BEGIN')
+                store.db.execute('SAVEPOINT analysis_record')
+                try:
+                    value = json.loads(raw)
+                    if not isinstance(value,dict): raise ValueError()
+                    if source == 'wazuh':
+                        self.store.confirm(value)
+                        from .native_alerts import accept
+                        accept(self.store,raw)
+                    else:
+                        from .native_input import confirm
+                        confirm(self.store,value)
+                except (ValueError, TypeError, AttributeError, XocError) as exc:
+                    store.db.execute('ROLLBACK TO analysis_record')
+                    if getattr(exc,'code','') in ('store_full','disk_reserve'): raise
+                    self.store.processing_error(source,raw,getattr(exc,'code','invalid_analysis_json'))
+                finally:
+                    store.db.execute('RELEASE analysis_record')
             elif raw.strip():
                 store.ingest(source, source_id, position, raw)
             consumed = end
@@ -208,7 +250,9 @@ class Collector:
             store.ingest(source, source_id, f"{key}:{previous['generation']}:{base+consumed}", remaining)
             remaining = b''
         store.set_cursor(key, {'offset': chunk['offset'] + len(data), 'buffer': base64.b64encode(remaining).decode(),
-                               'generation': previous['generation'], 'anchor': chunk['anchor']})
+                               'generation': previous['generation'], 'anchor': chunk['anchor'],
+                               'file': chunk.get('file'), 'complete': chunk.get('complete',False),
+                               'compressed_signature':chunk.get('compressed_signature')})
 
     def sysmon(self):
         state = self.store.cursor('sysmon-journal')
@@ -315,12 +359,15 @@ class Collector:
                 self.store.health(source_id, 'ready' if chunks else 'awaiting-file')
             except (XocError, OSError, ValueError, subprocess.TimeoutExpired) as exc:
                 self.store.health(source_id, getattr(exc, 'code', 'collection_failed'))
-        with self.store.transaction():
-            for key, value in self.store.db.execute("SELECT name,value FROM cursors WHERE name LIKE 'audit:%'").fetchall():
-                group = json.loads(value)
-                if time.time() - group['touched'] >= 2:
-                    self.store.ingest('auditd', group['source_id'], group['position'], base64.b64decode(group['raw']))
-                    self.store.db.execute('DELETE FROM cursors WHERE name=?', (key,))
+        try:
+            with self.store.transaction():
+                for key, value in self.store.db.execute("SELECT name,value FROM cursors WHERE name LIKE 'audit:%'").fetchall():
+                    group = json.loads(value)
+                    if time.time() - group['touched'] >= 2:
+                        self.store.ingest('auditd', group['source_id'], group['position'], base64.b64decode(group['raw']))
+                        self.store.db.execute('DELETE FROM cursors WHERE name=?', (key,))
+        except XocError as exc:
+            self.store.health('host-auditd', exc.code)
         for name, method in [('host-sysmon', self.sysmon), ('wazuh', self.forward), ('wazuh-native', self.forward_native)]:
             try:
                 status = method()
@@ -330,21 +377,33 @@ class Collector:
         if self.indexer:
             from .indexer import export
             try:
-                self.store.health('indexer',export(self.store,self.indexer))
+                for _ in range(4):
+                    state = export(self.store,self.indexer)
+                    if state != 'ready' or not self.store.db.execute('SELECT 1 FROM events WHERE confirmed IS NOT NULL AND indexed IS NULL LIMIT 1').fetchone(): break
+                self.store.health('indexer', state)
             except (XocError,OSError,ValueError) as exc:
                 self.store.health('indexer',getattr(exc,'code','indexer_failed'))
             from .native_alerts import export as export_native
             try:
-                self.store.health('native-indexer',export_native(self.store,self.indexer))
+                for _ in range(8):
+                    state = export_native(self.store,self.indexer)
+                    if state != 'ready' or not self.store.db.execute('SELECT 1 FROM wazuh_alerts WHERE indexed IS NULL LIMIT 1').fetchone(): break
+                self.store.health('native-indexer', state)
             except (XocError,OSError,ValueError) as exc:
                 self.store.health('native-indexer',getattr(exc,'code','native_indexer_failed'))
         return self.store.status()
 
     def run(self):
-        iteration = 0
+        last_maintenance = -300
         while True:
             self.once()
-            if iteration % 120 == 0:
-                self.store.prune()
-            iteration += 1
+            if time.monotonic()-last_maintenance >= 300:
+                import sqlite3
+                from .retention import maintain
+                try:
+                    self.store.prune()
+                    self.store.health('retention', maintain(self))
+                except (XocError, OSError, ValueError, sqlite3.DatabaseError):
+                    self.store.health('retention', 'maintenance_failed')
+                last_maintenance = time.monotonic()
             time.sleep(5)

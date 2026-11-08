@@ -10,8 +10,9 @@ Usage: sudo bash install.sh [options]
 Install the current experimental Core security path on a dedicated Ubuntu 26.04
 amd64 VM. Docker, Python, network prerequisites, images and verification are automatic.
 The current default includes platform, fw, IPS, WAF and harmless acceptance probes.
-SIEM collection, eight decoders and HTTPS dashboards are included.
---without siem omits them; --without siem-ui keeps local collection without web UI.
+Common management authentication, SIEM collection, eight decoders and HTTPS dashboards are included.
+--without siem omits SIEM; --without siem-ui keeps local collection without SIEM UI.
+Common HTTPS management remains available with either option.
 Portals and the complete Community release remain under development.
 
   --include ID       Add an implemented module (repeatable)
@@ -34,6 +35,7 @@ need_value() { [[ $# -ge 2 && -n $2 && $2 != --* ]] || fail "Missing value for $
 selection=()
 siem_selection=(--include siem)
 ui_selection=(--include siem-ui)
+management_selection=(--include management)
 public_host=
 data_directory=/var/lib/xocrange/data
 source_ref=
@@ -164,11 +166,11 @@ xoc=("$runtime/bin/xoc" --root "$release")
 stage module-plan
 plan_json=$state/plan-$run_id.json
 "${xoc[@]}" plan --preset security-path --allow-experimental --allow-fixtures \
-    --include fixture-security-probe "${siem_selection[@]}" "${ui_selection[@]}" "${selection[@]}" > "$plan_json"
+    --include fixture-security-probe "${siem_selection[@]}" "${ui_selection[@]}" "${management_selection[@]}" "${selection[@]}" > "$plan_json"
 plan_name=install-$("$runtime/bin/python" -c 'import json,sys; print(json.load(open(sys.argv[1]))["lock"]["plan_id"])' "$plan_json")
 if [[ ! -d $release/.local/plans/$plan_name ]]; then
     "${xoc[@]}" plan --preset security-path --allow-experimental --allow-fixtures \
-        --include fixture-security-probe "${siem_selection[@]}" "${ui_selection[@]}" "${selection[@]}" --output "$plan_name" > "$plan_json"
+        --include fixture-security-probe "${siem_selection[@]}" "${ui_selection[@]}" "${management_selection[@]}" "${selection[@]}" --output "$plan_name" > "$plan_json"
 fi
 # Prevent exclusion of a required acceptance service, before any Docker installation.
 "$runtime/bin/python" - "$release" "$plan_name" <<'PY'
@@ -259,6 +261,8 @@ if "$runtime/bin/python" -c 'import json,sys; sys.exit("siem-ui" not in json.loa
     printf 'vm.max_map_count = 262144\n' > /etc/sysctl.d/70-xocrange-indexer.conf
     if [[ $(sysctl -n vm.max_map_count) -lt 262144 ]]; then sysctl -w vm.max_map_count=262144; fi
 fi
+stage platform-identities
+"$runtime/bin/python" "$release/scripts/setup-platform.py" "$release" "$plan_name" "$public_host"
 "${compose[@]}" build
 stage start-services
 systemctl disable --now xocrange-collector.service 2>/dev/null || true
@@ -300,6 +304,8 @@ WantedBy=multi-user.target
 EOF
 systemctl daemon-reload
 systemctl enable --now xocrange-core.service
+stage management-acceptance
+"$runtime/bin/python" "$release/scripts/verify-management.py" "$release"
 if "$runtime/bin/python" -c 'import json,sys; sys.exit("siem" not in json.load(open(sys.argv[1]))["lock"]["selected"])' "$plan_json"; then
     stage siem-telemetry
     bash "$release/scripts/install-telemetry.sh" "$release" "$runtime" "$plan_name"
@@ -331,6 +337,9 @@ selected = json.loads(Path(sys.argv[7]).read_text())['lock']['selected']
 result = dict(status='installed', scope='experimental-security-path', release=sys.argv[2], selected=selected,
               plan=sys.argv[3], data_directory=sys.argv[4], log=sys.argv[5], acceptance=report,
               community_complete=False, reboot_verified=False)
+management=json.loads(Path('/var/lib/xocrange/management-acceptance.json').read_text())
+assert management['status']=='passed' and all(management['checks'].values())
+result['management_acceptance']=management
 if 'siem' in selected:
     siem = json.loads(Path('/var/lib/xocrange/siem-acceptance.json').read_text())
     assert siem['status'] == 'passed' and all(siem['checks'].values())
@@ -344,6 +353,7 @@ PY
 printf '\nInstalled and verified: experimental platform + fw + IPS + WAF.\n'
 printf 'State: %s/last-install.json\nLogs: %s\n' "$state" "$log"
 printf 'Portals and the complete Community release remain under development.\n'
+printf 'Core login details: sudo xoc platform credentials\n'
 if ((${#ui_selection[@]})); then
     printf 'SIEM login details: sudo xoc siem credentials\nLocal CA certificate: /etc/xocrange/ca.crt\n'
 fi

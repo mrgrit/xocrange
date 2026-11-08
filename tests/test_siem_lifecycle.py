@@ -129,7 +129,7 @@ def test_native_checkpoint_covers_eight_sources_and_creates_only_an_unprivileged
     from xocrange.native_alerts import accept
     with store.transaction():
         for i,row in enumerate(store.db.execute('SELECT event FROM events').fetchall()):
-            accept(store,canonical({'id':str(i),'timestamp':'2026-11-07T13:00:00Z','manager':{'name':'xoc'},'data':json.loads(row[0]),'rule':{'id':'110020'}}))
+            accept(store,canonical({'agent':{'id':'000'},'location':'xoc-c1','id':str(i),'timestamp':'2026-11-07T13:00:00Z','manager':{'name':'xoc'},'data':json.loads(row[0]),'rule':{'id':'110020'}}))
         store.db.execute("UPDATE wazuh_alerts SET indexed='2026-11-07T13:01:00Z'")
     calls=[]
     class Manager:

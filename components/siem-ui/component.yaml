@@ -1,7 +1,7 @@
 schema_version: xoc.manifest/0.1.0
 id: siem-ui
 kind: component
-title: SIEM indexer, dashboards and HTTPS ingress
+title: Wazuh indexer and dashboards
 version: 0.1.0
 core: '>=0.1.0 <0.2.0'
 status: experimental
@@ -12,14 +12,13 @@ requires:
   - platform
   - security-path
   - siem
+  - management
   capabilities: []
 provides:
 - events.dashboard
 conflicts: []
 networks:
 - int
-- user
-- ext
 config_keys:
 - OPENSEARCH_JAVA_OPTS
 contracts:
@@ -31,7 +30,6 @@ build_inputs:
 - dashboard.Dockerfile
 - dashboard-start.sh
 - wait-manager.js
-- ingress.Dockerfile
 - index-template.json
 - wazuh-template.json
 - saved-objects.ndjson

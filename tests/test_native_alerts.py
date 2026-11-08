@@ -45,8 +45,9 @@ def test_native_link_only_points_to_confirmed_matching_c1(store):
     with store.transaction():
         store.ingest('suricata','ips','1',(ROOT/'tests/fixtures/events/suricata-alert.json').read_bytes())
         event=json.loads(store.db.execute('SELECT event FROM events').fetchone()[0])
-        store.confirm({'data':event,'rule':{'id':'110002'}})
-        accept(store,alert(data=event))
+        store.confirm({'agent':{'id':'000'},'location':'xoc-c1','data':event,'rule':{'id':'110002'}})
+        c1=json.loads(alert(data=event));c1.update(agent={'id':'000'},location='xoc-c1',rule={'id':'110002','level':3})
+        accept(store,json.dumps(c1).encode())
     row=store.db.execute('SELECT * FROM wazuh_alerts').fetchone()
     assert row['event_id']==event['event_id']
     assert json.loads(row['document'])['xoc']['evidence_ref']==event['evidence']['ref']
@@ -87,8 +88,19 @@ def test_stock_rule_cannot_acknowledge_a_c1_event(store):
     with store.transaction():
         store.ingest('suricata','ips','1',(ROOT/'tests/fixtures/events/suricata-alert.json').read_bytes())
         event=json.loads(store.db.execute('SELECT event FROM events').fetchone()[0])
-        store.confirm({'data':event,'rule':{'id':'1002'}})
+        store.confirm({'agent':{'id':'000'},'location':'xoc-c1','data':event,'rule':{'id':'1002'}})
     assert not store.query(confirmed=True) and len(store.pending())==1
+
+
+def test_external_agent_cannot_forge_local_receipt_or_evidence_link(store):
+    with store.transaction():
+        store.ingest('suricata','ips','1',(ROOT/'tests/fixtures/events/suricata-alert.json').read_bytes())
+        event=json.loads(store.db.execute('SELECT event FROM events').fetchone()[0])
+        forged=json.loads(alert(data=event));forged.update(agent={'id':'001'},location='xoc-c1',rule={'id':'110002'})
+        store.confirm(forged)
+        accept(store,json.dumps(forged).encode())
+    assert not store.query(confirmed=True)
+    assert store.db.execute('SELECT event_id FROM wazuh_alerts').fetchone()[0] is None
 
 
 def test_recovery_queue_serves_fresh_and_old_events_without_duplicates(store):

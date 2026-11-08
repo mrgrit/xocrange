@@ -10,7 +10,7 @@
 sudo bash install.sh
 ```
 
-현재는 개발 버전이라 위 실행이 experimental security-path를 선택한다. platform·fw·IPS·WAF, Wazuh Manager/API, osquery·Sysmon·auditd와 무해한 검증용 client/backend를 설치한다. 기본 선택인 `siem-ui`는 같은 버전의 Wazuh Indexer·전용 Dashboard와 HTTPS 진입점을 추가한다. `--without siem-ui`는 웹 관제만, `--without siem`은 웹 관제와 SIEM·xOC 호스트 수집을 함께 제외한다. 장비 콘솔·사용자 포털은 아직 포함하지 않으며, 전체 Community 완성본으로 성공을 표시하지 않는다. [8종 수집·검증](SIEM.md)을 함께 참고한다.
+현재는 개발 버전이라 위 실행이 experimental security-path를 선택한다. platform·fw·IPS·WAF, Wazuh Manager/API, osquery·Sysmon·auditd와 무해한 검증용 client/backend를 설치한다. `management`가 공통 HTTPS·로그인·역할·감사·장비 쓰기 정책을 제공한다. 기본 선택인 `siem-ui`는 같은 버전의 Wazuh Indexer·전용 Dashboard를 추가한다. `--without siem-ui`는 웹 관제만, `--without siem`은 웹 관제와 SIEM·xOC 호스트 수집을 함께 제외한다. SIEM 제외 시에도 `/core/` 관리와 계정은 유지한다. 실제 장비 구성 콘솔·사용자 포털은 아직 포함하지 않으며, 전체 Community 완성본으로 성공을 표시하지 않는다. [8종 수집·검증](SIEM.md)을 함께 참고한다.
 
 현재 프로필의 실행 전 검사는 2 vCPU, 웹 관제 포함 시 RAM 약 8GB(제외 시 약 4GB), 데이터 경로 여유 20GB 이상이다. 이번 웹 관제 검증 VM은 8 vCPU·16GB RAM이다. 이는 전체 Core 최소 사양을 실측한 값이 아니다. 전체 개발을 위한 권장 예산은 8 vCPU·32GB RAM·OS 80GB + 데이터 300GB다.
 
@@ -53,7 +53,7 @@ sudo bash install.sh --ref <40-character-commit-sha>
 
 기본 데이터 경로는 `/var/lib/xocrange/data`다. Docker 데이터는 `docker/`, containerd 이미지·스냅샷은 `containerd/` 아래에 저장한다. 별도 디스크는 장치 확인 후 마운트된 경로를 선택하며, 이 버전의 설치기는 디스크를 포맷하지 않는다. `--data-dir` 변경으로 이미 설치한 데이터를 자동 이관하지 않는다.
 
-`--without`으로 platform·security-path·검증용 probe를 제거하면 현재 프로필의 설치 완료 검사를 만족할 수 없어 거부한다. 다른 모듈은 준비된 상태와 의존성에 따라 선택한다.
+`--without`으로 platform·security-path·management·검증용 probe를 제거하면 현재 프로필의 설치 완료 검사를 만족할 수 없어 거부한다. 다른 모듈은 준비된 상태와 의존성에 따라 선택한다.
 
 ## 설치 위치와 재실행
 

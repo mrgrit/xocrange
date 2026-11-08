@@ -35,6 +35,21 @@ def fingerprint(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
+def common_identity(project):
+    """Hash stable auth/policy state; omit sessions and append-only audit rows."""
+    import sqlite3
+    credentials=private_json(STATE/'platform/credentials.json')
+    volume=json.loads(subprocess.check_output(['docker','volume','inspect',project+'_platform-data'],text=True))[0]
+    database=Path(volume['Mountpoint'])/'control.sqlite3'
+    db=sqlite3.connect(database.as_uri()+'?mode=ro',uri=True)
+    try:
+        value={'keys':{k:credentials[k] for k in ('secret_key','bootstrap_password')},
+            'users':db.execute('SELECT u.username,u.password,u.is_active,p.role,p.generation,p.must_change_password FROM auth_user u JOIN control_profile p ON p.user_id=u.id ORDER BY u.username').fetchall(),
+            'devices':db.execute('SELECT device,write_enabled,version FROM control_devicepolicy ORDER BY device').fetchall()}
+        return hashlib.sha256(canonical(value)).hexdigest()
+    finally:db.close()
+
+
 @contextmanager
 def installation_lock(path=Path('/run/lock/xocrange-install.lock')):
     fd=os.open(path,os.O_WRONLY|os.O_CREAT|os.O_NOFOLLOW,0o600)
@@ -144,6 +159,10 @@ class Installed:
         self.install=private_json(STATE/'last-install.json')
         if self.install.get('status')!='installed' or 'siem-ui' not in self.install.get('selected',[]):
             raise XocError('not_installed','A successful SIEM UI installation is required.')
+        # ExecStartPost performs its own disruptive IPS acceptance. Never run
+        # another lab verification concurrently while the unit is activating.
+        wait_for(lambda:subprocess.run(['systemctl','is-active','--quiet','xocrange-core']).returncode==0,
+                 180,'The boot acceptance service did not become active.')
         self.root=Path(self.install['release'])
         if self.root.parent!=Path('/opt/xocrange/releases') or not re.fullmatch('[a-f0-9]{64}',self.root.name) or self.root.is_symlink():
             raise XocError('untrusted_release','Unexpected installed release location.')
@@ -160,6 +179,7 @@ class Installed:
         # Hashes remain in root-only state; public reports contain booleans only.
         private_json(STATE/'ui/credentials.json')
         result={'credentials_sha256':fingerprint(STATE/'ui/credentials.json'),'ca_sha256':fingerprint(STATE/'ui/ca.pem')}
+        result['common_security_sha256']=common_identity(self.project)
         if (self.root/'components/siem/bootstrap.py').is_file():
             result.update(manager_credentials_sha256=fingerprint(STATE/'manager/credentials.json'),manager_ca_sha256=fingerprint(STATE/'manager/ca.pem'))
         return result
@@ -276,6 +296,7 @@ class Installed:
         identity=self.identity()
         code,obj=self.client.request('GET','/siem/api/saved_objects/search/'+before['object_id'],service='dashboard')
         checks={'credentials_preserved':identity['credentials_sha256']==before['credentials_sha256'],'ca_preserved':identity['ca_sha256']==before['ca_sha256'],'saved_object_preserved':code==200 and obj.get('attributes')==before['attributes'],'raw_evidence_preserved':integrity['raw_matches']==integrity['total'],'c1_events_preserved':integrity['event_matches']==integrity['total'],'all_anchors_acknowledged':integrity['indexed']==integrity['total'],'index_documents_preserved_without_duplicates':indexed_integrity(self.client,before['anchors']),'core_active':subprocess.run(['systemctl','is-active','--quiet','xocrange-core']).returncode==0,'collector_active':subprocess.run(['systemctl','is-active','--quiet','xocrange-collector']).returncode==0}
+        checks['common_accounts_keys_policies_preserved']=identity['common_security_sha256']==before.get('common_security_sha256')
         if after=='reboot':checks['boot_id_changed']=before['boot_id']!=boot
         if before.get('native'):
             checks.update(self.verify_native(before['native']))

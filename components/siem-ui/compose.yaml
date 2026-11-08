@@ -45,52 +45,11 @@ services:
     - dashboard-config:/run/xoc-secrets:ro
     depends_on:
     - indexer
-  ingress:
-    read_only: true
-    cap_drop:
-    - ALL
-    security_opt:
-    - no-new-privileges:true
-    restart: 'no'
-    build:
-      context: .
-      dockerfile: ingress.Dockerfile
-    user: 65532:65532
-    networks:
-      user: {}
-      ext:
-        ipv4_address: 172.29.10.20
-    ports:
-    - target: 8080
-      published: 80
-      host_ip: 0.0.0.0
-      protocol: tcp
-    - target: 8443
-      published: 443
-      host_ip: 0.0.0.0
-      protocol: tcp
-    volumes:
-    - ingress-config:/run/xoc-secrets:ro
-    depends_on:
-    - web
 networks:
   int:
     internal: true
-  user:
-    internal: false
-  ext:
-    internal: true
-    driver: bridge
-    driver_opts:
-      com.docker.network.bridge.enable_ip_masquerade: 'false'
-    ipam:
-      config:
-      - subnet: 172.29.10.0/24
-        gateway: 172.29.10.254
 volumes:
   indexer-data: {}
   indexer-config: {}
   dashboard-data: {}
   dashboard-config: {}
-  ingress-config: {}
-  web-tls: {}

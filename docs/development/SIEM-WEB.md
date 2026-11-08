@@ -88,3 +88,9 @@ python tests/browser/siem.py --url https://VM주소 \
 재설치·재부팅·원본/검색 데이터 보존·Indexer 중단은 [수명주기 검증 절차](SIEM-LIFECYCLE-VALIDATION.md)로 반복할 수 있다. 새 검증 도구의 코드 검사와 VM에서 실제 실행한 결과를 구분한다.
 
 정식 Manager·전용 Dashboard 구성의 실제 결과는 [2026-11-07 native 검증 기록](WAZUH-NATIVE-VALIDATION-2026-11-07.md)에 있다.
+
+## K06 규칙 편집 회귀
+
+`/siem/api/request`의 JSON POST 중 Manager PUT `/rules/files/<name>.xml` 또는 `/decoders/files/<name>.xml`, `origin=raw`, 명시된 `etc/rules`·`etc/decoders` 디렉터리만 규칙 편집 경로로 분류한다. CRS 930120·932160·941100·941110·941160의 `ARGS:body.body` 대상만 제외한다. 이는 규칙 본문의 탐지 예시 문자열을 편집하기 위한 예외이며 요청 전체·다른 필드·다른 API·실습 8080 vhost에는 적용하지 않는다. 인증과 Wazuh의 XML 검증은 유지한다.
+
+읽기 전용 Manager rootfs는 유지하고 API 임시 파일 경로 `/var/ossec/tmp`에만 32 MiB tmpfs를 제공한다. 실제 HTTPS 생성·조회·갱신·삭제, 설정 검증, logtest, 잘못된 XML 수정 거부와 기존 파일 보존, 다른 필드/경로 공격 차단을 `tests/integration/siem_advanced.py`에서 검사한다.

@@ -27,7 +27,10 @@ def accept(store,raw):
     if existing:
         if existing[0]!=digest and not source_input:raise XocError('native_alert_conflict','An existing Wazuh alert has different bytes.')
         return identity
-    event_id=source_input['event_id'] if source_input else alert.get('data',{}).get('event_id')
+    from .retention import check_write
+    check_write(store, analysis=True)
+    local_c1 = alert.get('agent',{}).get('id')=='000' and alert.get('location')=='xoc-c1' and str(alert.get('rule',{}).get('id','')).startswith('110')
+    event_id=source_input['event_id'] if source_input else alert.get('data',{}).get('event_id') if local_c1 else None
     query='SELECT ref FROM events WHERE id=?' + ('' if source_input else ' AND confirmed IS NOT NULL')
     row=store.db.execute(query,(event_id,)).fetchone() if isinstance(event_id,str) else None
     link={'event_id':event_id,'evidence_ref':row['ref']} if row else {}
@@ -42,7 +45,7 @@ def accept(store,raw):
 
 
 def export(store,client):
-    rows=store.db.execute('SELECT id,observed,document FROM wazuh_alerts WHERE indexed IS NULL ORDER BY observed DESC LIMIT 4096').fetchall()
+    rows=store.index_batch(native=True)
     if not rows:return 'ready'
     lines=[];selected=[];size=0
     for row in rows:

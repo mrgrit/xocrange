@@ -34,7 +34,7 @@ def ingest(store,source='suricata',raw=None):
 
 
 def receipt(frame,decoder):
-    return {'location':'xoc-native/'+frame['id']+'/'+frame['source'],
+    return {'agent':{'id':'000'},'location':'xoc-native/'+frame['id']+'/'+frame['source'],
             'decoder':{'name':decoder},'full_log':frame['payload']}
 
 
@@ -233,3 +233,16 @@ def test_explicit_quarantine_retry_registers_native_route_without_replacing_raw(
     assert len(pending(store))==1
     assert store.db.execute('SELECT raw,error FROM records WHERE ref=?',(ref,)).fetchone()[:]==(raw,None)
     assert store.retry('suricata')['recovered']==0 and len(pending(store))==1
+
+
+def test_apache_empty_request_receipt_preserves_raw_and_can_recover(store):
+    raw=b'192.0.2.10 - - [07/Nov/2026:13:00:00 +0000] "-" 408 0 xoc_id=-\n'
+    ref,_=ingest(store,'apache-access',raw);frame,=pending(store)
+    assert frame['payload']==raw.decode().strip()
+    with store.transaction():confirm(store,receipt(frame,''))
+    assert store.db.execute('SELECT error FROM native_inputs').fetchone()[0]=='native_decoder_missing'
+    with store.transaction():confirm(store,receipt(frame,'xoc-apache-empty-request'))
+    with store.transaction():confirm(store,receipt(frame,''))
+    assert store.db.execute('SELECT confirmed,error FROM native_inputs').fetchone()[0]
+    assert store.db.execute('SELECT error FROM native_inputs').fetchone()[0] is None
+    assert store.db.execute('SELECT raw FROM records WHERE ref=?',(ref,)).fetchone()[0]==raw

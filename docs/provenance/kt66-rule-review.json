@@ -1,0 +1,102 @@
+{
+  "reviewed_at": "2026-11-07",
+  "original_git_head": "b179231073b25fb797b9c6443da393d02cc12340",
+  "scope": "Read-only local source inventory; no original runtime changes",
+  "files": [
+    {
+      "path": "siem/bastion-audit-decoder.xml",
+      "sha256": "2f7c7607316ac670e751b41c1592384c3d2df2a7fec31cd05cd6c1886b477312",
+      "rule_ids": []
+    },
+    {
+      "path": "siem/bastion-audit-rules.xml",
+      "sha256": "58d58c86236715db5e1d491de5ff8e4b9fcbcc82793c9e86f86f3f7385aad89c",
+      "rule_ids": [
+        "100200",
+        "100201",
+        "100202",
+        "100203",
+        "100204",
+        "100210",
+        "100211",
+        "100212",
+        "100213",
+        "100214",
+        "100215",
+        "100216",
+        "100217",
+        "100218"
+      ]
+    },
+    {
+      "path": "siem/cmdlog-decoder.xml",
+      "sha256": "00d6c2c19fa05ffe04b40cd2abb91f45da4e41cd5fd5589aff5b3d6c91da89ed",
+      "rule_ids": []
+    },
+    {
+      "path": "siem/cmdlog-rules.xml",
+      "sha256": "2d20fff409ae287afd4ebcd366046a669b6f017e08af9b4b2c947898c997f3f8",
+      "rule_ids": [
+        "100260",
+        "100261"
+      ]
+    },
+    {
+      "path": "siem/hollaex-honeypot-decoder.xml",
+      "sha256": "cdef209ec7c28b2242e8efd312b89aea3bdbd78973cfe2c3b54fb7be6921986b",
+      "rule_ids": []
+    },
+    {
+      "path": "siem/hollaex-honeypot-rules.xml",
+      "sha256": "ee2ba2b9440e645f71870ebbc34ad134cf600e945c8e01f0aba4a978e35df67f",
+      "rule_ids": [
+        "119680",
+        "119681",
+        "119682",
+        "119683",
+        "119684",
+        "119685",
+        "119686"
+      ]
+    },
+    {
+      "path": "siem/kt66-events-decoder.xml",
+      "sha256": "b0f5ff449bec5e584b9624f4e94e83fa4637ccac0d81b2f63f28d49d14e0e93c",
+      "rule_ids": []
+    },
+    {
+      "path": "siem/kt66-events-rules.xml",
+      "sha256": "e96dc79b600b77b6a123c1b73ee007cfdb1d6b2b168d58e2758c9b7a854f416e",
+      "rule_ids": [
+        "119660",
+        "119661",
+        "119662",
+        "119663"
+      ]
+    },
+    {
+      "path": "siem/modsecurity-json-rules.xml",
+      "sha256": "2dde21166f12ad715d4fdd5d8f4cb5e761f2c4cab7f0d53bfff0e3a902610493",
+      "rule_ids": [
+        "119670",
+        "119671",
+        "119672"
+      ]
+    },
+    {
+      "path": "endpoints/windows/download.py",
+      "sha256": "adc74a6b779a2fca53edd6bd0aad04c89c135a8445b990a76ccf039b9f9da87b",
+      "rule_ids": []
+    },
+    {
+      "path": "endpoints/windows/setup.py",
+      "sha256": "88ac44305579a133901f5d1dc3d6df64b6bf0fd5081ddf9de9bf28846c352ea1",
+      "rule_ids": []
+    },
+    {
+      "path": "endpoints/windows/entrypoint.sh",
+      "sha256": "ba188dcc79c333f30e380b44d00271dc103108e2ff03c7d748419db21b9f8cbf",
+      "rule_ids": []
+    }
+  ]
+}

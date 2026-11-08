@@ -18,7 +18,7 @@ ROOT=Path(__file__).resolve().parents[1]
 
 @pytest.fixture
 def ui_checkout(tmp_path):
-    for name in ('platform','security-path','siem','siem-ui'):
+    for name in ('platform','security-path','siem','siem-ui','management'):
         shutil.copytree(ROOT/'components'/name,tmp_path/'components'/name)
     shutil.copytree(ROOT/'presets',tmp_path/'presets')
     return tmp_path
@@ -48,7 +48,7 @@ def test_ui_selection_only_publishes_ingress_and_enables_tls(ui_checkout):
     ('dashboard',{'read_only':False}),
 ])
 def test_ui_builtin_cannot_expand_its_privileges(ui_checkout,role,change):
-    path=ui_checkout/'components/siem-ui/compose.yaml'
+    path=ui_checkout/('components/management/compose.yaml' if role=='ingress' else 'components/siem-ui/compose.yaml')
     data=yaml.safe_load(path.read_text());data['services'][role].update(change);path.write_text(yaml.safe_dump(data))
     with pytest.raises(XocError):ui_plan(ui_checkout)
 
@@ -134,3 +134,23 @@ def test_unindexed_evidence_is_retained_until_indexer_ack(tmp_path):
     with store.transaction():store.db.execute("UPDATE events SET indexed='2026-11-07T00:00:02Z'")
     store.prune(days=-1)
     assert store.db.execute('SELECT COUNT(*) FROM events').fetchone()[0]==0
+
+
+def test_native_bulk_uses_utf8_over_http(monkeypatch):
+    from xocrange import indexer
+    captured={}
+    class Response:
+        status=200
+        def read(self, size):return b'{}'
+    class Connection:
+        def __init__(self,*args,**kwargs):pass
+        def request(self,method,path,body,headers):captured['body']=body
+        def getresponse(self):return Response()
+        def close(self):pass
+    monkeypatch.setattr(indexer,'Connection',Connection)
+    client=indexer.Client.__new__(indexer.Client)
+    client.user='writer';client.credentials={'writer':'test-only'};client.context=None
+    client.address=lambda service:'127.0.0.1'
+    body='{"index":{}}\n{"full_log":"한글 ⍰ 탐지"}\n'
+    assert client.request('POST','/_bulk',body,content_type='application/x-ndjson')[0]==200
+    assert captured['body']==body.encode('utf-8')

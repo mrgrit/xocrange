@@ -11,7 +11,7 @@ from .events import SOURCES
 LOCATION = re.compile(r'^xoc-native/([a-f0-9]{64})/(' + '|'.join(SOURCES) + r')$')
 DECODERS = {'nftables': {'xoc-nftables', 'kernel'}, 'suricata': {'json'},
             'modsecurity': {'json'}, 'osquery': {'json'}, 'sysmon': {'json'},
-            'auditd': {'auditd'}, 'apache-access': {'web-accesslog', 'json'},
+            'auditd': {'auditd'}, 'apache-access': {'web-accesslog', 'json', 'xoc-apache-empty-request'},
             'apache-error': {'apache-errorlog'}}
 MAX_FRAME = 60000
 
@@ -117,7 +117,10 @@ def pending(store, limit=4096):
     query = '''SELECT n.*,r.raw FROM native_inputs n JOIN records r ON r.ref=n.ref
        WHERE n.confirmed IS NULL AND n.error IS NULL AND (n.sent IS NULL OR n.sent<?)
        ORDER BY n.observed {} LIMIT ?'''
-    recent = store.db.execute(query.format('DESC'), (cutoff, max(1, limit//4))).fetchall()
+    from .events import SOURCES
+    recent = []
+    for source in SOURCES:
+        recent.extend(store.db.execute(query.replace('WHERE n.confirmed','WHERE n.source=? AND n.confirmed').format('DESC'), (source,cutoff,max(1,limit//32))).fetchall())
     oldest = store.db.execute(query.format('ASC'), (cutoff, limit)).fetchall()
     result = []; seen = set(); cache = {}; size = 0
     for row in [*recent, *oldest]:
@@ -135,9 +138,18 @@ def pending(store, limit=4096):
 
 
 def delivery(store, value):
+    if value.get('agent', {}).get('id') != '000': return None
     match = LOCATION.fullmatch(value.get('location', ''))
     if not match: return None
     row = store.db.execute('SELECT * FROM native_inputs WHERE id=?', (match[1],)).fetchone()
+    if row is None:
+        # Closed archives outlive local, fully acknowledged evidence. Their old
+        # receipts cannot recreate or confirm an already expired local input.
+        from datetime import datetime, timezone, timedelta
+        try:
+            stamp = datetime.fromisoformat(value.get('timestamp','').replace('Z','+00:00'))
+            if stamp < datetime.now(timezone.utc)-timedelta(days=store.policy['days']): return None
+        except (ValueError, TypeError): pass
     if row is None or row['source'] != match[2] or row['error'] not in (None, 'native_decoder_missing'):
         raise XocError('native_receipt_identity', 'Native processing record has no matching local input.')
     if 'full_log' in value and hashlib.sha256(value['full_log'].encode()).hexdigest() != row['frame_sha256']:
@@ -153,6 +165,8 @@ def confirm(store, archive):
         raise XocError('native_receipt_missing_bytes', 'Processing receipts must include the submitted native message.')
     decoder = archive.get('decoder', {}).get('name')
     if decoder not in DECODERS[row['source']]:
-        store.db.execute('UPDATE native_inputs SET error=? WHERE id=?', ('native_decoder_missing', row['id']))
+        # A retained pre-upgrade receipt must not invalidate a later successful
+        # analysis of the same immutable input.
+        store.db.execute('UPDATE native_inputs SET error=? WHERE id=? AND confirmed IS NULL', ('native_decoder_missing', row['id']))
         return
     store.db.execute('UPDATE native_inputs SET confirmed=COALESCE(confirmed,?),decoder=?,error=NULL WHERE id=?', (now(), decoder, row['id']))

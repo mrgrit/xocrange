@@ -40,6 +40,13 @@ def parser():
     converting.add_argument("--source", required=True, choices=SOURCES)
     for name in ("tenant-id", "range-id", "source-id", "evidence-ref", "observed-at"):
         converting.add_argument(f"--{name}", required=True)
+    platform = commands.add_parser('platform', help='Local platform administrator access')
+    platform.add_argument('action', choices=['credentials'])
+    agents = commands.add_parser('agents', help='Local privileged Wazuh agent enrollment and status')
+    agents.add_argument('action', choices=['list', 'enroll'])
+    agents.add_argument('--plan', required=True)
+    agents.add_argument('--name')
+    agents.add_argument('--output', type=Path)
     lab = commands.add_parser("lab", help="run packet-path checks on a dedicated Ubuntu 26.04 VM")
     lab.add_argument("action", choices=("check", "up", "start", "verify", "down"))
     lab.add_argument("--plan", required=True, help="plan directory name beneath .local/plans")
@@ -56,6 +63,22 @@ def parser():
 
 
 def run(args):
+    if args.command == 'platform':
+        from .platform_setup import STATE
+        from .ui_setup import private_json
+        secret = private_json(STATE/'credentials.json')
+        return {'url':'https://'+secret['public_host']+'/core/', 'username':'admin', 'password':secret.get('admin_password',secret['bootstrap_password']), 'ca_certificate':'/etc/xocrange/ca.crt', 'note':'Initial credentials; if changed in the UI, use the password you chose.'}
+    if args.command == 'agents':
+        from .lab import Docker, checked_plan
+        from .manager_api import ManagerClient
+        from .agents import enroll, list_agents
+        directory, result = checked_plan(args.root, args.plan)
+        if 'siem' not in result['lock']['selected']:
+            raise XocError('siem_not_selected', 'Agent enrollment requires the selected SIEM.')
+        client = ManagerClient(Docker(directory/'compose.yaml', result['compose']['name']), result['compose']['name'])
+        if args.action == 'list': return {'agents':list_agents(client)}
+        if not args.name or not args.output: raise XocError('missing_arguments', 'Enrollment requires --name and private --output.')
+        return enroll(client, args.name, args.output)
     if args.command == "siem":
         from .collector import Collector
         from .event_store import Store

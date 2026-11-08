@@ -40,4 +40,5 @@ build_inputs:
 - web/modsecurity.conf
 - web/siem.conf
 - web/start.py
+- web/management.conf
 compose: compose.yaml

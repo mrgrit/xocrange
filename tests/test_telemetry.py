@@ -114,7 +114,7 @@ def test_store_atomic_cursor_duplicate_evidence_and_decoding_ack(tmp_path):
     assert len(store.pending()) == 1 and not store.query(confirmed=True)
     e = store.query()[0]['event']
     with store.transaction():
-        store.confirm({'data':e, 'rule':{'id':'110020'}})
+        store.confirm({'agent':{'id':'000'},'location':'xoc-c1','data':e, 'rule':{'id':'110020'}})
     assert len(store.query(confirmed=True)) == 1 and not store.pending()
     assert store.db.execute('SELECT raw FROM records WHERE ref=?',(ref,)).fetchone()[0] == raw
     with pytest.raises(XocError):

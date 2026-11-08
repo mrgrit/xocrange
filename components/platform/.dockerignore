@@ -1,3 +1,10 @@
 **
 !Dockerfile
 !health.py
+!start.py
+!settings.py
+!wsgi.py
+!control/
+!control/**
+**/__pycache__
+**/*.pyc

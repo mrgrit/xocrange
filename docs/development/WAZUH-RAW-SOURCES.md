@@ -21,7 +21,7 @@ ModSecurity에서 HTTP 403만 있거나 응답 본문/경고의 인용 문자열
 - 전송 ACK와 분석 완료는 구분한다. Manager `logall_json` archive에서 입력 ID·source·전체 메시지 hash·허용 decoder를 확인해야 완료한다. 정상 로그가 경보를 만들지 않았다는 이유로 실패하지 않는다.
 - JSON object array 등 미지원 형식, 60,000-byte 초과 frame은 잘라서 성공시키지 않는다. 원본과 오류를 남기며 상태에 노출한다. Sysmon 시작 배너는 진단 기록으로 보존하지만 실제 이벤트 검사에 세지 않는다.
 - 재전송 간 동일 native 입력·분석 결과는 한 검색 문서로 유지한다. Wazuh ID/시각/단순 firedtimes 변화만 무시하고 최초 경보 원본을 보존한다. 다른 규칙/결과/상관분석 문맥은 별도 경보다. 엔진 자체의 exactly-once 분석을 보장하는 것은 아니다. Native 경보의 시각은 Manager 분석 시각이며, 원본 발생 시각은 원문과 C1에 유지한다.
-- 미분석 입력과 선택된 Indexer로 미전송인 경보의 증거는 7일 경과만으로 삭제하지 않는다. 8 GiB는 신규 수집 중단 기준이며 전체 디스크 상한이 아니다. 소스·archive 회전 전에 읽지 못한 로그와 장기 디스크 고갈은 별도 운영 검증 대상이다.
+- 미분석 입력과 선택된 Indexer로 미전송인 경보의 증거는 로컬 1일 경과만으로 삭제하지 않는다. 24 GiB는 신규 수집 예산, 32 GiB는 SQLite 한도이며 전체 디스크 상한이 아니다. 2 GiB 파일시스템 여유 검사와 읽기 완료된 닫힌 archive 2일 정리·색인 7일 정리를 적용한다. 소스·archive 회전 전에 읽지 못한 로그와 장기 디스크 고갈은 별도 운영 검증 대상이다.
 
 ## 실제 엔진 비교 재실행
 
@@ -54,6 +54,8 @@ bash install.sh
 "$xoc_test_python" tests/integration/siem_selection.py cleanup --run raw-selection --isolated-vm
 ```
 
-전체 제외 상태에서는 Manager·Indexer·Dashboard·HTTPS ingress가 없고 collector/osquery/Sysmon은 중지·비활성화돼야 한다. 일반 auditd와 다른 audit 규칙은 유지하고 xOC의 세 watch만 제거한다. 제외 상태 재설치가 증거 건수를 바꾸지 않는지, 재포함 후 원본/C1 24건·경보 24건·8종 분석 receipt·두 CA와 계정·API 사용자·저장 화면이 유지되는지 대조한다. 보안 경로와 새 8종 C1/native 입력 및 HTTPS 검사를 다시 실행한다.
+전체 제외 상태에서는 Manager·Indexer·Dashboard가 없고, 독립 management의 HTTPS ingress와 `/core/`는 유지하며 collector/osquery/Sysmon은 중지·비활성화돼야 한다. 일반 auditd와 다른 audit 규칙은 유지하고 xOC의 세 watch만 제거한다. 제외 상태 재설치가 증거 건수를 바꾸지 않는지, 재포함 후 원본/C1 24건·경보 24건·8종 분석 receipt·두 CA와 계정·API 사용자·저장 화면이 유지되는지 대조한다. 보안 경로와 새 8종 C1/native 입력 및 HTTPS 검사를 다시 실행한다.
 
 근거: [Wazuh JSON decoder](https://documentation.wazuh.com/current/user-manual/ruleset/decoders/json-decoder.html), [실제 규칙 엔진 검사](https://documentation.wazuh.com/current/user-manual/ruleset/testing.html), [alerts와 archives](https://documentation.wazuh.com/current/user-manual/manager/event-logging.html). Wazuh/상용 소스의 출처와 검토 범위는 provenance에 기록한다.
+
+Apache의 요청 전 연결 종료 로그(`"-" 400/408`, xoc_id 포함)는 별도 `xoc-apache-empty-request` 디코더가 IP·상태·크기를 추출하고, Wazuh 기본 web-log 규칙 31100(level 0)과 archive receipt로 처리 완료를 확인한다. HTTP 요청 줄을 합성하지 않는다.

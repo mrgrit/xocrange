@@ -1,6 +1,8 @@
 FROM python:3.12-slim
 WORKDIR /app
-COPY health.py /app/health.py
-USER 65532:65532
+RUN pip install --no-cache-dir Django==5.2.19 gunicorn==26.2.0
+COPY health.py start.py settings.py wsgi.py /app/
+COPY control /app/control
+USER 65532:33
 EXPOSE 8080
-CMD ["python", "-B", "/app/health.py"]
+CMD ["python", "-B", "/app/start.py"]

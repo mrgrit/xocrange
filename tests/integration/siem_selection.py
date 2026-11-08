@@ -15,7 +15,7 @@ import subprocess
 import uuid
 
 from siem_lifecycle import (STATE, Installed, fingerprint, installation_lock,
-    private_directory, save_new, anchor_integrity)
+    private_directory, save_new, anchor_integrity, common_identity)
 from xocrange.event_store import Store
 from xocrange.ui_setup import private_json
 
@@ -48,7 +48,9 @@ def check_excluded(before,directory):
     current_volumes=volumes(before['project'])
     checks={'installation_succeeded':last.get('status')=='installed',
         'siem_unselected':not {'siem','siem-ui'} & set(last.get('selected',[])),
-        'siem_containers_absent':not {'siem','indexer','dashboard','ingress'} & running,
+        'siem_containers_absent':not {'siem','indexer','dashboard'} & running,
+        'management_gateway_kept':'ingress' in running and 'management' in last.get('selected',[]),
+        'common_accounts_keys_policies_kept':common_identity(before['project'])==before['common_identity'],
         'security_path_running':{'platform','fw','ips','web','lab-target','lab-client'}<=running,
         'collection_services_stopped':all(not active(unit) for unit in ('xocrange-collector','xocrange-osquery','sysmon')),
         'collection_services_disabled':all(run('systemctl','show',unit,'--property=UnitFileState','--value')=='disabled'
@@ -60,6 +62,15 @@ def check_excluded(before,directory):
         'all_existing_volumes_kept':all(current_volumes.get(k)==v for k,v in before['volumes'].items()),
         'credentials_and_cas_kept':all(fingerprint(path)==digest for path,digest in before['identity'].items()),
         'raw_and_c1_anchors_kept':proof['raw_matches']==proof['event_matches']==24}
+    import importlib.util
+    spec=importlib.util.spec_from_file_location('core_probe',Path(last['release'])/'scripts/verify-platform.py')
+    module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+    secret=private_json(STATE/'platform/credentials.json');session=module.Session(secret['public_host'])
+    code,body,_,_=session.login('admin',secret.get('admin_password',secret['bootstrap_password']))
+    checks['core_login_without_siem']=code==200 and body.get('role')=='admin'
+    checks['siem_link_disabled']=body.get('siem_available') is False
+    checks['core_policies_read_without_siem']=session.request('/core/api/devices')[0]==200
+    checks['core_logout_without_siem']=session.request('/core/api/logout',{})[0]==200
     counts={table:store.db.execute('SELECT COUNT(*) FROM '+table).fetchone()[0]
         for table in ('records','events','wazuh_alerts','native_inputs')}
     count_path=directory/'excluded-counts.json'
@@ -90,6 +101,7 @@ def main():
             identities=[STATE/'ui/credentials.json',STATE/'ui/ca.pem',STATE/'manager/credentials.json',STATE/'manager/ca.pem']
             save_new(path,{'release':str(installed.root),'project':installed.project,'watch':watch,'rule_path':str(rule_path),
                 'rule_sha256':fingerprint(rule_path),'volumes':volumes(installed.project),
+                'common_identity':common_identity(installed.project),
                 'identity':{str(p):fingerprint(p) for p in identities}})
             result={'status':'checkpoint-created','evidence_anchors':24,'native_alert_anchors':24,'raw_source_receipts':8}
         else:

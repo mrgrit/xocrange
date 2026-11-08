@@ -1,19 +1,38 @@
 schema_version: xoc.manifest/0.1.0
 id: platform
 kind: component
-title: Core bootstrap health service
+title: Core health and common management security
 version: 0.1.0
-core: ">=0.1.0 <0.2.0"
+core: '>=0.1.0 <0.2.0'
 status: ready
 commercial: false
 minimum_tier: community
 requires:
   components: []
   capabilities: []
-provides: ["platform.health"]
+provides:
+- platform.health
 conflicts: []
-networks: ["int"]
+networks:
+- int
 config_keys: []
 contracts: {}
 compose: compose.yaml
-build_inputs: ["Dockerfile","health.py",".dockerignore"]
+build_inputs:
+- .dockerignore
+- Dockerfile
+- control/__init__.py
+- control/app.js
+- control/middleware.py
+- control/migrations/0001_initial.py
+- control/migrations/__init__.py
+- control/models.py
+- control/page.html
+- control/security.py
+- control/style.css
+- control/urls.py
+- control/views.py
+- health.py
+- settings.py
+- start.py
+- wsgi.py

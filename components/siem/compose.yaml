@@ -12,6 +12,7 @@ services:
     tmpfs:
     - /run:size=16m,mode=0755
     - /var/ossec/var/run:size=16m,mode=0750,uid=999,gid=999
+    - /var/ossec/tmp:size=32m,mode=0770,uid=999,gid=999
     - /tmp:size=16m,mode=1777
     volumes:
     - siem-logs:/var/ossec/logs

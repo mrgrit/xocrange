@@ -114,6 +114,8 @@ frontend http
 frontend https
     bind :8443 ssl crt /run/xoc-secrets/ingress.pem ssl-min-ver TLSv1.2
     mode http
+    http-request deny deny_status 400 if {{ path_beg /core/ }} {{ query -m found }}
+    http-request deny deny_status 400 if {{ path_beg /core/ }} {{ req.hdr(authorization) -m found }}
     http-request set-header X-Xoc-Client-IP %[src]
     http-request set-header X-Forwarded-Proto https
     http-request del-header X-Forwarded-For
@@ -129,7 +131,7 @@ def host_rule(host):
     # IP access is the installer default, not an attack. Keep this CRS exception
     # inside the SIEM vhost and limited to its known addresses and path prefix.
     names='|'.join(re.escape(x) for x in dict.fromkeys([public_host(host),'127.0.0.1']))
-    return ('SecRule REQUEST_URI "@rx ^/siem(?:/|$)" "id:110089,phase:1,pass,nolog,t:none,chain"\n'
+    return ('SecRule REQUEST_URI "@rx ^/(?:siem|core)(?:/|$)" "id:110089,phase:1,pass,nolog,t:none,chain"\n'
             f'    SecRule REQUEST_HEADERS:Host "@rx ^(?:{names})(?::[0-9]+)?$" "t:none,t:lowercase,ctl:ruleRemoveById=920350"\n')
 
 
