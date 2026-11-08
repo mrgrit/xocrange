@@ -11,9 +11,30 @@ from xocrange.lab import Docker, checked_plan
 from xocrange.events import SOURCES
 
 store = Store('/var/lib/xocrange/siem')
-cutoff = now()
 plan_dir, result = checked_plan(Path(sys.argv[1]), sys.argv[2])
 engine = Docker(plan_dir / 'compose.yaml', result['compose']['name'])
+# A restored appliance can have durable input waiting from before maintenance.
+# Drain it before generating a new timed probe; never skip a journal cursor or
+# treat queued data as decoded. Brand-new installations normally pass immediately.
+recovery_deadline = time.monotonic() + 900
+last_notice = 0
+while True:
+    report = store.status()
+    lag = report.get('sysmon_source_lag_seconds')
+    caught_up = (lag is not None and lag < 90 and report['oldest_pending_seconds'] < 90
+                 and report.get('oldest_native_input_pending_seconds', 0) < 90)
+    if caught_up: break
+    if time.monotonic() >= recovery_deadline:
+        result = {'status':'failed', 'phase':'recovery-backlog', 'store':report,
+                  'scope':'Retained input has not caught up; no data or cursor was skipped.'}
+        Path('/var/lib/xocrange/siem-acceptance.json').write_text(json.dumps(result,indent=2)+'\n')
+        print(json.dumps(result,indent=2));raise SystemExit(2)
+    if time.monotonic()-last_notice >= 30:
+        print(json.dumps({'stage':'draining-retained-input','sysmon_lag_seconds':lag,
+                          'pending':report['pending'],'native_pending':report.get('native_input_pending',0)}),flush=True)
+        last_notice=time.monotonic()
+    time.sleep(5)
+cutoff = now()
 for options in ([], ['--port', '8081'], ['--marker', 'waf-block'], ['--marker', 'ips-block']):
     engine.run(['exec', '-T', 'lab-client', 'python', '-B', '/app/probe.py', *options], compose=True)
 subprocess.run(['/usr/bin/true'], check=True)  # xoc_probe audit rule and Sysmon process event

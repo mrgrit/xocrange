@@ -30,11 +30,12 @@ FILES = (
 
 # Used on the host and via docker exec; only immutable registry paths are passed.
 # Read each inode once across rename rotation. Offset resets detect copy-truncate.
-def read_snapshots(path, owner, states, limit=262144, history=()):
+def read_snapshots(path, owner, states, limit=262144, history=(), rotations=True):
     result = []
     seen = set()
     remaining = limit
-    for name in (*history, path + '.3', path + '.2', path + '.1', path):
+    names = (*history, path + '.3', path + '.2', path + '.1', path) if rotations else (path,)
+    for name in names:
         try:
             fd = os.open(name, os.O_RDONLY | os.O_NOFOLLOW)
         except FileNotFoundError:
@@ -186,7 +187,12 @@ class Collector:
             # Preserve low latency for current input while draining rotated files.
             older = read_snapshots(path, owner, states, 24*MAX_BYTES, history)
             return live + [chunk for chunk in older if chunk['key'] not in live_keys]
-        return read_snapshots(path, owner, states, 262144, history)
+        # Current files receive their own read budget while rotated generations
+        # drain. One large, unread old file cannot monopolize every source poll.
+        live = read_snapshots(path, owner, states, 2*MAX_BYTES, rotations=False)
+        live_keys = {chunk['key'] for chunk in live}
+        older = read_snapshots(path, owner, states, 2*MAX_BYTES, history)
+        return live + [chunk for chunk in older if chunk['key'] not in live_keys]
 
     def accept_audit_line(self, source_id, position, raw):
         try:
@@ -266,37 +272,37 @@ class Collector:
         deadline = time.monotonic() + 5
         latest = state.get('source_time') if state else None
         try:
-            for count in range(4096):
-                if count and time.monotonic() >= deadline:
-                    limited = True
-                    break
-                line = process.stdout.readline(MAX_BYTES + 1)
-                if not line:
-                    break
-                if len(line) > MAX_BYTES:
-                    raise XocError('journal_oversize', 'Sysmon journal record exceeds its budget.')
-                record = json.loads(line)
-                message, cursor = record.get('MESSAGE'), record.get('__CURSOR')
-                if not isinstance(cursor, str):
-                    raise XocError('journal_format', 'Sysmon journal record has no usable cursor.')
-                if isinstance(message,str):
-                    raw_message=message.encode()
-                elif isinstance(message,list) and all(type(n) is int and 0 <= n <= 255 for n in message):
-                    raw_message=bytes(message)
-                else:
-                    # Preserve an invalid record for quarantine and advance past
-                    # it; one malformed MESSAGE must not stall the journal.
-                    raw_message=json.dumps(record).encode()
-                with self.store.transaction():
+            with self.store.transaction():
+                for count in range(4096):
+                    if count and time.monotonic() >= deadline:
+                        limited = True
+                        break
+                    line = process.stdout.readline(MAX_BYTES + 1)
+                    if not line:
+                        break
+                    if len(line) > MAX_BYTES:
+                        raise XocError('journal_oversize', 'Sysmon journal record exceeds its budget.')
+                    record = json.loads(line)
+                    message, cursor = record.get('MESSAGE'), record.get('__CURSOR')
+                    if not isinstance(cursor, str):
+                        raise XocError('journal_format', 'Sysmon journal record has no usable cursor.')
+                    if isinstance(message,str):
+                        raw_message=message.encode()
+                    elif isinstance(message,list) and all(type(n) is int and 0 <= n <= 255 for n in message):
+                        raw_message=bytes(message)
+                    else:
+                        # Preserve an invalid record for quarantine and advance past
+                        # it; one malformed MESSAGE must not stall the journal.
+                        raw_message=json.dumps(record).encode()
                     self.store.ingest('sysmon', 'host-sysmon', cursor, raw_message)
                     latest = int(record['__REALTIME_TIMESTAMP']) / 1000000
                     self.store.set_cursor('sysmon-journal', {'cursor': cursor, 'source_time': latest})
                     if resume:
                         self.store.db.execute('DELETE FROM cursors WHERE name=?', ('sysmon-journal-resume',))
-            else:
-                limited = True
-            if not limited and process.wait(timeout=5) != 0:
-                raise XocError('journal_cursor', 'Journal cursor is unavailable; inspect journal retention before recovery.')
+                else:
+                    limited = True
+                if not limited and process.wait(timeout=5) != 0:
+                    raise XocError('journal_cursor', 'Journal cursor is unavailable; inspect journal retention before recovery.')
         finally:
             if process.poll() is None:
                 process.terminate()

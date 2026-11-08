@@ -51,6 +51,8 @@ class Store:
         CREATE INDEX IF NOT EXISTS records_observed ON records(observed);
         CREATE INDEX IF NOT EXISTS events_observed ON events(observed);
         CREATE INDEX IF NOT EXISTS events_ref ON events(ref);
+        CREATE INDEX IF NOT EXISTS events_delivery_producer ON events(producer,observed) WHERE confirmed IS NULL;
+        CREATE INDEX IF NOT EXISTS events_delivery_time ON events(observed) WHERE confirmed IS NULL;
         CREATE TABLE IF NOT EXISTS cursors (name TEXT PRIMARY KEY, value TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS health (source TEXT PRIMARY KEY, checked TEXT NOT NULL, status TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS processing_errors (
@@ -79,6 +81,8 @@ class Store:
             self.db.execute('ALTER TABLE events ADD COLUMN indexed TEXT')
             self.db.commit()
         self.db.execute('CREATE INDEX IF NOT EXISTS events_indexing ON events(indexed,confirmed)')
+        self.db.execute('CREATE INDEX IF NOT EXISTS events_export_producer ON events(producer,observed) WHERE confirmed IS NOT NULL AND indexed IS NULL')
+        self.db.execute('CREATE INDEX IF NOT EXISTS events_export_time ON events(observed) WHERE confirmed IS NOT NULL AND indexed IS NULL')
 
     @contextmanager
     def transaction(self):
@@ -135,10 +139,10 @@ class Store:
         if limit<1:return []
         # Reserve a quarter for fresh observations during recovery, while the
         # remaining slots drain oldest evidence. Neither stream can starve.
-        query="SELECT id,event FROM events WHERE confirmed IS NULL AND (sent IS NULL OR sent<?) ORDER BY observed {} LIMIT ?"
+        query="SELECT id,event FROM events INDEXED BY events_delivery_time WHERE confirmed IS NULL AND (sent IS NULL OR sent<?) ORDER BY observed {} LIMIT ?"
         recent=[]
         for source in SOURCES:
-            recent.extend(self.db.execute('SELECT id,event FROM events WHERE producer=? AND confirmed IS NULL AND (sent IS NULL OR sent<?) ORDER BY observed DESC LIMIT ?', (source,cutoff,max(1,limit//32))).fetchall())
+            recent.extend(self.db.execute('SELECT id,event FROM events INDEXED BY events_delivery_producer WHERE producer=? AND confirmed IS NULL AND (sent IS NULL OR sent<?) ORDER BY observed DESC LIMIT ?', (source,cutoff,max(1,limit//32))).fetchall())
         oldest=self.db.execute(query.format('ASC'),(cutoff,limit)).fetchall()
         result=[];seen=set()
         for row in [*recent,*oldest]:
@@ -175,7 +179,8 @@ class Store:
 
     def index_batch(self, native=False, limit=4096):
         table, fields, where = ('wazuh_alerts', 'id,observed,document', 'indexed IS NULL') if native else ('events', 'id,event,observed,confirmed,rule_id', 'confirmed IS NOT NULL AND indexed IS NULL')
-        query = f'SELECT {fields} FROM {table} WHERE {where} ORDER BY observed {{}} LIMIT ?'
+        index = 'native_alerts_pending' if native else 'events_export_time'
+        query = f'SELECT {fields} FROM {table} INDEXED BY {index} WHERE {where} ORDER BY observed {{}} LIMIT ?'
         if native:
             # External agents and stock detections must not be crowded out by
             # high-rate C1/Sysmon observations during archive recovery.
@@ -184,7 +189,7 @@ class Store:
         else:
             recent=[]
             for source in SOURCES:
-                recent.extend(self.db.execute(f'SELECT {fields} FROM events WHERE producer=? AND {where} ORDER BY observed DESC LIMIT ?', (source,max(1,limit//32))).fetchall())
+                recent.extend(self.db.execute(f'SELECT {fields} FROM events INDEXED BY events_export_producer WHERE producer=? AND {where} ORDER BY observed DESC LIMIT ?', (source,max(1,limit//32))).fetchall())
         oldest = self.db.execute(query.format('ASC'), (limit,)).fetchall()
         result = []; seen = set()
         for row in [*recent, *oldest]:

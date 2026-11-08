@@ -151,3 +151,33 @@ def test_periodic_retention_health_has_its_own_deadline(tmp_path):
     age(310);assert store.status()['status']=='ready'
     age(601);assert store.status()['status']=='degraded'
     store.health('retention','maintenance_failed');assert store.status()['status']=='degraded'
+
+
+def test_delivery_batches_do_not_scan_already_delivered_history(tmp_path):
+    store=Store(tmp_path/'store')
+    raw=(FIXTURES/'suricata-alert.json').read_bytes()
+    with store.transaction():
+        for n in range(2500):store.ingest('suricata','ips',str(n),raw)
+        store.db.execute("UPDATE events SET confirmed='done',indexed='done'")
+    ticks=[]
+    def bounded_work():
+        ticks.append(1)
+        return int(len(ticks)>50)
+    store.db.set_progress_handler(bounded_work,100)
+    try:
+        assert store.pending()==[] and store.index_batch()==[]
+    finally:store.db.set_progress_handler(None,0)
+    with store.transaction():store.ingest('suricata','ips','new',raw)
+    pending=store.pending();assert len(pending)==1
+    with store.transaction():store.db.execute("UPDATE events SET confirmed='done' WHERE id=?",(pending[0]['id'],))
+    assert [r['id'] for r in store.index_batch()]==[pending[0]['id']]
+
+
+def test_live_log_gets_budget_while_old_generation_drains(tmp_path):
+    c=Collector.__new__(Collector);c.store=Store(tmp_path/'store');c.volumes={}
+    active=tmp_path/'audit.log';active.write_bytes(b'fresh\n')
+    old=tmp_path/'audit.log.1';old.write_bytes(b'x'*(3*1024**2))
+    chunks=c.read_files('host-auditd',None,None,str(active))
+    assert chunks[0]['file']==str(active) and base64.b64decode(chunks[0]['data'])==b'fresh\n'
+    historical=next(row for row in chunks if row['file']==str(old))
+    assert historical['offset']==0 and len(base64.b64decode(historical['data']))==2*1024**2

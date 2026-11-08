@@ -206,3 +206,21 @@ def test_large_and_binary_journal_messages_do_not_stall_collection(tmp_path,monk
     assert collector.store.status()['quarantined']==2
     assert collector.store.db.execute('SELECT COUNT(*) FROM records WHERE raw=?',(b'\xff\xfe',)).fetchone()[0]==1
     assert len(collector.store.query())==3
+
+
+def test_journal_batch_and_cursor_roll_back_together(tmp_path,monkeypatch):
+    import io
+    import time
+    collector=Collector.__new__(Collector);collector.store=Store(tmp_path/'store')
+    raw=(FIXTURES/'sysmon-process.xml').read_text()
+    rows=[{'MESSAGE':raw,'__CURSOR':'one','__REALTIME_TIMESTAMP':str(int(time.time()*1000000))},
+          {'MESSAGE':raw,'__REALTIME_TIMESTAMP':str(int(time.time()*1000000))}]
+    class Process:
+        def __init__(self,*args,**kwargs):self.stdout=io.BytesIO(('\n'.join(json.dumps(row) for row in rows)+'\n').encode())
+        def wait(self,**kwargs):return 0
+        def poll(self):return 0
+    monkeypatch.setattr('xocrange.collector.subprocess.Popen',Process)
+    with pytest.raises(XocError) as error:collector.sysmon()
+    assert error.value.code=='journal_format'
+    assert collector.store.cursor('sysmon-journal') is None
+    assert collector.store.db.execute('SELECT COUNT(*) FROM records').fetchone()[0]==0
