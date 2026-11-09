@@ -19,6 +19,10 @@ Apache combined access와 Windows Sysmon의 내보낸 XML의 오프라인 C1 정
 
 osquery는 processes 메타데이터를 60초, 센서 상태 snapshot을 30초마다 조회한다. audit subsystem은 auditd가 담당하며 osquery audit/event subscriber는 비활성화한다. auditd 기본 규칙은 `/etc/xocrange` 변경, sudo 실행, 수용 검사 `/usr/bin/true` 실행이다. Sysmon은 프로세스 생성·네트워크 연결을 관측한다. 전체 프로덕션 탐지 규칙이나 모든 행위 감사가 완성된 상태는 아니다.
 
+`observation`은 Sysmon·osquery의 일반 행위 관측 분류다. 해당 기록은 공격 여부를 분석하는 재료이며, 분류만으로 공격이 탐지됐다는 의미는 아니다. Core의 Sysmon 기본 정책은 ProcessCreate(EventID 1)와 NetworkConnect(EventID 3)를 수집한다. ProcessTerminate(EventID 5)는 빈 `include` 필터로 명시적으로 끈다. 필터를 생략하면 프로세스 종료 기록도 발생하여 Docker·수집기 등의 반복 실행이 대량의 관측 기록을 만든다. [Microsoft의 설정 예제](https://learn.microsoft.com/en-us/sysinternals/downloads/sysmon#configuration-files)와 동일한 필터 방식이며, Linux VM에서도 실제 적용·수집을 검증한다. 실행·연결 필터에는 Docker 등 관리 프로그램 전체를 제외하는 예외를 두지 않는다.
+
+프로세스 종료 시점·수명 추적이 필요한 별도 센서 정책은 EventID 5를 활성화할 수 있으며 C1 디코더의 `process/stop` 지원은 유지한다. 설치기는 `components/siem/sysmon.xml`을 `/etc/xocrange/sysmon.xml`에 설치하고 `sysmon -c`로 적용한다. 기존 호스트에는 정책 파일을 백업한 뒤 같은 설정을 적용할 수 있다.
+
 ## 설치와 선택
 
 ```bash
@@ -67,5 +71,7 @@ Native 입력은 별도 ID·frame hash·전송/처리 상태를 갖는다. `arch
 root 전용 `/var/lib/xocrange/siem/retention.json`에서 `days`, `ingest_bytes`, `database_bytes`, `reserve_bytes`, `index_days`, `archive_days`를 조정할 수 있다. 기본값은 각각 1일·24 GiB·32 GiB·2 GiB·7일·2일이다. collector 재시작 때 설정을 검증한다. 미확인 입력·미색인 증거는 나이만으로 제거하지 않으며, 여유가 부족하면 cursor를 보존하고 수집을 중지한다. 여유 확보 후 다시 수집한다.
 
 Wazuh의 날짜별 hardlink 회전을 인식하고, 압축된 파일도 이전 논리 offset부터 이어 읽는다. archive 정리는 읽기가 끝났고 활성 hardlink가 아닌 닫힌 파일에만 적용한다. SQLite의 빈 페이지는 재사용하며 매 정리마다 파일 크기가 줄어드는 것은 아니다. `status.storage`로 할당량·사용량·파일시스템 여유를 구분한다.
+
+보관 작업은 5분 주기로 실행된다. 로컬 DB의 `days`, Manager 회전 로그의 `archive_days`, 검색 인덱스의 `index_days`는 서로 다른 보관 계층에 적용된다. 수집량을 줄여도 이미 저장된 기록은 각 보관 기한까지 남는다. SQLite의 파일 크기가 그대로여도 빈 페이지가 늘면 이후 쓰기에 재사용한다. 디스크를 점검할 때는 DB 외에 Docker의 SIEM 로그·Indexer 볼륨, `/var/lib/xocrange/backups`의 설치 전 복구 지점도 함께 확인한다. 백업은 SIEM 보관 기한으로 삭제되지 않는다.
 
 이 정책은 모든 로그 볼륨과 호스트 디스크의 상한을 보장하지 않는다. 원천 로그가 읽히기 전에 외부 회전으로 제거되는 경우와 장기 장애·전체 디스크 고갈 복구는 K11의 필수 검증이다. 운영 사양을 단기 테스트 결과만으로 확정하지 않는다.

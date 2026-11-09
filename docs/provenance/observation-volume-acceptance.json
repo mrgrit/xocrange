@@ -1,0 +1,256 @@
+{
+  "schema_version": "xoc.observation-volume-acceptance/1",
+  "date": "2026-11-09",
+  "environment": "Ubuntu 26.04.1 dedicated xoc development VM",
+  "installed_release": "8bfde4893b555f991752d7552d2db039692abf169ec12fdef7c6f8af5acf6969",
+  "deployment": "Reloaded host /etc/xocrange/sysmon.xml using sysmon -c; source default updated for future installations. Existing immutable application release retained.",
+  "policy": {
+    "applied_at": "2026-11-09T14:06:50.698741Z",
+    "config_sha256": "1f80bbb6bb7f6f3574a077142ee990844cd64f2ef1a1cb1934c10c09a9400a71",
+    "config_returncode": 0,
+    "previous_sha256": "d0dcbeee5f010574938ea441d33e899ec068c1eea326fb2fbd6065937b52179b"
+  },
+  "before": {
+    "start": "2026-11-09T14:04:30.629222Z",
+    "end": "2026-11-09T14:06:30.629222Z",
+    "seconds": 120.0,
+    "events": 5339,
+    "events_per_second": 44.492,
+    "groups": [
+      {
+        "source": "sysmon",
+        "type": "observation",
+        "action": "stop",
+        "sysmon_event_id": 5,
+        "count": 3970
+      },
+      {
+        "source": "sysmon",
+        "type": "observation",
+        "action": "start",
+        "sysmon_event_id": 1,
+        "count": 1023
+      },
+      {
+        "source": "sysmon",
+        "type": "observation",
+        "action": "connect",
+        "sysmon_event_id": 3,
+        "count": 110
+      },
+      {
+        "source": "modsecurity",
+        "type": "transaction",
+        "action": "http-request",
+        "sysmon_event_id": null,
+        "count": 46
+      },
+      {
+        "source": "apache-access",
+        "type": "access",
+        "action": "http-request",
+        "sysmon_event_id": null,
+        "count": 46
+      },
+      {
+        "source": "osquery",
+        "type": "observation",
+        "action": "removed",
+        "sysmon_event_id": null,
+        "count": 43
+      },
+      {
+        "source": "osquery",
+        "type": "observation",
+        "action": "added",
+        "sysmon_event_id": null,
+        "count": 41
+      },
+      {
+        "source": "auditd",
+        "type": "audit",
+        "action": "audit-record",
+        "sysmon_event_id": null,
+        "count": 35
+      },
+      {
+        "source": "nftables",
+        "type": "access",
+        "action": "accept",
+        "sysmon_event_id": null,
+        "count": 16
+      },
+      {
+        "source": "osquery",
+        "type": "observation",
+        "action": "snapshot",
+        "sysmon_event_id": null,
+        "count": 4
+      },
+      {
+        "source": "auditd",
+        "type": "audit",
+        "action": "syscall",
+        "sysmon_event_id": null,
+        "count": 3
+      },
+      {
+        "source": "modsecurity",
+        "type": "alert",
+        "action": "rule-message",
+        "sysmon_event_id": null,
+        "count": 1
+      },
+      {
+        "source": "apache-error",
+        "type": "diagnostic",
+        "action": "server-message",
+        "sysmon_event_id": null,
+        "count": 1
+      }
+    ]
+  },
+  "after": {
+    "start": "2026-11-09T14:07:10.698941Z",
+    "end": "2026-11-09T14:09:10.698941Z",
+    "seconds": 120.0,
+    "events": 1411,
+    "events_per_second": 11.758,
+    "groups": [
+      {
+        "source": "sysmon",
+        "type": "observation",
+        "action": "start",
+        "sysmon_event_id": 1,
+        "count": 1018
+      },
+      {
+        "source": "sysmon",
+        "type": "observation",
+        "action": "connect",
+        "sysmon_event_id": 3,
+        "count": 136
+      },
+      {
+        "source": "modsecurity",
+        "type": "transaction",
+        "action": "http-request",
+        "sysmon_event_id": null,
+        "count": 60
+      },
+      {
+        "source": "apache-access",
+        "type": "access",
+        "action": "http-request",
+        "sysmon_event_id": null,
+        "count": 60
+      },
+      {
+        "source": "osquery",
+        "type": "observation",
+        "action": "removed",
+        "sysmon_event_id": null,
+        "count": 36
+      },
+      {
+        "source": "osquery",
+        "type": "observation",
+        "action": "added",
+        "sysmon_event_id": null,
+        "count": 36
+      },
+      {
+        "source": "auditd",
+        "type": "audit",
+        "action": "audit-record",
+        "sysmon_event_id": null,
+        "count": 30
+      },
+      {
+        "source": "nftables",
+        "type": "access",
+        "action": "accept",
+        "sysmon_event_id": null,
+        "count": 29
+      },
+      {
+        "source": "osquery",
+        "type": "observation",
+        "action": "snapshot",
+        "sysmon_event_id": null,
+        "count": 4
+      },
+      {
+        "source": "auditd",
+        "type": "audit",
+        "action": "syscall",
+        "sysmon_event_id": null,
+        "count": 2
+      }
+    ]
+  },
+  "event_count_reduction_percent": 73.57,
+  "fresh_validation": {
+    "status": "passed",
+    "checks": {
+      "nftables": true,
+      "suricata": true,
+      "modsecurity": true,
+      "osquery": true,
+      "sysmon": true,
+      "auditd": true,
+      "apache-access": true,
+      "apache-error": true
+    },
+    "native_checks": {
+      "nftables": true,
+      "suricata": true,
+      "modsecurity": true,
+      "osquery": true,
+      "sysmon": true,
+      "auditd": true,
+      "apache-access": true,
+      "apache-error": true
+    },
+    "since": "2026-11-09T14:09:51.227051Z",
+    "storage": {
+      "allocated_bytes": 40610996224,
+      "used_bytes": 40610996224,
+      "filesystem_free_bytes": 45634678784,
+      "policy": {
+        "days": 1,
+        "ingest_bytes": 51539607552,
+        "database_bytes": 68719476736,
+        "reserve_bytes": 2147483648,
+        "index_days": 7,
+        "archive_days": 2
+      }
+    },
+    "index": {
+      "checks": {
+        "1": true,
+        "3": true
+      },
+      "since": "2026-11-09T14:09:51.227051Z",
+      "host_policy_sha256": "1f80bbb6bb7f6f3574a077142ee990844cd64f2ef1a1cb1934c10c09a9400a71"
+    },
+    "store_status": "ready",
+    "quarantined": 0
+  },
+  "unit_tests": {
+    "passed": 86,
+    "files": [
+      "tests/test_telemetry.py",
+      "tests/test_retention.py",
+      "tests/test_native_input.py",
+      "tests/test_native_alerts.py"
+    ]
+  },
+  "evidence_deleted": false,
+  "backups_deleted": false,
+  "limitations": [
+    "Two 120-second observation windows under development VM workload; not a long-term capacity guarantee.",
+    "Process termination timing is no longer captured by the default host policy; the decoder still accepts EventID 5 from other policies.",
+    "Existing evidence follows existing retention; SQLite allocated pages are reused rather than automatically returned to the filesystem."
+  ]
+}

@@ -151,6 +151,8 @@ sudo xoc siem retry --source auditd
 
 `--confirmed`는 실제 Wazuh 분석 결과를 확인한 이벤트만 조회한다. 원본은 관리자 전용 저장소에 보관하며 `evidence.ref`로 연결된다. 정상 HTTP 403을 보안 장비 차단으로 오인하지 않으며, ModSecurity 요청과 탐지 메시지는 별도 이벤트로 구분한다. [8종 매핑·수집·운영 제한](docs/development/SIEM.md)
 
+SIEM의 `observation`은 Sysmon·osquery의 행위 관측 기록이다. 프로세스 실행·네트워크 연결·프로세스 목록 변화가 여기에 포함되며, 이 분류 자체가 공격 탐지를 뜻하지는 않는다. Core 기본 Sysmon 정책은 실행·연결을 수집하고, 양이 많은 프로세스 종료(EventID 5)는 수집하지 않는다. 로컬 증거는 기본 1일, Wazuh 회전 로그는 2일, 검색 인덱스는 7일 보관한다. `sudo xoc siem status`의 `storage`에서 DB 사용량·할당량·디스크 여유를 확인할 수 있다. [수집량과 보관 정책](docs/development/SIEM.md#보존과-복구-설정)
+
 ## 구성 변경과 백업
 
 ```bash

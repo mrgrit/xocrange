@@ -3,6 +3,10 @@
     <RuleGroup name="Core process observation" groupRelation="or">
       <ProcessCreate onmatch="exclude"/>
     </RuleGroup>
+    <!-- An empty include disables EventID 5. Omitting it logs process exits. -->
+    <RuleGroup name="Core process termination policy" groupRelation="or">
+      <ProcessTerminate onmatch="include"/>
+    </RuleGroup>
     <RuleGroup name="Core network observation" groupRelation="or">
       <NetworkConnect onmatch="exclude"/>
     </RuleGroup>
