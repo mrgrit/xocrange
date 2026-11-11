@@ -21,9 +21,16 @@ def selection_arguments(selected):
 
 def copy_source(source, destination):
     # Reuse the installer's explicitly bounded release contents, never .git/.env.
-    import importlib.util
+    import importlib.util, sys
     spec = importlib.util.spec_from_file_location('xoc_install_snapshot', source/'scripts/install-support.py')
-    support = importlib.util.module_from_spec(spec); spec.loader.exec_module(support)
+    support = importlib.util.module_from_spec(spec)
+    # Runs as root against the operator's checkout: never leave a root-owned
+    # scripts/__pycache__ behind in it.
+    previous, sys.dont_write_bytecode = sys.dont_write_bytecode, True
+    try:
+        spec.loader.exec_module(support)
+    finally:
+        sys.dont_write_bytecode = previous
     for relative in support.source_files(source):
         target = destination/relative; target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source/relative, target)
