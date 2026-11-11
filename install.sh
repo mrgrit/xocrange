@@ -204,6 +204,11 @@ printf 'xocrange installer v1\n' > "$state/installer-owned"
 
 stage base-packages
 apt_options=(-o DPkg::Lock::Timeout=120 -o Acquire::Retries=3 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30)
+# Earlier installers left xOC keys root-only (umask 077); apt's unprivileged gpgv
+# then rejects the repository and every later apt update fails.
+for key in /etc/apt/keyrings/xocrange-*.asc; do
+    if [[ -f $key ]]; then chmod 0644 "$key"; fi
+done
 apt_retry "${apt_options[@]}" update
 base_missing=()
 for package in ca-certificates curl git python3 python3-venv iproute2 kmod openssl; do
@@ -235,6 +240,8 @@ done
 if $content_selected; then
     stage content-module
     python3 "$source_directory/scripts/fetch-contents.py" --root "$source_directory"
+    # Keep the cache in a user's checkout owned by that user, not root-only.
+    chown -R --no-dereference "$(stat -c %u:%g "$source_directory")" "$source_directory/contents"
 fi
 stage source-snapshot
 release=$(python3 "$source_directory/scripts/install-support.py" snapshot "$source_directory" "$prefix/releases")

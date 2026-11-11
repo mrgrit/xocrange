@@ -21,6 +21,8 @@ if ! dpkg-query -W -f='${Status}' osquery 2>/dev/null | grep -qx 'install ok ins
         -o /etc/apt/keyrings/xocrange-osquery.asc
     printf '%s\n' 'deb [arch=amd64 signed-by=/etc/apt/keyrings/xocrange-osquery.asc] https://pkg.osquery.io/deb deb main' \
         > /etc/apt/sources.list.d/xocrange-osquery.list
+    # umask 077 would leave the key unreadable to apt's unprivileged gpgv (_apt).
+    chmod 0644 /etc/apt/keyrings/xocrange-osquery.asc /etc/apt/sources.list.d/xocrange-osquery.list
 fi
 apt_retry "${apt_options[@]}" update
 missing=()

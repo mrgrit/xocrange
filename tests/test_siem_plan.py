@@ -38,6 +38,38 @@ def test_siem_cannot_expand_its_host_privileges(siem_checkout,change):
         plan(siem_checkout,preset='security-path',include=['siem'],allow_experimental=True)
 
 
+def manager_volumes(tmp_path,monkeypatch,mounts):
+    module=runpy.run_path(str(ROOT/'components/siem/bootstrap.py'))
+    seed=tmp_path/'seed'
+    for relative in module['VOLUMES']:(seed/relative).mkdir(parents=True)
+    (seed/'var/run').mkdir();(seed/'var/db').mkdir();(seed/'var/db/global.db').write_text('seed')
+    root=tmp_path/'ossec'
+    for relative in mounts:(root/relative).mkdir(parents=True)
+    monkeypatch.setattr(type(root),'is_mount',lambda path:path in {root/m for m in mounts})
+    monkeypatch.setattr(module['os'],'chown',lambda *args:None)
+    return module['seed_volumes'],root,seed
+
+
+def test_manager_seeds_fresh_volume_holding_only_nested_mount_points(tmp_path,monkeypatch):
+    # Compose mounts the /var/ossec/var/run tmpfs inside the siem-var volume, so
+    # Docker leaves an empty run/ mount point in a brand-new volume.
+    fragment=yaml.safe_load((ROOT/'components/siem/compose.yaml').read_text())['services']['siem']
+    assert any(entry.startswith('/var/ossec/var/run:') for entry in fragment['tmpfs'])
+    seed_volumes,root,_=manager_volumes(tmp_path,monkeypatch,['var/run'])
+    seed_volumes(root,tmp_path/'seed')
+    assert (root/'var/db/global.db').read_text()=='seed'
+    assert all((root/relative/'.xoc-initialized').is_file() for relative in ('etc','api/configuration','queue','var'))
+
+
+def test_manager_never_overwrites_unmarked_volume_with_state(tmp_path,monkeypatch):
+    seed_volumes,root,_=manager_volumes(tmp_path,monkeypatch,['var/run'])
+    (root/'var/db').mkdir();(root/'var/db/global.db').write_text('existing')
+    with pytest.raises(SystemExit,match='not empty: var'):
+        seed_volumes(root,tmp_path/'seed')
+    assert (root/'var/db/global.db').read_text()=='existing'
+    assert not (root/'var/.xoc-initialized').exists()
+
+
 def test_audit_rule_setup_resumes_partial_install_without_flushing():
     configure=runpy.run_path(str(ROOT/'scripts/configure-audit.py'))['configure']
     import shlex

@@ -1,6 +1,6 @@
 # 빈 Ubuntu VM 자동 설치
 
-상태: 실제 VM 자동 설치·통신 검증 통과. 재실행·재부팅을 포함한 상세 결과는 [VM 검증 기록](VM-VALIDATION-2026-11-07.md)을 따른다. 현재 실행 대상은 Ubuntu Server 26.04 LTS amd64 전용 VM이다.
+상태: 실제 VM 자동 설치·통신 검증 통과. 재실행·재부팅을 포함한 상세 결과는 [VM 검증 기록](VM-VALIDATION-2026-11-07.md)을 따른다. 새 VM의 첫 설치에서만 드러난 결함과 수정은 [신규 설치 검증](FRESH-INSTALL-VALIDATION-2026-11-11.md)에 기록한다. 현재 실행 대상은 Ubuntu Server 26.04 LTS amd64 전용 VM이다.
 
 ## 사용자 진입점
 
