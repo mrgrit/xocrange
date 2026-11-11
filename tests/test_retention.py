@@ -66,6 +66,20 @@ def test_retention_preserves_pending_and_quarantines_until_expiry(tmp_path):
     assert len(store.query())==1 and len(store.pending())==1
 
 
+def test_pruned_space_returns_to_the_filesystem(tmp_path):
+    store=Store(tmp_path/'store')
+    assert store.db.execute('PRAGMA auto_vacuum').fetchone()[0]==2
+    raw=(FIXTURES/'suricata-alert.json').read_bytes()
+    with store.transaction():
+        for n in range(300):store.ingest('suricata','ips',str(n),raw,observed='2000-01-01T00:00:00Z')
+        store.db.execute('UPDATE events SET confirmed=?,indexed=?',('2000-01-01','2000-01-01'))
+        store.set_cursor('indexer-enabled',True)
+    before=store.db.execute('PRAGMA page_count').fetchone()[0]
+    store.prune()
+    assert store.db.execute('PRAGMA freelist_count').fetchone()[0]==0
+    assert store.db.execute('PRAGMA page_count').fetchone()[0]<before
+
+
 def test_wazuh_dated_hardlinks_recover_unread_tail_without_duplicates(tmp_path):
     parent=tmp_path/'alerts';history=parent/'2026/Nov';history.mkdir(parents=True)
     active=parent/'alerts.json';active.write_bytes(b'first\nlast\n')

@@ -70,8 +70,8 @@ Native 입력은 별도 ID·frame hash·전송/처리 상태를 갖는다. `arch
 
 root 전용 `/var/lib/xocrange/siem/retention.json`에서 `days`, `ingest_bytes`, `database_bytes`, `reserve_bytes`, `index_days`, `archive_days`를 조정할 수 있다. 기본값은 각각 1일·24 GiB·32 GiB·2 GiB·7일·2일이다. collector 재시작 때 설정을 검증한다. 미확인 입력·미색인 증거는 나이만으로 제거하지 않으며, 여유가 부족하면 cursor를 보존하고 수집을 중지한다. 여유 확보 후 다시 수집한다.
 
-Wazuh의 날짜별 hardlink 회전을 인식하고, 압축된 파일도 이전 논리 offset부터 이어 읽는다. archive 정리는 읽기가 끝났고 활성 hardlink가 아닌 닫힌 파일에만 적용한다. SQLite의 빈 페이지는 재사용하며 매 정리마다 파일 크기가 줄어드는 것은 아니다. `status.storage`로 할당량·사용량·파일시스템 여유를 구분한다.
+Wazuh의 날짜별 hardlink 회전을 인식하고, 압축된 파일도 이전 논리 offset부터 이어 읽는다. archive 정리는 읽기가 끝났고 활성 hardlink가 아닌 닫힌 파일에만 적용한다. 새 SQLite 저장소는 `auto_vacuum=INCREMENTAL`로 만들고, 정리 때마다 빈 페이지를 최대 256 MiB씩 파일시스템에 돌려준다. 이전 버전에서 만든 저장소(`auto_vacuum=0`)는 수집기를 멈춘 상태에서 `PRAGMA auto_vacuum=INCREMENTAL; VACUUM;`을 한 번 실행해야 전환된다(2026-11-11 개발 VM: 38 GB → 6.1 GB, 약 5분). `status.storage`로 할당량·사용량·파일시스템 여유를 구분한다.
 
-보관 작업은 5분 주기로 실행된다. 로컬 DB의 `days`, Manager 회전 로그의 `archive_days`, 검색 인덱스의 `index_days`는 서로 다른 보관 계층에 적용된다. 수집량을 줄여도 이미 저장된 기록은 각 보관 기한까지 남는다. SQLite의 파일 크기가 그대로여도 빈 페이지가 늘면 이후 쓰기에 재사용한다. 디스크를 점검할 때는 DB 외에 Docker의 SIEM 로그·Indexer 볼륨, `/var/lib/xocrange/backups`의 설치 전 복구 지점도 함께 확인한다. 백업은 SIEM 보관 기한으로 삭제되지 않는다.
+보관 작업은 5분 주기로 실행된다. 로컬 DB의 `days`, Manager 회전 로그의 `archive_days`, 검색 인덱스의 `index_days`는 서로 다른 보관 계층에 적용된다. 수집량을 줄여도 이미 저장된 기록은 각 보관 기한까지 남는다. 설치 전 백업은 SQLite 파일 전체를 복사하므로, 전환하지 않은 저장소는 실제 사용량보다 훨씬 큰 백업과 여유 공간을 요구한다. 디스크를 점검할 때는 DB 외에 Docker의 SIEM 로그·Indexer 볼륨, `/var/lib/xocrange/backups`의 설치 전 복구 지점도 함께 확인한다. 백업은 SIEM 보관 기한으로 삭제되지 않는다.
 
 이 정책은 모든 로그 볼륨과 호스트 디스크의 상한을 보장하지 않는다. 원천 로그가 읽히기 전에 외부 회전으로 제거되는 경우와 장기 장애·전체 디스크 고갈 복구는 K11의 필수 검증이다. 운영 사양을 단기 테스트 결과만으로 확정하지 않는다.

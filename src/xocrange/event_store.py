@@ -31,6 +31,9 @@ class Store:
             raise XocError("unsafe_store", "Evidence database must be private and owned by the current user.")
         self.db = sqlite3.connect(path, timeout=30)
         self.db.row_factory = sqlite3.Row
+        # Takes effect for a new database (before any table exists); an older
+        # store keeps auto_vacuum=0 until an explicit offline VACUUM.
+        self.db.execute("PRAGMA auto_vacuum=INCREMENTAL")
         self.db.execute("PRAGMA journal_mode=WAL")
         self.db.execute("PRAGMA synchronous=FULL")
         self.db.execute("PRAGMA foreign_keys=ON")
@@ -263,3 +266,18 @@ class Store:
             self.db.execute('DELETE FROM wazuh_alerts WHERE observed<? AND (?=0 OR indexed IS NOT NULL)',(cutoff,int(bool(self.cursor('indexer-enabled')))))
             self.db.execute('DELETE FROM processing_errors WHERE observed<?', (cutoff,))
         self.db.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+        self.compact()
+
+    def compact(self, max_pages=65536):
+        """Return free pages to the filesystem in bounded steps.
+
+        Without this the file stays at its high-water mark: a 7 GB store held
+        38 GB on disk, which every pre-install backup then had to copy.
+        """
+        if self.db.execute('PRAGMA auto_vacuum').fetchone()[0] != 2:
+            return 0
+        free = self.db.execute('PRAGMA freelist_count').fetchone()[0]
+        if free:
+            self.db.execute(f'PRAGMA incremental_vacuum({min(free, int(max_pages))})').fetchall()
+            self.db.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+        return free - self.db.execute('PRAGMA freelist_count').fetchone()[0]
