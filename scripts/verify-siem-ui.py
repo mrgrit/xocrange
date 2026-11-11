@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Exercise the installed HTTPS ingress, real WAF, Dashboard and Indexer."""
+import base64
 import http.cookiejar
 import json
 from pathlib import Path
@@ -196,15 +197,22 @@ r.on('error',e=>process.exit(['ERR_TLS_CERT_ALTNAME_INVALID','UNABLE_TO_VERIFY_L
     # synthetic syslog probe, not an SSH attempt or a modification of host users.
     marker='xocprobe'+uuid.uuid4().hex[:12]
     line=time.strftime('%b %d %H:%M:%S')+' xoc sshd[43210]: Invalid user '+marker+' from 192.0.2.10 port 4444'
+    # Pass the line encoded: Sysmon/auditd record this exec's command line, and
+    # a plain copy there was indexed as a second alert containing the same text.
     engine.run(['exec','-T','--user','999:999','siem','/var/ossec/framework/python/bin/python3','-c',
-                'import socket,sys;s=socket.socket(socket.AF_UNIX,socket.SOCK_DGRAM);s.connect("/var/ossec/queue/sockets/queue");s.send(("1:xoc-native-probe:"+sys.argv[1]).encode())',line],compose=True)
-    deadline=time.monotonic()+60;native_hits=[]
+                'import base64,socket,sys;s=socket.socket(socket.AF_UNIX,socket.SOCK_DGRAM);s.connect("/var/ossec/queue/sockets/queue");s.send(b"1:xoc-native-probe:"+base64.b64decode(sys.argv[1]))',
+                base64.b64encode(line.encode()).decode()],compose=True)
+    # The probe queues behind alerts collected while services were stopped for
+    # the update checkpoint; use the same bound as the other native-index checks.
+    started=time.monotonic();deadline=started+180;native_hits=[]
     while time.monotonic()<deadline:
-        code,data=client.request('POST','/wazuh-alerts-4.x-*/_search',{'size':2,'query':{'match_phrase':{'full_log':line}}})
+        code,data=client.request('POST','/wazuh-alerts-4.x-*/_search',{'size':2,'query':{'bool':{'filter':[
+            {'match_phrase':{'full_log':line}},{'term':{'location':'xoc-native-probe'}}]}}})
         native_hits=data.get('hits',{}).get('hits',[])
         if native_hits:break
         time.sleep(2)
     checks['stock_sshd_rule_indexes_original_alert']=code==200 and len(native_hits)==1 and native_hits[0]['_source']['rule']['id']=='5710' and 'event_id' not in native_hits[0]['_source']['xoc']
+    diagnostics={'stock_sshd_hits':len(native_hits),'stock_sshd_seconds':round(time.monotonic()-started,1)}
     # The ingestion service credential cannot read or delete search data.
     writer=Client(engine,plan['compose']['name'])
     checks['writer_cannot_read_events']=writer.request('POST','/xoc-events-*/_search',{'size':0})[0]==403
@@ -213,7 +221,7 @@ r.on('error',e=>process.exit(['ERR_TLS_CERT_ALTNAME_INVALID','UNABLE_TO_VERIFY_L
     checks['logout']=code in (200,302)
     code,_,_=request('/siem/api/saved_objects/_find?type=dashboard')
     checks['logout_revokes_browser_session']=code in (401,302)
-    report={'status':'passed' if all(checks.values()) else 'failed','checks':checks,'scope':'Real HTTPS ingress -> fw -> IPS -> ModSecurity CRS -> authenticated Dashboards; C1 in Indexer.',
+    report={'status':'passed' if all(checks.values()) else 'failed','checks':checks,'diagnostics':diagnostics,'scope':'Real HTTPS ingress -> fw -> IPS -> ModSecurity CRS -> authenticated Dashboards; C1 in Indexer.',
             'known_limitations':['ModSecurity 2.x #2807 rejects truncated JSON with HTTP 500 before phase 2; ordinary malformed JSON returns 400.']}
     Path('/var/lib/xocrange/siem-ui-acceptance.json').write_text(json.dumps(report,indent=2)+'\n')
     return report
