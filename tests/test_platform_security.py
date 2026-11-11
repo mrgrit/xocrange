@@ -184,3 +184,21 @@ def test_console_audit_failure_prevents_device_call(app,monkeypatch):
     monkeypatch.setattr(Audit.objects,'create',fail)
     monkeypatch.setattr(console,'rpc',lambda *args:pytest.fail('Device must not be contacted'))
     assert send(app,'console/fw/apply',{'version':0,'token':'a'}).status_code==503
+
+
+def test_outcome_audit_failure_still_reports_the_device_result(app,monkeypatch):
+    from django.conf import settings
+    from django.db import OperationalError
+    from control import console
+    from control.models import Audit,DevicePolicy
+    monkeypatch.setitem(settings.CONFIG,'consoles',['fw']);login(app)
+    DevicePolicy.objects.filter(device='fw').update(write_enabled=True)
+    create=Audit.objects.create
+    def outcome_fails(**kwargs):
+        if kwargs.get('outcome')=='applied': raise OperationalError('audit unavailable')
+        return create(**kwargs)
+    monkeypatch.setattr(Audit.objects,'create',outcome_fails)
+    monkeypatch.setattr(console,'rpc',lambda *args:{'ok':True,'data':{'version':1}})
+    response=send(app,'console/fw/apply',{'version':0,'token':'a'})
+    assert response.status_code==200 and response.json()['audit']=='incomplete'
+    assert Audit.objects.filter(action='console_apply',outcome='requested').exists()

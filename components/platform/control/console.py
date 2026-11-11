@@ -2,7 +2,7 @@
 import json
 import socket
 from django.conf import settings
-from django.db import transaction
+from django.db import DatabaseError, transaction
 from django.http import JsonResponse
 from .models import DevicePolicy
 from .security import audit, device_permission, protected
@@ -33,6 +33,7 @@ def endpoint(request,device,action='status'):
         body=data(request,['version','payload'] if action=='preview' else ['version','token'])
         if type(body['version']) is not int: return JsonResponse({'error':'invalid_version'},status=400)
         body.update(action=action,actor=request.user.username,request_id=request.request_id)
+    audit_incomplete=False
     try:
         if action=='status': result=rpc(device,body)
         else:
@@ -49,11 +50,20 @@ def endpoint(request,device,action='status'):
                 if not device_permission(request,device,write=action=='apply',preview=action=='preview'):
                     return JsonResponse({'error':'device_write_locked'},status=403)
                 result=rpc(device,body)
-                audit(request,'console_'+action,'applied' if result.get('ok') and action=='apply' else 'validated' if result.get('ok') else 'rejected',device,
-                      {'version':body['version']},{'version':result.get('data',{}).get('version',body['version'])})
+                # The device has already acted and keeps its own journal; the
+                # "requested" row is committed. Losing only the outcome row
+                # must not report an applied change as a failure (503).
+                try:
+                    with transaction.atomic():
+                        audit(request,'console_'+action,'applied' if result.get('ok') and action=='apply' else 'validated' if result.get('ok') else 'rejected',device,
+                              {'version':body['version']},{'version':result.get('data',{}).get('version',body['version'])})
+                except DatabaseError:
+                    audit_incomplete=True
         if not result.get('ok'):
             return JsonResponse({'error':'device_rejected','detail':result.get('error','Operation rejected')},status=result.get('status',503))
         result=result['data']
+        if audit_incomplete:
+            result=dict(result,audit='incomplete')
         if action=='status':
             result['write_enabled']=device_permission(request,device,write=True)
             result['can_preview']=request.user.profile.role in ('admin','operator')
