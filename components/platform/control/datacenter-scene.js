@@ -95,7 +95,7 @@ function arrangeBuilding(outlines,mainIds,frame) {
     const g=el('g',{'data-dc-floor':f.id,transform:`translate(${x} ${y})`,class:active?'dc-level-active':preview?'dc-level-preview':'dc-level-locked','aria-disabled':String(!active&&!preview)});
     if(active||preview){g.setAttribute('role','button');g.setAttribute('tabindex','0');g.setAttribute('aria-label',f.title+(active?' 내부 보기':' 디자인 보기'));}
     g.append(rooms.get(f.id));root.append(g);
-    const position=arch.iso(8.2,7.8,.22);labels.push({x:x+position[0],y:y+position[1]+20,title:f.id+' · '+f.title,active});
+    const position=arch.iso(8.2,7.8,.22);labels.push({x:x+position[0],y:y+position[1]+20,title:(f.id==='XOC'?'':f.id+' · ')+f.title,active});
    }
   }else{
    const room=arch.room(['design','learning'].includes(mode)?designFloor:'2F');root.append(room);

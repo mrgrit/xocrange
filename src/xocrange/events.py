@@ -197,7 +197,7 @@ def nftables(raw, ctx):
         raise XocError("invalid_event", "nftables input must be UTF-8.") from exc
     match = NFT_PREFIX.fullmatch(line)
     if not match:
-        raise XocError("unsupported_event", "Expected a trusted kt66/xoc firewall kernel log prefix.")
+        raise XocError("unsupported_event", "Expected a trusted xoc firewall kernel log prefix.")
     fields = {}
     for key, value in re.findall(r"\b([A-Z]+)=(\S*)", match["fields"]):
         if key in fields:
