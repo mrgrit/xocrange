@@ -220,3 +220,18 @@ def test_failed_recovery_run_keeps_its_recovery_point(tmp_path, monkeypatch):
         ops.restore(directory, checkpoint=False)
     value = json.loads(journal.read_text())
     assert value['status'] == 'failed' and value['recovery'] == str(directory)
+
+
+def test_successful_install_keeps_only_its_checkpoint(tmp_path):
+    state = tmp_path/'state'; backups = state/'backups'; backups.mkdir(parents=True)
+    names = ['before-install-20261108T150908-1', 'before-install-20261111T155720-2',
+             'before-install-20261111T162201-3', 'manual-001', 'before-restore-20261108T070000000000Z']
+    for name in names:
+        (backups/name).mkdir(); (backups/name/'manifest.json').write_text('{}')
+    # An unfinished restore still needs its recovery point.
+    (state/'restore-operation.json').write_text(json.dumps({'status':'failed', 'recovery':str(backups/names[1])}))
+    result = ops.prune_checkpoints(backups/names[2], backups)
+    assert result['removed'] == [names[0]]
+    assert sorted(p.name for p in backups.iterdir()) == sorted(names[1:])
+    with pytest.raises(XocError):
+        ops.prune_checkpoints(backups/'manual-001', backups)

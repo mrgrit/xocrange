@@ -462,6 +462,10 @@ bash "$release/scripts/install-operations.sh" "$release" "$runtime"
 stage release-inventory
 "$runtime/bin/python" "$release/scripts/release-inventory.py" "$release" "$plan_name"
 printf '{"status":"complete","release":"%s","checkpoint":"%s"}\n' "$release" "$checkpoint" > "$state/install-operation.json"
+if [[ -n $checkpoint ]]; then
+    # Older pre-install checkpoints are superseded by this one; keep disk bounded.
+    "$runtime/bin/python" "$release/scripts/appliance-ops.py" prune-checkpoints "$checkpoint" || printf 'Warning: older checkpoints were not pruned\n' >&2
+fi
 checkpoint=
 if [[ -n $restore_path ]]; then
     stage backup-restore

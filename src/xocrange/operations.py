@@ -336,6 +336,35 @@ def create(output, *, portable=True, keep_stopped=False):
     return {'status':'complete', 'path':str(output), 'archives':len(metadata['files']), 'bytes':sum(v['bytes'] for v in metadata['files'].values()), 'portable':portable}
 
 
+def prune_checkpoints(current, backups=None):
+    """Keep only the checkpoint of the install that just completed.
+
+    Pre-install checkpoints were never removed; each copies all appliance
+    state (14-23 GB on the development VM), so a few updates filled the disk.
+    Manual backups (any other name) and points named by an unfinished
+    operation journal are never touched.
+    """
+    base = Path(backups or STATE/'backups')
+    current = Path(current).resolve()
+    if current.parent != base.resolve() or not re.fullmatch(r'before-install-\d{8}T\d{6}-\d+', current.name) or not (current/'manifest.json').is_file():
+        raise XocError('prune_checkpoint', 'Only a completed installer checkpoint can replace older ones.')
+    protected = {current}
+    for name in ('restore-operation.json', 'install-operation.json'):
+        try:
+            value = json.loads((base.parent/name).read_text())
+        except (OSError, ValueError):
+            continue
+        if value.get('status') in ('staging', 'restoring', 'failed', 'in-progress', 'recovery-required'):
+            protected |= {Path(v).resolve() for k, v in value.items() if k in ('recovery', 'checkpoint', 'backup') and isinstance(v, str)}
+    removed = []
+    for candidate in sorted(base.iterdir()):
+        if candidate.is_symlink() or not candidate.is_dir() or candidate.resolve() in protected:
+            continue
+        if re.fullmatch(r'before-install-\d{8}T\d{6}-\d+', candidate.name):
+            shutil.rmtree(candidate); removed.append(candidate.name)
+    return {'status': 'pruned', 'kept': current.name, 'removed': removed}
+
+
 def verify_backup(directory):
     try:
         return _verify_backup(directory)
