@@ -112,7 +112,17 @@ def test_invalid_fragments_are_rejected(checkout, mutation, code):
     expect(code, lambda: plan(checkout, include=["extension"]))
 
 
-@pytest.mark.parametrize("host", ["127.0.0.1", "0.0.0.0", "::"])
+@pytest.mark.parametrize("host", ["0.0.0.0", "::", "192.0.2.10"])
+def test_extensions_cannot_publish_beyond_loopback(checkout, host):
+    folder = module(checkout)
+    fragment = yaml_document(folder / "compose.yaml")
+    fragment["networks"]["int"]["internal"] = False
+    fragment["services"]["extension"]["ports"] = [{"target": 1234, "published": 18080, "host_ip": host, "protocol": "tcp"}]
+    save(folder / "compose.yaml", fragment)
+    expect("public_port", lambda: plan(checkout, include=["extension"]))
+
+
+@pytest.mark.parametrize("host", ["127.0.0.1"])
 def test_port_overlaps_include_wildcard_bindings(checkout, host):
     folder = module(checkout)
     fragment = yaml_document(folder / "compose.yaml")

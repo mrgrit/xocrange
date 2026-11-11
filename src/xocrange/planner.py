@@ -181,8 +181,14 @@ def plan(root: Path, *, preset="bootstrap", include=(), without=(), allow_fixtur
             raise XocError("experimental_component", "The security-path runtime requires explicit experimental selection.")
         siem = identifier == "siem" and manifest["kind"] == "component"
         siem_ui = identifier == "siem-ui" and manifest["kind"] == "component"
-        schema = "security-compose-fragment" if security_path else "siem-compose-fragment" if siem else "siem-ui-compose-fragment" if siem_ui else "management-compose-fragment" if identifier == "management" else "console-compose-fragment" if identifier in ("console-fw","console-ips","console-waf","portal","noc","academy-reader") else "compose-fragment"
+        schema = "security-compose-fragment" if security_path else "siem-compose-fragment" if siem else "siem-ui-compose-fragment" if siem_ui else "management-compose-fragment" if identifier == "management" else "console-compose-fragment" if identifier in ("console-fw","console-ips","console-waf","portal","noc","academy-reader") else "target-compose-fragment" if identifier in PRACTICE_TARGETS and manifest["kind"] == "component" else "compose-fragment"
         fragment = validate(yaml_document(fragment_path), schema)
+        if schema == "compose-fragment":
+            # Only the reviewed management ingress publishes on external
+            # interfaces; anything else would bypass fw/IPS/WAF and Core login.
+            for service in fragment["services"].values():
+                if any(port["host_ip"] not in ("127.0.0.1", "::1") for port in service.get("ports", [])):
+                    raise XocError("public_port", "Extensions may publish host ports on loopback only; learner access goes through the ingress.")
         if siem:
             service = fragment["services"]["siem"]
             if fragment["networks"] != {"int": {"internal": True}} or service["networks"] != ["int"] or any(k in service for k in ("ports", "sysctls", "environment", "command", "entrypoint")):
