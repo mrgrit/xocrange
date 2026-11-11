@@ -33,7 +33,8 @@ STATE_NAMES = ('platform', 'ui', 'manager', 'siem', 'osquery', 'last-install.jso
 HOST_PATHS = {'etc': Path('/etc/xocrange'), 'wrapper': Path('/usr/local/bin/xoc'),
               'audit-rule': Path('/etc/audit/rules.d/70-xocrange.rules'),
               'logrotate': Path('/etc/logrotate.d/xocrange'),
-              'journal-policy': Path('/etc/systemd/journald.conf.d/70-xocrange.conf')}
+              'journal-policy': Path('/etc/systemd/journald.conf.d/70-xocrange.conf'),
+              'rsyslog-sysmon': Path('/etc/rsyslog.d/30-xocrange-sysmon.conf')}
 MAX_MEMBERS = 1000000
 
 
@@ -451,8 +452,11 @@ def restore(directory, *, checkpoint=True):
     recovery = STATE/'backups'/('before-restore-'+timestamp()) if checkpoint else None
     if recovery:
         create(recovery, portable=False)
+    # A recovery run (checkpoint=False) restores a recovery point itself; keep
+    # that point in the journal so a failed or interrupted run stays resumable.
+    recovery_ref = str(recovery) if recovery else (None if checkpoint else str(directory))
     journal = STATE/'restore-operation.json'
-    save(journal, {'status':'staging', 'backup':str(directory), 'recovery':str(recovery) if recovery else None})
+    save(journal, {'status':'staging', 'backup':str(directory), 'recovery':recovery_ref})
     staging = Path(tempfile.mkdtemp(prefix='restore-', dir=STATE))
     mutated = False
     try:
@@ -471,7 +475,7 @@ def restore(directory, *, checkpoint=True):
         retain(value['images'])
         mutated = True; stop()
         failed_state = preserve_failed_state(current) if not checkpoint else None
-        save(journal, {'status':'restoring', 'backup':str(directory), 'recovery':str(recovery) if recovery else None,
+        save(journal, {'status':'restoring', 'backup':str(directory), 'recovery':recovery_ref,
                        'preserved_failed_state':str(failed_state) if failed_state else None})
         from .lab import Docker
         from .ui_setup import owned_volume
@@ -484,12 +488,15 @@ def restore(directory, *, checkpoint=True):
             if 'unit-'+unit not in extracted:
                 command(['systemctl', 'disable', unit], check=False)
                 (Path('/etc/systemd/system')/unit).unlink(missing_ok=True)
+        # The rsyslog Sysmon filter is kept even when an older backup lacks it:
+        # it only removes a duplicate of the journald copy the collector reads.
         for name in ('logrotate', 'journal-policy', 'audit-rule'):
             if 'host-'+name not in extracted:
                 HOST_PATHS[name].unlink(missing_ok=True)
         ops_journal = HOST_PATHS['journal-policy']
         if ops_journal.parent.exists():
             command(['systemctl', 'restart', 'systemd-journald'])
+        command(['systemctl', 'try-restart', 'rsyslog.service'], check=False)
         # Legacy releases use tags. Rebind only the exact saved references to IDs.
         for item in value['images'].values():
             if '@' not in item['reference']:
@@ -499,10 +506,13 @@ def restore(directory, *, checkpoint=True):
             raise XocError('restore_path', 'Unexpected current release pointer.')
         current_link.unlink(missing_ok=True); current_link.symlink_to(value['installation']['release'])
         resume(value['units'])
-        save(journal, {'status':'complete', 'backup':str(directory), 'recovery':str(recovery) if recovery else None,
+        save(journal, {'status':'complete', 'backup':str(directory), 'recovery':recovery_ref,
                        'preserved_failed_state':str(failed_state) if failed_state else None, 'finished_at':timestamp()})
     except BaseException:
-        save(journal, {'status':'failed', 'backup':str(directory), 'recovery':str(recovery) if recovery else None})
+        # Nothing was changed before mutation; mark it non-recoverable so a later
+        # `xoc recover` cannot roll the host back to this stale checkpoint.
+        status = 'failed' if mutated or not checkpoint else 'aborted'
+        save(journal, {'status':status, 'backup':str(directory), 'recovery':recovery_ref})
         if mutated and recovery:
             restore(recovery, checkpoint=False)
             save(journal, {'status':'rolled-back', 'failed_backup':str(directory), 'recovery':str(recovery)})

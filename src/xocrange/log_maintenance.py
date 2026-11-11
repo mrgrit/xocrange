@@ -1,4 +1,5 @@
 """Rename device logs, reopen writers, and retain unread generations for SIEM."""
+import base64
 import json
 import os
 from pathlib import Path
@@ -41,7 +42,15 @@ def removable(path, states, opened, *, now=None, siem=True):
     if not siem:
         return True
     suffix = f':{info.st_dev}:{info.st_ino}'
-    return any(name.endswith(suffix) and not value.get('buffer') and value.get('offset',0) >= info.st_size for name,value in states.items())
+    candidates = [v for n,v in states.items() if n.endswith(suffix) and not v.get('buffer') and v.get('offset',0) >= info.st_size]
+    if not candidates:
+        return False
+    # Inode numbers are reused after deletion. A stale cursor of an earlier
+    # generation must not mark a new, unread file as read: require the same
+    # leading bytes the collector anchored when it read this file.
+    with path.open('rb') as stream:
+        head = stream.read(64)
+    return any(head.startswith(base64.b64decode(v.get('anchor', ''))) and (v.get('anchor') or not info.st_size) for v in candidates)
 
 
 def maintain():

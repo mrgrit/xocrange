@@ -169,3 +169,54 @@ def test_compressed_receipt_cursors_keep_completion_after_restoring_new_inodes(t
     assert old not in rows
     from xocrange.collector import read_snapshots
     assert read_snapshots(str(volume/'missing.json'),'wazuh-archives:'+ops.PROJECT+'_siem-logs',rows,history=[file])==[]
+
+
+def test_sysmon_is_not_duplicated_into_syslog():
+    # The collector reads Sysmon from journald; rsyslog must not also copy it
+    # into /var/log/syslog, and the rule must follow backup/restore.
+    from xocrange import operations
+    script = (Path(__file__).resolve().parents[1]/'scripts/install-operations.sh').read_text()
+    rule = operations.HOST_PATHS['rsyslog-sysmon']
+    assert str(rule) in script
+    assert ':programname, isequal, "sysmon" stop' in script
+    assert rule.name < '50-default.conf'
+
+
+def _restorable(tmp_path, monkeypatch):
+    state_dir = tmp_path/'state'; state_dir.mkdir(mode=0o700); (state_dir/'backups').mkdir(mode=0o700)
+    monkeypatch.setattr(ops, 'STATE', state_dir)
+    directory = tmp_path/'backup'; directory.mkdir(mode=0o700)
+    state = {'release':'/opt/xocrange/releases/'+'a'*64, 'plan':'install-'+'b'*64, 'data_directory':'/data'}
+    files = {}
+    for name in ('source.tar.gz','venv.tar.gz','state-last-install.json.tar.gz'):
+        archive(directory/name, [('data/file','file',b'original')])
+        files[name] = {'sha256':ops.sha256(directory/name),'bytes':(directory/name).stat().st_size,'expanded_bytes':8}
+    image = {'id':'sha256:'+'c'*64, 'reference':'example@sha256:'+'c'*64}
+    ops.save(directory/'manifest.json', {'schema_version':'xoc.backup/0.1.0','status':'complete','installation':state,
+                                         'files':files,'portable':False,'units':[],'images':{'web':image}})
+    monkeypatch.setattr(ops, 'installed', lambda: state)
+    monkeypatch.setattr(ops, 'create', lambda *a, **k: None)
+    monkeypatch.setattr(ops, 'unpack', lambda source, target: target)
+    monkeypatch.setattr(ops, 'stop', lambda: pytest.fail('must not stop services'))
+    def command(args, **kwargs):
+        raise XocError('operation_command', 'image missing')
+    monkeypatch.setattr(ops, 'command', command)
+    return directory, state_dir/'restore-operation.json'
+
+
+def test_restore_failing_before_mutation_is_not_recoverable(tmp_path, monkeypatch):
+    directory, journal = _restorable(tmp_path, monkeypatch)
+    with pytest.raises(XocError):
+        ops.restore(directory)
+    value = json.loads(journal.read_text())
+    # Nothing changed, so `xoc recover` must not roll back to this checkpoint later.
+    assert value['status'] == 'aborted'
+    assert ops.recover() == {'status':'no-recovery-needed'}
+
+
+def test_failed_recovery_run_keeps_its_recovery_point(tmp_path, monkeypatch):
+    directory, journal = _restorable(tmp_path, monkeypatch)
+    with pytest.raises(XocError):
+        ops.restore(directory, checkpoint=False)
+    value = json.loads(journal.read_text())
+    assert value['status'] == 'failed' and value['recovery'] == str(directory)

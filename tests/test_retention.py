@@ -20,9 +20,14 @@ def test_device_history_never_removes_unread_open_or_recent_logs(tmp_path):
     assert not removable(path,{key:{'offset':3,'buffer':''}},set())
     assert not removable(path,{key:{'offset':5,'buffer':'partial'}},set())
     assert not removable(path,{key:{'offset':5,'buffer':''}},{(info.st_dev,info.st_ino)})
-    assert removable(path,{key:{'offset':5,'buffer':''}},set())
-    os.utime(path,None)
+    anchor=base64.b64encode(b'line\n').decode()
+    assert removable(path,{key:{'offset':5,'buffer':'','anchor':anchor}},set())
+    # A stale cursor left by an earlier file that had the same inode number
+    # (different leading bytes, or no anchor at all) does not count as read.
+    assert not removable(path,{key:{'offset':5,'buffer':'','anchor':base64.b64encode(b'other\n').decode()}},set())
     assert not removable(path,{key:{'offset':5,'buffer':''}},set())
+    os.utime(path,None)
+    assert not removable(path,{key:{'offset':5,'buffer':'','anchor':anchor}},set())
 
 FIXTURES = Path(__file__).parent/'fixtures/events'
 
