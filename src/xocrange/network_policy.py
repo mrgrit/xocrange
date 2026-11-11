@@ -89,7 +89,9 @@ def attach_http_targets(compose, manifests, owners):
                 raise XocError("target_conflict", "HTTP target identifiers must be unique.")
             if owners.get(service) != manifest["id"] or "int" not in compose["services"][service]["networks"]:
                 raise XocError("invalid_http_target", "An HTTP target must own its backend service on the int network.")
-            targets[name] = target
+            # Fixtures stay on the internal verification host names; reviewed
+            # components are also published to learners as <id>.xoc.range.
+            targets[name] = dict(target, public=True) if manifest["kind"] == "component" else target
     if targets and owners.get("web") != "security-path":
         raise XocError("missing_web_gateway", "Selected HTTP targets require the security-path gateway.")
     if owners.get("web") == "security-path":

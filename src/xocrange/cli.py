@@ -15,6 +15,24 @@ from .planner import catalog, plan, write_plan
 from .lab import run_lab
 
 
+def learner_targets(root, selected, public_host):
+    """Hosts-only learner names (NAMING: xoc.range) for installed practice targets."""
+    import ipaddress
+    entries = catalog(root)
+    names = sorted(t["id"] + ".xoc.range" for key in selected if key in entries
+                   and entries[key]["manifest"]["kind"] == "component"
+                   for t in entries[key]["manifest"].get("http_targets", []))
+    try:
+        ipaddress.ip_address(public_host)
+        hosts = f"{public_host} {' '.join(names)}" if names else None
+    except ValueError:
+        hosts = None
+    return {"targets": [{"host": n, "url": "https://" + n + "/"} for n in names],
+            "hosts_line": hosts,
+            "note": "Add hosts_line to the learner PC's hosts file (or an internal DNS zone) and trust "
+                    "/etc/xocrange/ca.crt. Traffic passes fw -> IPS -> WAF and is recorded in the SIEM."}
+
+
 def parser():
     cli = argparse.ArgumentParser(prog="xoc", description="xOC Range Core bootstrap CLI")
     cli.add_argument("--version", action="version", version=f"xoc {__version__}")
@@ -41,7 +59,7 @@ def parser():
     for name in ("tenant-id", "range-id", "source-id", "evidence-ref", "observed-at"):
         converting.add_argument(f"--{name}", required=True)
     platform = commands.add_parser('platform', help='Local platform administrator access')
-    platform.add_argument('action', choices=['credentials'])
+    platform.add_argument('action', choices=['credentials', 'targets'])
     licensing = commands.add_parser('license', help='Offline C7 verification and public trust keys')
     licensing.add_argument('action', choices=['status', 'trust', 'activate'])
     licensing.add_argument('--file', type=Path)
@@ -113,6 +131,9 @@ def run(args):
         from .platform_setup import STATE
         from .ui_setup import private_json
         secret = private_json(STATE/'credentials.json')
+        if args.action == 'targets':
+            from .operations import installed
+            return learner_targets(args.root, installed()['selected'], secret['public_host'])
         return {'url':'https://'+secret['public_host']+'/core/', 'username':'admin', 'password':secret.get('admin_password',secret['bootstrap_password']), 'ca_certificate':'/etc/xocrange/ca.crt', 'note':'Initial credentials; if changed in the UI, use the password you chose.'}
     if args.command == 'agents':
         from .lab import Docker, checked_plan

@@ -46,3 +46,12 @@ def test_checkout_entry_point():
     result = subprocess.run([sys.executable, str(ROOT / "bin/xoc"), "--version"], capture_output=True, text=True)
     assert result.returncode == 0
     assert result.stdout.strip() == "xoc 0.1.0"
+
+
+def test_learner_targets_list_only_selected_reviewed_targets():
+    from xocrange.cli import learner_targets
+    root = Path(__file__).resolve().parents[1]
+    result = learner_targets(root, ['platform', 'security-path', 'target-juice', 'fixture-security-probe'], '192.0.2.10')
+    assert result['hosts_line'] == '192.0.2.10 juice.xoc.range'
+    assert [t['url'] for t in result['targets']] == ['https://juice.xoc.range/']
+    assert learner_targets(root, ['platform'], 'xoc.example.test')['hosts_line'] is None

@@ -127,6 +127,12 @@ backend security_path
 '''
 
 
+def ingress_names(host):
+    """Names served by the TLS ingress: the access address plus the hosts-only
+    learner domain for selected practice targets (<id>.xoc.range)."""
+    return list(dict.fromkeys([host, 'localhost', '127.0.0.1', 'xoc.range', '*.xoc.range']))
+
+
 def host_rule(host):
     # IP access is the installer default, not an attack. Keep this CRS exception
     # inside the SIEM vhost and limited to its known addresses and path prefix.
@@ -174,7 +180,7 @@ def prepare(engine, project, host=None, state=STATE, root=None):
     if not (state/'ca.pem').exists():
         subprocess.run(['openssl','req','-x509','-newkey','rsa:3072','-nodes','-days','3650','-sha256','-keyout',str(state/'ca-key.pem'),'-out',str(state/'ca.pem'),'-subj','/CN=xOC Range local CA','-addext','basicConstraints=critical,CA:TRUE','-addext','keyUsage=critical,keyCertSign,cRLSign'],check=True,capture_output=True)
         (state/'ca-key.pem').chmod(0o600)
-    for name, names in [('indexer',['indexer']),('dashboard',['dashboard']),('web',list(dict.fromkeys([host,'localhost','127.0.0.1']))),('xoc-indexer-admin',[])]:
+    for name, names in [('indexer',['indexer']),('dashboard',['dashboard']),('web',ingress_names(host)),('xoc-indexer-admin',[])]:
         certificate(name,names,state)
     def populate(volume, uid, files):
         base=owned_volume(engine,project,volume)

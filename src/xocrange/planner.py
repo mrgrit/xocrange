@@ -16,6 +16,9 @@ from .errors import XocError
 from .network_policy import attach_http_targets, check_addresses, security_role_policy
 from .registry import registrations
 
+# Unmodified upstream practice apps; reviewed against target-compose-fragment.
+PRACTICE_TARGETS = ("target-juice", "target-dvwa")
+
 
 def compatible(requirement: str, version=__version__):
     current = tuple(map(int, version.split(".")))

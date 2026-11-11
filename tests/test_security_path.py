@@ -124,13 +124,23 @@ def test_selected_networks_cannot_overlap(security_checkout):
 
 def test_web_render_contains_only_current_selection():
     render = runpy.run_path(str(ROOT / "components/security-path/web/start.py"))["render"]
-    selected, page = render('[{"id":"sample","service":"lab-target","port":8080}]')
+    selected, page, learner = render('[{"id":"sample","service":"lab-target","port":8080}]')
     assert "ServerName sample.xoc.test" in selected
     assert "http://lab-target:8080/" in selected
     assert "sample.xoc.test:8080" in page
-    empty, page = render("[]")
+    assert learner == ""
+    empty, page, learner = render("[]")
     assert "lab-target" not in empty and "sample.xoc.test" not in page
-    assert "ProxyPass" not in empty
+    assert "ProxyPass" not in empty and learner == ""
+
+
+def test_reviewed_targets_get_learner_vhosts_behind_the_ingress():
+    render = runpy.run_path(str(ROOT / "components/security-path/web/start.py"))["render"]
+    _, _, learner = render(json.dumps([{"id": "juice", "service": "juiceshop", "port": 3000, "public": True},
+                                       {"id": "sample", "service": "lab-target", "port": 8080, "public": False}]))
+    assert "<VirtualHost *:8443>" in learner and "ServerName juice.xoc.range" in learner
+    assert "http://juiceshop:3000/" in learner and "RemoteIPInternalProxy 172.29.10.20" in learner
+    assert "sample" not in learner and "lab-target" not in learner
 
 
 def test_suricata_config_includes_required_yaml_version_and_inline_policy():
@@ -148,9 +158,46 @@ def test_suricata_config_includes_required_yaml_version_and_inline_policy():
     [{"id": "sample", "service": "lab-target", "port": True}],
     [{"id": "sample", "service": "lab-target", "port": 0}],
     [{"id": "sample", "service": "lab-target", "port": 8080, "raw_config": "evil"}],
+    [{"id": "sample", "service": "lab-target", "port": 8080, "public": "yes"}],
     [{"id": "sample", "service": "lab-target", "port": 8080}] * 2,
 ])
 def test_web_configuration_rejects_injection_and_invalid_targets(value):
     render = runpy.run_path(str(ROOT / "components/security-path/web/start.py"))["render"]
     with pytest.raises(ValueError):
         render(json.dumps(value))
+
+
+@pytest.fixture
+def target_checkout(security_checkout):
+    for relative in ("components/target-juice", "components/target-dvwa"):
+        shutil.copytree(ROOT / relative, security_checkout / relative)
+    return security_checkout
+
+
+def test_practice_targets_are_published_only_through_the_waf(target_checkout):
+    result = plan(target_checkout, preset="security-path", allow_experimental=True, include=["target-juice", "target-dvwa"])
+    services = result["compose"]["services"]
+    for name in ("juiceshop", "dvwa"):
+        assert services[name]["networks"] == ["int"] and "ports" not in services[name]
+        assert services[name]["cap_drop"] == ["ALL"]
+    targets = json.loads(services["web"]["environment"]["XOC_WEB_TARGETS"])
+    assert {t["id"]: t.get("public") for t in targets} == {"dvwa": True, "juice": True}
+    assert {"juiceshop", "dvwa"} <= set(services["web"]["depends_on"])
+    removed = plan(target_checkout, preset="security-path", allow_experimental=True, include=["target-juice"])["compose"]["services"]
+    assert "dvwa" not in removed and "dvwa" not in removed["web"]["environment"]["XOC_WEB_TARGETS"]
+
+
+@pytest.mark.parametrize("change", [
+    lambda s: s.update(ports=[{"target": 3000, "published": 3000, "host_ip": "0.0.0.0", "protocol": "tcp"}]),
+    lambda s: s.update(networks=["int", "ext"]),
+    lambda s: s.update(cap_add=["NET_ADMIN"]),
+    lambda s: s.update(volumes=["/:/host"]),
+    lambda s: s.update(security_opt=[]),
+])
+def test_practice_target_fragment_rejects_extra_privileges(target_checkout, change):
+    path = target_checkout / "components/target-juice/compose.yaml"
+    fragment = yaml.safe_load(path.read_text())
+    change(fragment["services"]["juiceshop"])
+    path.write_text(yaml.safe_dump(fragment))
+    with pytest.raises(XocError):
+        plan(target_checkout, preset="security-path", allow_experimental=True, include=["target-juice"])

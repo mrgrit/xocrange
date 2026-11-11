@@ -56,7 +56,7 @@ Ubuntu Server 26.04 LTS amd64 전용 VM에서 저장소 또는 별도로 받은 
 sudo bash install.sh
 ```
 
-**현재 개발 버전의 설치 범위는 공통 관리 화면 + 데이터센터·운영 개요·NOC 2층·자료실 + 장비 콘솔 3종 + platform + 방화벽 + IPS + WAF + SIEM 백엔드·웹 관제 + 호스트 관측 도구 + 통신 검증용 타깃이다.** 웹 관제를 포함하면 최소 8 GiB RAM을 요구하며 실제 검증 VM은 16 GiB다. `--without siem-ui`로 웹 관제만 제외하거나 `--without siem`으로 SIEM 전체를 제외할 수 있다. `--without portal`, `--without noc`, `--without academy-reader`로 각 화면을 제외할 수 있다. 모듈 설치·제거와 백업·업데이트·복구 명령을 제공한다. 실제 입문 타깃과 전체 출시 검증은 후속 단계다. [운영 개요·NOC·자료실](docs/development/WORKSPACES.md) [웹 관제 구성·WAF 예외·검증](docs/development/SIEM-WEB.md)
+**현재 개발 버전의 설치 범위는 공통 관리 화면 + 데이터센터·운영 개요·NOC 2층·자료실 + 장비 콘솔 3종 + platform + 방화벽 + IPS + WAF + SIEM 백엔드·웹 관제 + 호스트 관측 도구 + 통신 검증용 타깃이다.** 웹 관제를 포함하면 최소 8 GiB RAM을 요구하며 실제 검증 VM은 16 GiB다. `--without siem-ui`로 웹 관제만 제외하거나 `--without siem`으로 SIEM 전체를 제외할 수 있다. `--without portal`, `--without noc`, `--without academy-reader`로 각 화면을 제외할 수 있다. 모듈 설치·제거와 백업·업데이트·복구 명령을 제공한다. 입문 실습 타깃(Juice Shop·DVWA)은 `sudo xoc module add target-juice`·`target-dvwa`로 추가한다. 전체 출시 검증은 후속 단계다. [운영 개요·NOC·자료실](docs/development/WORKSPACES.md) [웹 관제 구성·WAF 예외·검증](docs/development/SIEM-WEB.md)
 
 설치 후 `sudo xoc platform credentials`로 `https://VM주소/core/`의 초기 관리자 계정을 확인하고 첫 로그인에서 비밀번호를 변경한다. 이 관리 화면은 SIEM 제외 시에도 유지된다. SIEM은 자체 Wazuh 계정을 사용하며, Core 역할을 SIEM에 자동 적용하는 SSO는 포함하지 않는다. [공통 보안과 권한](docs/development/COMMON-SECURITY.md)
 
@@ -67,6 +67,16 @@ sudo bash install.sh
 `sudo xoc siem credentials`로 HTTPS 주소와 생성된 관리자 비밀번호를 확인한다. 기본 주소는 `https://VM주소/siem/`이며 `--public-host siem.example.test`로 DNS 이름을 지정할 수 있다. 설치기가 만든 로컬 CA(`/etc/xocrange/ca.crt`)는 접속 PC에 한 번 신뢰 등록해야 브라우저 인증서 경고가 없어진다. 인증서와 비밀번호는 재설치 시 유지한다.
 
 설치기는 필요한 패키지를 설치하고 Docker와 containerd의 데이터 경로를 함께 구성한다. 기동 후 실제 차단·우회 방지·출처 보존·장애 복구 검사에 실패하면 비정상 종료하며 완료 상태를 기록하지 않는다. [설치 동작·선택 옵션·재실행](docs/development/INSTALLER.md)
+
+## 실습 타깃 (Juice Shop · DVWA)
+
+```bash
+sudo xoc module add target-juice     # OWASP Juice Shop
+sudo xoc module add target-dvwa      # DVWA
+sudo xoc platform targets            # 학습자 PC hosts 파일에 넣을 한 줄 출력
+```
+
+타깃은 `juice.xoc.range`, `dvwa.xoc.range`로 접속한다. Community는 공개 DNS를 쓰지 않고, 학습자 PC의 hosts 파일(또는 기관 내부 DNS)에 `서버IP juice.xoc.range dvwa.xoc.range`를 추가한다. 설치 CA(`/etc/xocrange/ca.crt`)를 신뢰 등록하면 인증서 경고가 사라진다. 모든 요청은 TLS ingress → 방화벽 → IPS → WAF를 지나 타깃에 도달하며, 차단·탐지 기록은 SIEM에 남는다. 타깃은 내부망(`int`)에만 연결되고 호스트 포트를 열지 않는다. upstream 이미지를 digest로 고정해 수정 없이 사용한다(Juice Shop MIT, DVWA GPL-3.0).
 
 ## 아카데미와 실습 기록
 

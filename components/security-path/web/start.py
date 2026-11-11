@@ -6,6 +6,8 @@ from pathlib import Path
 import re
 import subprocess
 
+LEARNER_DOMAIN = ".xoc.range"
+
 
 def render(raw):
     if len(raw.encode()) > 16384:
@@ -15,8 +17,10 @@ def render(raw):
         raise ValueError("Expected at most 32 selected targets")
     names, services = set(), []
     for target in targets:
-        if not isinstance(target, dict) or set(target) != {"id", "service", "port"}:
+        if not isinstance(target, dict) or not {"id", "service", "port"} <= set(target) <= {"id", "service", "port", "public"}:
             raise ValueError("Invalid target descriptor")
+        if type(target.get("public", False)) is not bool:
+            raise ValueError("Invalid target visibility")
         for key, length in (("id", 40), ("service", 62)):
             if not isinstance(target[key], str) or not re.fullmatch(r"[a-z][a-z0-9-]{0," + str(length) + r"}", target[key]):
                 raise ValueError("Invalid HTTP target identifier")
@@ -34,14 +38,26 @@ def render(raw):
         lines.extend(['<VirtualHost *:8080>', f'ServerName {host}', 'ProxyPreserveHost On',
                       f'ProxyPass / {backend}', f'ProxyPassReverse / {backend}'] + console + ['</VirtualHost>'])
         links.append(f'<li><a href="http://{host}:8080/">{html.escape(target["id"])}</a></li>')
+    # Learner access goes through the TLS ingress -> fw -> IPS -> this WAF as
+    # <id>.xoc.range (hosts/internal DNS only, NAMING). These vhosts follow the
+    # management vhost so a bare IP still lands on /core/.
+    learner = []
+    for target in sorted((t for t in services if t.get("public")), key=lambda t: t["id"]):
+        host = target["id"] + LEARNER_DOMAIN
+        backend = f'http://{target["service"]}:{target["port"]}/'
+        learner.extend(['<VirtualHost *:8443>', f'ServerName {host}',
+                        'RemoteIPHeader X-Xoc-Client-IP', 'RemoteIPInternalProxy 172.29.10.20',
+                        'RequestHeader unset X-Xoc-Client-IP', 'RequestHeader set X-Forwarded-Proto "https"',
+                        'ProxyPreserveHost On', f'ProxyPass / {backend}', f'ProxyPassReverse / {backend}']
+                       + console + ['</VirtualHost>'])
     page = '<!doctype html><html lang="en"><meta charset="utf-8"><title>xOC Core lab</title><h1>xOC Core security-path lab</h1>'
     page += '<p>Experimental gateway. Selected targets require lab DNS or a matching Host header.</p><ul>' + ''.join(links) + '</ul></html>'
-    return '\n'.join(lines) + '\n', page
+    return '\n'.join(lines) + '\n', page, '\n'.join(learner) + ('\n' if learner else '')
 
 
 if __name__ == "__main__":
     try:
-        config, page = render(os.environ.get("XOC_WEB_TARGETS", "[]"))
+        config, page, learner = render(os.environ.get("XOC_WEB_TARGETS", "[]"))
     except (ValueError, TypeError):
         raise SystemExit("Invalid selected-target configuration")
     base = Path("/run/apache2")
@@ -53,7 +69,7 @@ if __name__ == "__main__":
     (base / 'xoc-siem-route.conf').write_text('Include /etc/xoc/siem.conf\n' if os.environ.get('XOC_SIEM_UI') == '1' else '')
     if os.environ.get('XOC_MANAGEMENT') == '1':
         with (base / 'xoc-sites.conf').open('a') as stream:
-            stream.write('\nInclude /etc/xoc/management.conf\n')
+            stream.write('\nInclude /etc/xoc/management.conf\n' + learner)
     if os.environ.get("XOC_POLICY_STATE") == "1":
         subprocess.run(["python3", "-B", "/usr/local/lib/xoc/console/broker.py", "waf", "init"], check=True)
     if os.environ.get("XOC_CONSOLE") == "1":

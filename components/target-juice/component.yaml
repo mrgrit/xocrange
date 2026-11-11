@@ -1,18 +1,23 @@
 schema_version: xoc.manifest/0.1.0
 id: target-juice
 kind: component
-title: Juice Shop practice target
+title: OWASP Juice Shop practice target
 version: 0.1.0
 core: ">=0.1.0 <0.2.0"
-status: planned
+status: experimental
 commercial: false
 minimum_tier: community
 requires:
   components: ["security-path"]
-  capabilities: []
+  capabilities: [security.http-proxy]
 provides: ["target.juice"]
 conflicts: []
-networks: ["app"]
+networks: [int]
 config_keys: []
 contracts: {}
-build_inputs: []
+http_targets:
+  - id: juice
+    service: juiceshop
+    port: 3000
+compose: compose.yaml
+build_inputs: [Dockerfile, .dockerignore]

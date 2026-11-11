@@ -9,7 +9,7 @@ K06의 현재 선택 구성 수집·SIEM 회귀와 K07 공통 보안을 구현�
 | 구간 | 구현 범위 | 남은 작업 |
 |---|---|---|
 | K01~K04 기반 | 선별 출처, C1 v0.2, 8종 매핑, manifest·의존성·권한·Compose 검사 | 전체 이식 자산·권리 대조 및 Core 배포 라이선스 결정 |
-| K05 설치·보안 경로 | Ubuntu 26.04 설치기, fw→IPS→WAF, 검증 타깃, 선택 SIEM, 독립 HTTPS 관리 | 실제 Juice Shop/DVWA 선택 타깃, Community hosts 연계 |
+| K05 설치·보안 경로 | Ubuntu 26.04 설치기, fw→IPS→WAF, 검증 타깃, 선택 SIEM, 독립 HTTPS 관리, Juice Shop/DVWA 선택 타깃과 `*.xoc.range` hosts 접속(2026-11-11 개발 VM 실검증) | 신규 VM 기본 설치에 타깃 포함 여부, 외부 PC에서의 출처 IP 보존 확인 |
 | K06 수집·SIEM | 8종 C1/native 분석·receipt·검색, 재전송, 분석 오류 격리, 에이전트 등록/상태·격리 Linux 통신, 규칙 편집 WAF 회귀, 보존 예산 | 별도 호스트 실통신, 모듈별 미선택 원천/규칙 대조, K11 장기 부하·전체 디스크 복구 |
 | K07 공통 보안 | 공통 로그인·3역할·CSRF·세션 폐기·원자적 감사·장비 정책 API, 직접 TCP 우회 차단 | K08 apply에 연결됨; Wazuh SSO는 현재 범위 밖 |
 | K08 장비 콘솔 | FORWARD 중심 운영 UI, 객체·NAT·전체 규칙 탭, 3종 규칙 생성기, Unix socket 제어·버전/쓰기 잠금·검증/적용/복원 초안 | 전체 장비 프로파일 범위·장기 동시 변경 검증 |

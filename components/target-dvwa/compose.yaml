@@ -1,0 +1,14 @@
+services:
+  dvwa:
+    build: {context: ., dockerfile: Dockerfile}
+    networks: [int]
+    # The upstream entrypoint starts MariaDB and Apache as root, which then
+    # switch to their service users; only those capabilities are kept.
+    read_only: false
+    cap_drop: [ALL]
+    cap_add: [CHOWN, DAC_OVERRIDE, FOWNER, SETUID, SETGID, NET_BIND_SERVICE]
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+networks:
+  int:
+    internal: true

@@ -1,0 +1,12 @@
+services:
+  juiceshop:
+    build: {context: ., dockerfile: Dockerfile}
+    networks: [int]
+    # Upstream runs as its unprivileged user and writes its SQLite data.
+    read_only: false
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+networks:
+  int:
+    internal: true

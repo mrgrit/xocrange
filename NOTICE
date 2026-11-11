@@ -18,6 +18,8 @@ Runtime dependencies retain their upstream copyright and license notices:
   Linux, nftables, Suricata, Wazuh Manager and related GPL components.
   Apache HTTP Server, ModSecurity, OWASP CRS, Wazuh Indexer/Dashboard components,
   osquery, Sysmon for Linux, HAProxy, Python, Django, Gunicorn, Pillow and Python libraries.
+  Optional practice targets run unmodified upstream images: OWASP Juice Shop (MIT)
+  and DVWA (GPL-3.0), each in its own container.
   Package-specific license files are retained in the installed images/packages.
   Wazuh includes components under different licenses; it is not relicensed as a unit.
   Detailed sources, licenses and bundle boundaries: docs/development/DEPENDENCIES.md.

@@ -1,0 +1,44 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Reviewed Community practice target behind the WAF",
+  "description": "One unmodified upstream application on the internal app network. No host ports, volumes, environment overrides or added privileges beyond the listed process-management capabilities.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["services", "networks"],
+  "properties": {
+    "services": {
+      "type": "object",
+      "minProperties": 1,
+      "maxProperties": 1,
+      "additionalProperties": false,
+      "patternProperties": {
+        "^[a-z][a-z0-9-]{0,62}$": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["build", "networks", "cap_drop", "security_opt", "restart"],
+          "properties": {
+            "build": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["context", "dockerfile"],
+              "properties": {"context": {"const": "."}, "dockerfile": {"const": "Dockerfile"}}
+            },
+            "networks": {"const": ["int"]},
+            "user": {"type": "string", "pattern": "^[1-9][0-9]*(?::[1-9][0-9]*)?$"},
+            "read_only": {"type": "boolean"},
+            "cap_drop": {"const": ["ALL"]},
+            "cap_add": {
+              "type": "array",
+              "uniqueItems": true,
+              "maxItems": 6,
+              "items": {"enum": ["CHOWN", "DAC_OVERRIDE", "FOWNER", "SETUID", "SETGID", "NET_BIND_SERVICE"]}
+            },
+            "security_opt": {"const": ["no-new-privileges:true"]},
+            "restart": {"enum": ["unless-stopped", "on-failure"]}
+          }
+        }
+      }
+    },
+    "networks": {"const": {"int": {"internal": true}}}
+  }
+}
