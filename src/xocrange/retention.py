@@ -63,6 +63,33 @@ def retained_manager_paths(path):
     return sorted(result, key=lambda p:(p.stat().st_mtime_ns,str(p)))
 
 
+def remove_orphan_text(active, cutoff):
+    """Drop closed text renditions whose JSON twin was already removed.
+
+    The text copy is only deleted together with its JSON in the same pass, so
+    a .log that was still too new at that moment stayed forever (122 MB of
+    Nov 7 alerts on the development VM). The collector never reads .log files.
+    """
+    import re
+    active = Path(active)
+    stem = 'ossec-alerts-' if active.name == 'alerts.json' else 'ossec-archive-' if active.name == 'archives.json' else None
+    if stem is None or not active.parent.is_dir():
+        return 0
+    removed = 0
+    for year in active.parent.iterdir():
+        if year.is_symlink() or not year.is_dir() or not re.fullmatch(r'20\d\d', year.name): continue
+        for month in year.iterdir():
+            if month.is_symlink() or not month.is_dir(): continue
+            for text in month.iterdir():
+                match = re.fullmatch(stem+r'(\d{2}(?:-\d{3})?)\.log(\.gz)?', text.name)
+                if not match or text.is_symlink() or not text.is_file(): continue
+                twin = [month/(stem+match[1]+'.json'+suffix) for suffix in ('', '.gz')]
+                info = text.stat()
+                if not any(t.exists() for t in twin) and info.st_nlink == 1 and info.st_mtime < cutoff:
+                    text.unlink(); removed += 1
+    return removed
+
+
 def maintain(collector):
     """Remove only old, fully read, closed project archives and expired indices."""
     from datetime import datetime, timezone, timedelta
@@ -86,6 +113,7 @@ def maintain(collector):
                 # The text rendition is redundant; only delete the same closed interval.
                 text = Path(str(path).replace('.json','.log'))
                 if text.is_file() and not text.is_symlink() and text.stat().st_nlink==1 and text.stat().st_mtime<cutoff:text.unlink()
+        deleted += remove_orphan_text(mount/kind/(kind+'.json'), cutoff)
     if collector.indexer:
         from .indexer import Client
         admin = Client(collector.engine, collector.indexer.project, user='admin')

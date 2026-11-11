@@ -200,3 +200,17 @@ def test_live_log_gets_budget_while_old_generation_drains(tmp_path):
     assert chunks[0]['file']==str(active) and base64.b64decode(chunks[0]['data'])==b'fresh\n'
     historical=next(row for row in chunks if row['file']==str(old))
     assert historical['offset']==0 and len(base64.b64decode(historical['data']))==2*1024**2
+
+
+def test_orphan_text_renditions_are_removed_after_their_json(tmp_path):
+    import time
+    from xocrange.retention import remove_orphan_text
+    month=tmp_path/'alerts/2026/Nov';month.mkdir(parents=True)
+    old=time.time()-5*86400
+    for name in ('ossec-alerts-07-046.log.gz','ossec-alerts-08.log','ossec-alerts-08.json','ossec-alerts-09.log.gz'):
+        (month/name).write_bytes(b'x')
+    for name in ('ossec-alerts-07-046.log.gz','ossec-alerts-08.log','ossec-alerts-08.json'):
+        os.utime(month/name,(old,old))
+    removed=remove_orphan_text(tmp_path/'alerts/alerts.json',time.time()-2*86400)
+    # Only the old text whose JSON is gone; a twin-backed or recent file stays.
+    assert removed==1 and sorted(p.name for p in month.iterdir())==['ossec-alerts-08.json','ossec-alerts-08.log','ossec-alerts-09.log.gz']
