@@ -142,7 +142,16 @@ def verify(engine):
             pass
         time.sleep(2)
     health_reader = "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:8080/healthz', timeout=3).read(16384).decode())"
-    health = json.loads(engine.run(["exec", "-T", "platform", "python", "-B", "-c", health_reader], compose=True))
+    # The landing path can answer before the platform's own listener does,
+    # e.g. right after a restore restarts every container.
+    for attempt in range(30):
+        try:
+            health = json.loads(engine.run(["exec", "-T", "platform", "python", "-B", "-c", health_reader], compose=True))
+            break
+        except XocError:
+            if attempt == 29:
+                raise
+            time.sleep(2)
     checks["platform_health"] = isinstance(health, dict) and health.get("service") == "xocrange-core" and health.get("status") == "bootstrap"
     # Dropped DAC capabilities also constrain uid 0; use each log's actual owner.
     offsets = {source: int(engine.run(["exec", "-T", "--user", user, service, "wc", "-c", path], compose=True).split()[0])

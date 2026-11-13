@@ -201,3 +201,16 @@ def test_practice_target_fragment_rejects_extra_privileges(target_checkout, chan
     path.write_text(yaml.safe_dump(fragment))
     with pytest.raises(XocError):
         plan(target_checkout, preset="security-path", allow_experimental=True, include=["target-juice"])
+
+
+def test_devices_filter_before_they_route():
+    # Forwarding is enabled when the namespace is created. A device that sets
+    # its route before loading its table forwards uninspected traffic meanwhile.
+    text = (Path(__file__).resolve().parents[1] / 'components/security-path/runtime/entrypoint.sh').read_text()
+    for role, table in (('fw', '/etc/xoc/fw.nft'), ('ips', '/etc/xoc/ips.nft')):
+        body = text[text.index(f'  {role})'):]
+        body = body[:body.index(';;')]
+        assert body.index(f'nft -f {table}') < body.index('ip route replace')
+        if role == 'ips':
+            assert body.index(f'nft -f {table}') < body.index('suricata -T')
+            assert 'queue num 0 bypass' not in (Path(__file__).resolve().parents[1] / 'components/security-path/ips/rules.nft').read_text()
