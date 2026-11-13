@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Dedicated-VM acceptance: concurrent preview/apply against one real device broker.
 
-Requests go to the firewall broker socket as the platform's uid (65532) inside
+Requests go to the firewall broker socket as the platform's identity (65532:33) inside
 the platform container, so the real serialization, version check and review
 ticket of the device are exercised without a Core login. The Core HTTPS layer
 (authentication, DB write lock, audit) is covered by device_console.py.
@@ -91,7 +91,7 @@ def main():
     parser.add_argument('--project', default='xoc-core-security-path')
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
-    result = subprocess.run(['docker', '--context', 'default', 'exec', '-i', '-u', '65532', args.project + '-platform-1',
+    result = subprocess.run(['docker', '--context', 'default', 'exec', '-i', '-u', '65532:33', args.project + '-platform-1',
                              'python3', '-I', '-'], input=CLIENT, capture_output=True, text=True, timeout=600)
     if result.returncode:
         raise SystemExit('Broker client failed: ' + result.stderr[-2000:])

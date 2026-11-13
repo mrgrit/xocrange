@@ -32,7 +32,12 @@ if code==200:checks['only_second_floor']=noc['floor']=='2F' and {a['floor'] for 
 code,dc,_,_=s.request('/core/api/datacenter')
 checks['datacenter_selection']=code==(200 if 'noc' in selected else 404)
 if code==200:
-    checks['datacenter_only_core_floor']=dc['allowed_floors']==['2F'] and {f['id'] for f in dc['floors'] if f['enabled']}=={'2F'}
+    # The bundled academy reader opens 6F as a catalog-only floor (no assets, no execution).
+    open_floors=['2F']+(['6F'] if 'academy-reader' in selected else [])
+    checks['datacenter_only_core_floor']=dc['allowed_floors']==open_floors and {f['id'] for f in dc['floors'] if f['enabled']}==set(open_floors)
+    if '6F' in open_floors:
+        code,academy_floor,_,_=s.request('/core/api/datacenter/floors/6F')
+        checks['academy_floor_catalog_only']=code==200 and academy_floor.get('catalog_only') is True and academy_floor.get('assets')==[] and academy_floor.get('commercial_execution') is False
     checks['datacenter_actual_assets']=[{k:a[k] for k in data['assets'][0]} for a in dc['assets']]==data['assets']
     checks['datacenter_floor_read']=s.request('/core/api/datacenter/floors/2F')[0]==200
     checks['datacenter_rack_membership']=sorted(i for r in dc['racks'] for i in r['asset_ids'])==sorted(a['asset_id'] for a in data['assets'])
@@ -46,7 +51,8 @@ if code==200:
         checks['device_shell_'+service]=probe.returncode==0 and probe.stdout=='xoc-device-shell-ok'
 
     for floor in ('B1','1F','3F','4F','5F','6F','7F','8F','XOC','SITE'):
-        checks['locked_floor_'+floor]=s.request('/core/api/datacenter/floors/'+floor)[0]==403
+        if floor not in open_floors:
+            checks['locked_floor_'+floor]=s.request('/core/api/datacenter/floors/'+floor)[0]==403
         code,preview,_,_=s.request('/core/api/datacenter/design/'+floor)
         checks['admin_design_'+floor]=code==200 and preview['preview_only'] and preview['assets']==[] and preview['actions']==[]
     checks['preview_no_write']=s.request('/core/api/datacenter/design/6F',{})[0]==405
