@@ -83,6 +83,9 @@ class Store:
         if 'indexed' not in {r[1] for r in self.db.execute('PRAGMA table_info(events)')}:
             self.db.execute('ALTER TABLE events ADD COLUMN indexed TEXT')
             self.db.commit()
+        if 'annotation' not in {r[1] for r in self.db.execute('PRAGMA table_info(wazuh_alerts)')}:
+            self.db.execute('ALTER TABLE wazuh_alerts ADD COLUMN annotation TEXT')
+            self.db.commit()
         self.db.execute('CREATE INDEX IF NOT EXISTS events_indexing ON events(indexed,confirmed)')
         self.db.execute('CREATE INDEX IF NOT EXISTS events_export_producer ON events(producer,observed) WHERE confirmed IS NOT NULL AND indexed IS NULL')
         self.db.execute('CREATE INDEX IF NOT EXISTS events_export_time ON events(observed) WHERE confirmed IS NOT NULL AND indexed IS NULL')
@@ -181,13 +184,13 @@ class Store:
         return [{"event": json.loads(r[0]), "wazuh_confirmed_at": r[1], "wazuh_rule_id": r[2]} for r in rows]
 
     def index_batch(self, native=False, limit=4096):
-        table, fields, where = ('wazuh_alerts', 'id,observed,document', 'indexed IS NULL') if native else ('events', 'id,event,observed,confirmed,rule_id', 'confirmed IS NOT NULL AND indexed IS NULL')
+        table, fields, where = ('wazuh_alerts', 'id,observed,raw,document,annotation', 'indexed IS NULL') if native else ('events', 'id,event,observed,confirmed,rule_id', 'confirmed IS NOT NULL AND indexed IS NULL')
         index = 'native_alerts_pending' if native else 'events_export_time'
         query = f'SELECT {fields} FROM {table} INDEXED BY {index} WHERE {where} ORDER BY observed {{}} LIMIT ?'
         if native:
             # External agents and stock detections must not be crowded out by
             # high-rate C1/Sysmon observations during archive recovery.
-            recent = self.db.execute('SELECT id,observed,document FROM wazuh_alerts WHERE indexed IS NULL AND event_id IS NULL ORDER BY observed DESC LIMIT ?', (max(1,limit//8),)).fetchall()
+            recent = self.db.execute(f'SELECT {fields} FROM wazuh_alerts WHERE indexed IS NULL AND event_id IS NULL ORDER BY observed DESC LIMIT ?', (max(1,limit//8),)).fetchall()
             recent += self.db.execute(query.format('DESC'), (max(1,limit//8),)).fetchall()
         else:
             recent=[]

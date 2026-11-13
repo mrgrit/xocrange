@@ -74,6 +74,8 @@ root 전용 `/var/lib/xocrange/siem/retention.json`에서 `days`, `ingest_bytes`
 
 Wazuh의 날짜별 hardlink 회전을 인식하고, 압축된 파일도 이전 논리 offset부터 이어 읽는다. archive 정리는 읽기가 끝났고 활성 hardlink가 아닌 닫힌 파일에만 적용한다. 새 SQLite 저장소는 `auto_vacuum=INCREMENTAL`로 만들고, 정리 때마다 빈 페이지를 최대 256 MiB씩 파일시스템에 돌려준다. 이전 버전에서 만든 저장소(`auto_vacuum=0`)는 수집기를 멈춘 상태에서 `PRAGMA auto_vacuum=INCREMENTAL; VACUUM;`을 한 번 실행해야 전환된다(2026-11-11 개발 VM: 38 GB → 6.1 GB, 약 5분). `status.storage`로 할당량·사용량·파일시스템 여유를 구분한다.
 
+Wazuh 원본 경보(`wazuh_alerts`)는 원본 바이트와 작은 `xoc` 연결 정보(`annotation`)만 저장하고, Indexer로 보낼 검색 문서는 내보낼 때 다시 만든다. 만들어지는 문서는 이전 릴리스가 저장하던 문서와 바이트까지 같다. 이전 릴리스가 저장한 행은 저장된 문서를 그대로 쓴다. 전체 사본을 저장하던 때는 문서가 경보 행의 절반 이상, DB의 약 1/3이었다.
+
 보관 작업은 5분 주기로 실행된다. 로컬 DB의 `days`, Manager 회전 로그의 `archive_days`, 검색 인덱스의 `index_days`는 서로 다른 보관 계층에 적용된다. 수집량을 줄여도 이미 저장된 기록은 각 보관 기한까지 남는다. 설치 전 백업은 SQLite 파일 전체를 복사하므로, 전환하지 않은 저장소는 실제 사용량보다 훨씬 큰 백업과 여유 공간을 요구한다. 디스크를 점검할 때는 DB 외에 Docker의 SIEM 로그·Indexer 볼륨, `/var/lib/xocrange/backups`의 설치 전 복구 지점도 함께 확인한다. 백업은 SIEM 보관 기한으로 삭제되지 않는다.
 
 이 정책은 모든 로그 볼륨과 호스트 디스크의 상한을 보장하지 않는다. 원천 로그가 읽히기 전에 외부 회전으로 제거되는 경우와 장기 장애·전체 디스크 고갈 복구는 K11의 필수 검증이다. 운영 사양을 단기 테스트 결과만으로 확정하지 않는다.

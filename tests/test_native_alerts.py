@@ -6,7 +6,8 @@ import pytest
 
 from xocrange.errors import XocError
 from xocrange.event_store import Store
-from xocrange.native_alerts import accept, export
+from xocrange.documents import canonical
+from xocrange.native_alerts import accept, document, export
 
 ROOT=Path(__file__).resolve().parents[1]
 
@@ -29,8 +30,8 @@ def test_original_alert_and_bytes_survive_without_c1_loop(store):
     row=store.db.execute('SELECT * FROM wazuh_alerts').fetchone()
     assert row['raw']==raw and row['sha256']==hashlib.sha256(raw).hexdigest()
     assert row['event_id'] is None
-    document=json.loads(row['document']);original=json.loads(raw)
-    assert all(document[k]==v for k,v in original.items())
+    rebuilt=json.loads(document(row));original=json.loads(raw)
+    assert all(rebuilt[k]==v for k,v in original.items())
     assert store.db.execute('SELECT COUNT(*) FROM events').fetchone()[0]==0
 
 
@@ -50,7 +51,7 @@ def test_native_link_only_points_to_confirmed_matching_c1(store):
         accept(store,json.dumps(c1).encode())
     row=store.db.execute('SELECT * FROM wazuh_alerts').fetchone()
     assert row['event_id']==event['event_id']
-    assert json.loads(row['document'])['xoc']['evidence_ref']==event['evidence']['ref']
+    assert json.loads(document(row))['xoc']['evidence_ref']==event['evidence']['ref']
     assert store.db.execute('SELECT COUNT(*) FROM events').fetchone()[0]==1
 
 
@@ -109,3 +110,25 @@ def test_recovery_queue_serves_fresh_and_old_events_without_duplicates(store):
     rows=store.db.execute('SELECT id FROM events ORDER BY observed').fetchall()
     pending=store.pending(limit=4);ids=[r['id'] for r in pending]
     assert len(set(ids))==4 and rows[-1]['id'] in ids and rows[0]['id'] in ids
+
+
+def test_search_document_is_rebuilt_not_stored_and_matches_earlier_releases(store):
+    raw=alert()
+    with store.transaction():identity=accept(store,raw)
+    row=store.db.execute('SELECT * FROM wazuh_alerts').fetchone()
+    assert row['document']=='' and len(row['annotation'])<len(raw)
+    # Exactly the bytes earlier releases stored and indexed.
+    legacy=dict(json.loads(raw));legacy['@timestamp']=legacy['timestamp'];legacy['xoc']={'native_alert_id':identity}
+    assert document(row)==canonical(legacy).decode()
+    # Rows written by earlier releases keep their stored document.
+    with store.transaction():
+        store.db.execute("INSERT INTO wazuh_alerts(id,observed,raw,sha256,document) VALUES ('old','2026-11-07',?,?,?)",
+                         (raw,hashlib.sha256(raw).hexdigest(),'{"stored":true}'))
+    bodies=[]
+    class Client:
+        def request(self,method,path,body,**kwargs):
+            bodies.append(body);ids=[json.loads(line)['index']['_id'] for line in body.splitlines()[::2]]
+            return 200,{'items':[{'index':{'_id':v,'status':201}} for v in ids]}
+    assert export(store,Client())=='ready'
+    lines=bodies[0].splitlines()
+    assert sorted(lines[1::2])==sorted([canonical(legacy).decode(),'{"stored":true}'])

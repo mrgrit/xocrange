@@ -26,6 +26,7 @@ from xocrange.event_store import Store, now
 from xocrange.events import SOURCES
 from xocrange.indexer import Client
 from xocrange.lab import Docker, checked_plan, host_check
+from xocrange.native_alerts import document as alert_document
 from xocrange.ui_setup import private_json
 
 STATE=Path('/var/lib/xocrange')
@@ -192,12 +193,12 @@ class Installed:
     def native_checkpoint(self):
         anchors=[]
         for producer in SOURCES:
-            rows=self.store.db.execute('''SELECT n.id,n.observed,n.raw,n.sha256,n.document FROM wazuh_alerts n JOIN events e ON e.id=n.event_id
+            rows=self.store.db.execute('''SELECT n.id,n.observed,n.raw,n.sha256,n.document,n.annotation FROM wazuh_alerts n JOIN events e ON e.id=n.event_id
               WHERE e.producer=? AND n.indexed IS NOT NULL ORDER BY n.observed DESC LIMIT 3''',(producer,)).fetchall()
             if len(rows)!=3:raise XocError('native_evidence_missing','Need three native alerts from every source.')
             for row in rows:
                 if hashlib.sha256(row['raw']).hexdigest()!=row['sha256']:raise XocError('evidence_corrupt','Native evidence is corrupt.')
-                anchors.append({'id':row['id'],'observed':row['observed'],'sha256':row['sha256'],'document_sha256':hashlib.sha256(canonical(json.loads(row['document']))).hexdigest()})
+                anchors.append({'id':row['id'],'observed':row['observed'],'sha256':row['sha256'],'document_sha256':hashlib.sha256(canonical(json.loads(alert_document(row)))).hexdigest()})
         inputs=[]
         if self.store.cursor('native-input-enabled'):
             for source in SOURCES:
@@ -228,8 +229,8 @@ class Installed:
     def verify_native(self,native):
         anchors=native['anchors'];matches=0
         for anchor in anchors:
-            row=self.store.db.execute('SELECT raw,sha256,document,indexed FROM wazuh_alerts WHERE id=?',(anchor['id'],)).fetchone()
-            matches+=bool(row and row['indexed'] and hashlib.sha256(row['raw']).hexdigest()==anchor['sha256'] and hashlib.sha256(canonical(json.loads(row['document']))).hexdigest()==anchor['document_sha256'])
+            row=self.store.db.execute('SELECT raw,sha256,document,annotation,indexed FROM wazuh_alerts WHERE id=?',(anchor['id'],)).fetchone()
+            matches+=bool(row and row['indexed'] and hashlib.sha256(row['raw']).hexdigest()==anchor['sha256'] and hashlib.sha256(canonical(json.loads(alert_document(row)))).hexdigest()==anchor['document_sha256'])
         docs=[{'_index':'wazuh-alerts-4.x-'+a['observed'][:10].replace('-','.'),'_id':a['id']} for a in anchors]
         code,data=self.client.request('POST','/_mget',{'docs':docs})
         found=data.get('docs',[])
@@ -320,7 +321,7 @@ class Installed:
                 if native:
                     native_queued[:]=self.store.db.execute('SELECT id FROM wazuh_alerts WHERE observed>=? AND indexed IS NULL ORDER BY observed LIMIT 100',(cutoff,)).fetchall()
                 if raw:
-                    raw_queued[:]=self.store.db.execute("SELECT id FROM wazuh_alerts WHERE observed>=? AND indexed IS NULL AND json_extract(document,'$.xoc.analysis_route')='raw' ORDER BY observed LIMIT 100",(cutoff,)).fetchall()
+                    raw_queued[:]=self.store.db.execute("SELECT id FROM wazuh_alerts WHERE observed>=? AND indexed IS NULL AND COALESCE(json_extract(annotation,'$.analysis_route'),json_extract(NULLIF(document,''),'$.xoc.analysis_route'))='raw' ORDER BY observed LIMIT 100",(cutoff,)).fetchall()
                 return len(queued)==100 and health is not None and health[0]!='ready' and (not native or len(native_queued)==100) and (not raw or len(raw_queued)==100)
             wait_for(observed,min(timeout,90),'Did not observe 100 Wazuh-confirmed queued events and an Indexer failure.')
         stopped_indexer_probe(self.engine,probe)

@@ -10,7 +10,11 @@ import time
 
 from siem_lifecycle import Installed, STATE, installation_lock, private_directory, save_new, wait_for
 from xocrange.documents import canonical
+from xocrange.native_alerts import document
 from xocrange.native_input import frames
+
+# Current releases store the xoc annotation; earlier ones stored a full document.
+INPUT_ID="COALESCE(json_extract(a.annotation,'$.input_id'),json_extract(NULLIF(a.document,''),'$.xoc.input_id'))"
 
 
 def main():
@@ -21,13 +25,14 @@ def main():
         wait_for(lambda:store.status()['status']=='ready',300,'Start replay verification with healthy queues')
         probes=[]
         for source,rule in [('suricata','86601'),('modsecurity','119672'),('osquery','24010'),('sysmon','111201')]:
-            row=store.db.execute('''SELECT n.id,n.source,n.ordinal,r.raw,a.id AS alert_id,a.sha256,a.document
+            row=store.db.execute(f'''SELECT n.id,n.source,n.ordinal,r.raw,a.id AS alert_id,a.sha256,a.raw AS alert_raw,a.document,a.annotation
               FROM native_inputs n JOIN records r ON r.ref=n.ref JOIN wazuh_alerts a ON a.event_id=n.event_id
               WHERE n.source=? AND n.confirmed IS NOT NULL AND a.indexed IS NOT NULL
-              AND json_extract(a.document,'$.xoc.input_id')=n.id AND json_extract(a.document,'$.rule.id')=?
+              AND {INPUT_ID}=n.id AND json_extract(CAST(a.raw AS TEXT),'$.rule.id')=?
               ORDER BY n.observed DESC LIMIT 1''',(source,rule)).fetchone()
             if row is None:raise RuntimeError('Missing live native alert for '+source)
-            probes.append(dict(row))
+            probe=dict(row);probe['document']=document({'raw':row['alert_raw'],'document':row['document'],'annotation':row['annotation']})
+            probes.append(probe)
         payload=[{'id':p['id'],'source':p['source'],'payload':frames(p['source'],p['raw'])[p['ordinal']]} for p in probes]
         volume=json.loads(installed.engine.run(['volume','inspect',installed.project+'_siem-logs']))[0]['Mountpoint']
         archive=Path(volume)/'archives/archives.json'
@@ -58,8 +63,8 @@ def main():
         wait_for(consumed,180,'Collector did not consume replay alerts')
         checks={}
         for p in probes:
-            rows=store.db.execute("SELECT id,raw,sha256,document,indexed FROM wazuh_alerts WHERE json_extract(document,'$.xoc.input_id')=?",(p['id'],)).fetchall()
-            checks[p['source']]=p['id'] in receipts and len(rows)==1 and rows[0]['id']==p['alert_id'] and rows[0]['sha256']==p['sha256'] and hashlib.sha256(rows[0]['raw']).hexdigest()==p['sha256'] and rows[0]['document']==p['document'] and bool(rows[0]['indexed'])
+            rows=store.db.execute(f"SELECT a.id,a.raw,a.sha256,a.document,a.annotation,a.indexed FROM wazuh_alerts a WHERE {INPUT_ID}=?",(p['id'],)).fetchall()
+            checks[p['source']]=p['id'] in receipts and len(rows)==1 and rows[0]['id']==p['alert_id'] and rows[0]['sha256']==p['sha256'] and hashlib.sha256(rows[0]['raw']).hexdigest()==p['sha256'] and document(rows[0])==p['document'] and bool(rows[0]['indexed'])
         code,data=installed.client.request('POST','/wazuh-alerts-4.x-*/_search',{'size':0,'track_total_hits':True,
             'query':{'terms':{'xoc.input_id':[p['id'] for p in probes]}}})
         checks['four_unique_index_documents']=code==200 and data.get('hits',{}).get('total',{}).get('value')==4

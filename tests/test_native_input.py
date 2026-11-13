@@ -9,7 +9,7 @@ from xocrange.errors import XocError
 from xocrange.event_store import Store
 from xocrange.events import Context, normalize
 from xocrange.native_input import confirm, delivery, frames, pending
-from xocrange.native_alerts import accept
+from xocrange.native_alerts import accept, document
 
 FIXTURES=Path(__file__).parent/'fixtures/events'
 FILES={'nftables':'nftables-drop.log','suricata':'suricata-alert.json','modsecurity':'modsecurity-audit.json',
@@ -155,7 +155,7 @@ def test_original_raw_alert_is_linked_and_equivalent_transport_replay_is_dedupli
     with store.transaction():identifier=accept(store,first)
     value['id']='2';value['timestamp']='2026-11-07T01:00:05Z';value['rule']['firedtimes']=2
     with store.transaction():assert accept(store,canonical(value))==identifier
-    row=store.db.execute('SELECT * FROM wazuh_alerts').fetchone();doc=json.loads(row['document'])
+    row=store.db.execute('SELECT * FROM wazuh_alerts').fetchone();doc=json.loads(document(row))
     assert row['raw']==first and doc['xoc']['evidence_ref']==ref and doc['xoc']['input_id']==frame['id']
     assert doc['xoc']['analysis_route']=='raw' and doc['xoc']['producer']=='suricata'
     assert store.db.execute('SELECT COUNT(*) FROM wazuh_alerts').fetchone()[0]==1

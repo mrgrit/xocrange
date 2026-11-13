@@ -34,14 +34,24 @@ def accept(store,raw):
     query='SELECT ref FROM events WHERE id=?' + ('' if source_input else ' AND confirmed IS NOT NULL')
     row=store.db.execute(query,(event_id,)).fetchone() if isinstance(event_id,str) else None
     link={'event_id':event_id,'evidence_ref':row['ref']} if row else {}
-    document=dict(alert)
-    document['@timestamp']=alert['timestamp']
-    document['xoc']={'native_alert_id':identity,**link}
+    annotation={'native_alert_id':identity,**link}
     if source_input:
-        document['xoc'].update(input_id=source_input['id'],producer=source_input['source'],analysis_route='raw',evidence_ref=source_input['ref'])
-    store.db.execute('INSERT INTO wazuh_alerts(id,observed,raw,sha256,document,event_id) VALUES (?,?,?,?,?,?)',
-                     (identity,now(),raw,digest,canonical(document).decode(),event_id if row else None))
+        annotation.update(input_id=source_input['id'],producer=source_input['source'],analysis_route='raw',evidence_ref=source_input['ref'])
+    # Only the original bytes and the small xoc annotation are stored; the
+    # search document is rebuilt at export (a full copy was half the table).
+    store.db.execute('INSERT INTO wazuh_alerts(id,observed,raw,sha256,document,event_id,annotation) VALUES (?,?,?,?,?,?,?)',
+                     (identity,now(),raw,digest,'',event_id if row else None,canonical(annotation).decode()))
     return identity
+
+
+def document(row):
+    """Search document for a stored alert: the original alert, @timestamp and xoc."""
+    if row['document']:
+        return row['document']  # stored by earlier releases
+    value=json.loads(row['raw'])
+    value['@timestamp']=value['timestamp']
+    value['xoc']=json.loads(row['annotation'])
+    return canonical(value).decode()
 
 
 def export(store,client):
@@ -49,7 +59,7 @@ def export(store,client):
     if not rows:return 'ready'
     lines=[];selected=[];size=0
     for row in rows:
-        chunk=json.dumps({'index':{'_index':'wazuh-alerts-4.x-'+row['observed'][:10].replace('-','.'),'_id':row['id']}})+'\n'+row['document']+'\n'
+        chunk=json.dumps({'index':{'_index':'wazuh-alerts-4.x-'+row['observed'][:10].replace('-','.'),'_id':row['id']}})+'\n'+document(row)+'\n'
         size+=len(chunk.encode())
         if selected and size>8*1024**2:break
         lines.append(chunk);selected.append(row)
