@@ -27,7 +27,7 @@ HTTPS ingress → nftables → Suricata → Apache/ModSecurity
 
 [Django의 인증](https://docs.djangoproject.com/en/5.2/topics/auth/default/)·DB 세션·암호 검증과 [CSRF 보호](https://docs.djangoproject.com/en/5.2/ref/csrf/)를 사용한다. Secure/HttpOnly/SameSite=Strict의 `__Host-` 쿠키, 로그인 시 세션 교체, 15분 비활성 만료·8시간 절대 만료를 적용한다. 비밀번호·역할·활성 상태 변경은 기존 세션을 폐기한다. POST는 JSON·정확한 Origin·CSRF 토큰을 모두 요구하며, 임의 사용자·역할·Forwarded 헤더를 인증 근거로 삼지 않는다.
 
-계정별 15분에 10회, 전체 100회의 로그인 시도 한도가 DB에 유지된다. 요청 본문은 16KiB로 제한한다. 관리 API의 query 문자열·Authorization 헤더는 ingress에서 거부한다. credentials를 URL에 넣어 접속하지 않는다.
+계정별 15분에 10회, 전체 100회의 **실패한** 로그인 한도가 DB에 유지된다. 성공한 로그인은 세지 않는다. 시도는 비밀번호 확인 전에 먼저 세고 성공하면 되돌리므로, 동시에 보낸 추측도 한도를 넘지 못한다. 한도에 도달한 계정은 창이 끝날 때까지 맞는 비밀번호도 429로 거절된다. 요청 본문은 16KiB로 제한한다. 관리 API의 query 문자열·Authorization 헤더는 ingress에서 거부한다. credentials를 URL에 넣어 접속하지 않는다.
 
 ## 감사와 민감값
 

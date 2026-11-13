@@ -100,15 +100,18 @@ def sign_in(request):
     if not isinstance(name, str) or not re.fullmatch('[a-z][a-z0-9_-]{2,31}', name) or not isinstance(secret, str) or len(secret) > 128:
         raise ValidationError('invalid_login')
     now = time.time()
-    # Global and per-account bounded windows; spoofed forwarded IPs do not bypass this.
+    # Global and per-account bounded windows of failed logins; spoofed forwarded IPs do not
+    # bypass this. Each attempt is reserved before the password check, so concurrent guesses
+    # cannot overrun the limit, and refunded below when the login succeeds.
     with transaction.atomic():
         LoginWindow.objects.filter(started__lt=now-900).delete()
-        blocked = False
+        blocked, windows = False, []
         for key, limit in [('all', 100), (hashlib.sha256(name.encode()).hexdigest(), 10)]:
             window, _ = LoginWindow.objects.get_or_create(key=key, defaults={'started': now})
             blocked |= window.attempts >= limit
             window.attempts += 1
             window.save()
+            windows.append(window)
         if blocked:
             audit(request, 'login', 'rate_limited')
             return JsonResponse({'error': 'try_later'}, status=429)
@@ -116,6 +119,9 @@ def sign_in(request):
         if user is None or not Profile.objects.filter(user=user).exists():
             audit(request, 'login', 'denied')
             return JsonResponse({'error': 'invalid_credentials'}, status=401)
+        for window in windows:
+            window.attempts -= 1
+            window.save(update_fields=['attempts'])
         login(request, user)
         request.session['authenticated_at'] = now
         request.session['generation'] = user.profile.generation

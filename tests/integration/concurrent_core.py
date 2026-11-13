@@ -64,7 +64,7 @@ def verify(root, project):
     logins = [a.login('admin', password)[0], b.login('admin', password)[0]]
     checks = {'two_admin_sessions': logins == [200, 200]}
     if not checks['two_admin_sessions']:
-        # 429: the per-account window (10 attempts / 15 min, successes included) is spent.
+        # 429: the per-account window (10 failed logins / 15 min) is spent.
         return {'status': 'failed', 'checks': checks, 'login_status': logins, 'winner': None,
                 'finished_at': datetime.now(timezone.utc).isoformat(), 'scope': 'Login failed; nothing was changed.'}
     policy = next(p for p in a.request('/core/api/devices')[1]['devices'] if p['device'] == 'fw')

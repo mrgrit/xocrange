@@ -132,6 +132,19 @@ def test_rate_limit_and_header_identity_spoof(app):
     assert app.get('/core/api/devices',HTTP_X_USER='admin',HTTP_X_ROLE='admin').status_code==401
 
 
+def test_rate_limit_counts_only_failed_logins(app):
+    from django.test import Client
+    from control.models import LoginWindow
+    for _ in range(12):
+        login(Client(enforce_csrf_checks=True,HTTP_HOST='platform',HTTP_X_FORWARDED_PROTO='https'))
+    assert set(LoginWindow.objects.values_list('attempts',flat=True))=={0}
+    for _ in range(10):
+        assert send(app,'login',{'username':'operator','password':'wrong-password'}).status_code==401
+    # The account window is spent: even the right password waits; other accounts do not.
+    assert send(app,'login',{'username':'operator','password':'Initial-Test-Password-987!'}).status_code==429
+    login(app,'viewer')
+
+
 def test_method_query_and_body_limits(app):
     assert app.put('/core/api/users',content_type='application/json').status_code==405
     assert app.get('/core/api/session?password=secret').status_code==400
