@@ -235,3 +235,29 @@ def test_successful_install_keeps_only_its_checkpoint(tmp_path):
     assert sorted(p.name for p in backups.iterdir()) == sorted(names[1:])
     with pytest.raises(XocError):
         ops.prune_checkpoints(backups/'manual-001', backups)
+
+
+def test_volume_paths_inspects_all_volumes_in_one_call(monkeypatch, tmp_path):
+    import types
+    calls = []
+    names = [ops.PROJECT + '_' + n for n in ('siem-logs', 'web-logs', 'platform-socket', 'platform-observation')]
+    def item(name, **extra):
+        short = name[len(ops.PROJECT)+1:]
+        (tmp_path/short).mkdir(exist_ok=True)
+        return dict({'Name': name, 'Driver': 'local', 'Options': None, 'Mountpoint': str(tmp_path/short),
+                     'Labels': {'com.docker.compose.project': ops.PROJECT, 'com.docker.compose.volume': short}}, **extra)
+    inspected = {'value': [item(names[0]), item(names[1])]}
+    def command(args, **kw):
+        calls.append(args)
+        out = '\n'.join(names) if args[4] == 'ls' else json.dumps(inspected['value'])
+        return types.SimpleNamespace(stdout=out, returncode=0)
+    monkeypatch.setattr(ops, 'command', command)
+    assert ops.volume_paths() == {'siem-logs': tmp_path/'siem-logs', 'web-logs': tmp_path/'web-logs'}
+    assert [c[4] for c in calls] == ['ls', 'inspect'] and calls[1][5:] == names[:2]
+    inspected['value'] = [item(names[0])]
+    with pytest.raises(XocError):
+        ops.volume_paths()
+    inspected['value'] = [item(names[0]), item(names[1], Driver='nfs')]
+    with pytest.raises(XocError):
+        ops.volume_paths()
+

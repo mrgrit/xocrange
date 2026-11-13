@@ -157,7 +157,10 @@ def run(args):
             if not args.plan:
                 raise XocError('missing_plan', 'Collection requires a validated --plan.')
             collector = Collector(args.root, args.plan, args.store)
-            return collector.run() if args.action == 'collect' else collector.once()
+            try:
+                return collector.run() if args.action == 'collect' else collector.once()
+            finally:
+                collector.close()
         store = Store(args.store)
         if args.action == 'status':
             return store.status()

@@ -23,6 +23,8 @@ osquery는 processes 메타데이터를 60초, 센서 상태 snapshot을 30초�
 
 프로세스 종료 시점·수명 추적이 필요한 별도 센서 정책은 EventID 5를 활성화할 수 있으며 C1 디코더의 `process/stop` 지원은 유지한다. 설치기는 `components/siem/sysmon.xml`을 `/etc/xocrange/sysmon.xml`에 설치하고 `sysmon -c`로 적용한다. 기존 호스트에는 정책 파일을 백업한 뒤 같은 설정을 적용할 수 있다.
 
+xoc 자신의 주기 작업도 Sysmon 관측 대상이므로, 주기마다 프로세스를 많이 띄우지 않도록 구현한다. Manager 컨테이너의 필수 daemon 확인은 셸 내장 명령만 쓰고, 수집기는 Wazuh queue마다 상시 전송 프로세스 1개를 유지한다. 배치마다 `docker compose exec`를 새로 띄우면 그 실행 기록을 다음 배치가 다시 전송하는 자기 증식 루프가 생긴다. 근거와 측정은 [2026-11-13 검증](OBSERVATION-VOLUME-VALIDATION-2026-11-13.md)에 있다.
+
 ## 설치와 선택
 
 ```bash

@@ -45,11 +45,16 @@ def write(path, data, uid=0, mode=0o600):
 
 def owned_volume(engine, project, name):
     full = project + '_' + name
-    names = engine.run(['volume', 'ls', '--format', '{{.Name}}']).splitlines()
-    if full not in names:
+    # Inspect first: the 15-second observer calls this and every extra CLI
+    # process is also a host Sysmon observation. Create only when missing.
+    try:
+        item, = json.loads(engine.run(['volume', 'inspect', full]))
+    except XocError:
+        if full in engine.run(['volume', 'ls', '--format', '{{.Name}}']).splitlines():
+            raise
         engine.run(['volume', 'create', '--label', 'com.docker.compose.project='+project,
                     '--label', 'com.docker.compose.volume='+name, full])
-    item, = json.loads(engine.run(['volume', 'inspect', full]))
+        item, = json.loads(engine.run(['volume', 'inspect', full]))
     labels = item.get('Labels') or {}
     path = Path(item['Mountpoint'])
     if item.get('Driver') != 'local' or item.get('Options') or labels.get('com.docker.compose.project') != project or labels.get('com.docker.compose.volume') != name or not path.is_absolute() or any(p.is_symlink() for p in (path, *path.parents)):

@@ -98,7 +98,7 @@ def sha256(path):
 
 def volume_paths():
     names = command(['docker', '--context', 'default', 'volume', 'ls', '--filter', 'label=com.docker.compose.project='+PROJECT, '--format', '{{.Name}}']).stdout.splitlines()
-    result = {}
+    wanted = {}
     for name in names:
         if not name.startswith(PROJECT+'_'):
             raise XocError('volume_identity', 'An appliance volume has an unexpected name.')
@@ -107,7 +107,15 @@ def volume_paths():
             raise XocError('volume_identity', 'Invalid volume identity.')
         if short.endswith('-socket') or short == 'platform-observation':
             continue
-        item, = json.loads(command(['docker', '--context', 'default', 'volume', 'inspect', name]).stdout)
+        wanted[name] = short
+    # One inspect for all volumes: log maintenance calls this every minute and
+    # each Docker CLI process is also a host Sysmon observation.
+    items = json.loads(command(['docker', '--context', 'default', 'volume', 'inspect', *wanted]).stdout) if wanted else []
+    if sorted(item.get('Name') for item in items) != sorted(wanted):
+        raise XocError('volume_identity', 'Volume inspection differs from the listed appliance volumes.')
+    result = {}
+    for item in items:
+        short = wanted[item['Name']]
         path = Path(item['Mountpoint']); labels = item.get('Labels') or {}
         if item.get('Driver') != 'local' or item.get('Options') or labels.get('com.docker.compose.project') != PROJECT or labels.get('com.docker.compose.volume') != short or any(p.is_symlink() for p in (path, *path.parents)):
             raise XocError('volume_identity', 'Refusing to back up an unrelated or redirected volume.')

@@ -7,6 +7,7 @@ import gzip
 import json
 import os
 from pathlib import Path
+import selectors
 import subprocess
 import time
 
@@ -121,6 +122,89 @@ def framed(buffer, multiline=False):
         offset = end
 
 
+class Transport:
+    """One long-lived local transport process per Wazuh queue.
+
+    Spawning `compose exec` for every batch made the collector's own docker,
+    compose, runc and Python processes into Sysmon observations, which the next
+    spawn then delivered: a self-sustaining loop of evidence about delivery.
+    The queue scripts already stream one acknowledgment per input line.
+    """
+    def __init__(self, command):
+        self.command = list(command)
+        self.process = None
+
+    def close(self, kill=False):
+        process, self.process = self.process, None
+        if process is None:
+            return
+        if kill:
+            process.kill()
+        else:
+            try:
+                process.stdin.close()
+            except OSError:
+                pass
+        try:
+            process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait(timeout=5)
+
+    def send(self, payload, ids, timeout=30):
+        """Write newline frames and return the acknowledged ids, in order.
+
+        On failure the process is discarded and ``exc.acked`` holds the ids
+        acknowledged before the failure, so they are not redelivered.
+        """
+        acked = []
+        if not ids:
+            return acked
+        pending, buffer = memoryview(payload), b''
+        deadline = time.monotonic() + timeout
+        code, message = 'collection_command', 'A local collection/analysis command failed.'
+        try:
+            if self.process is None or self.process.poll() is not None:
+                self.close()
+                self.process = subprocess.Popen(self.command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                                stderr=subprocess.DEVNULL)
+                os.set_blocking(self.process.stdin.fileno(), False)
+                os.set_blocking(self.process.stdout.fileno(), False)
+            writer, reader = self.process.stdin.fileno(), self.process.stdout.fileno()
+            with selectors.DefaultSelector() as selector:
+                if pending:
+                    selector.register(writer, selectors.EVENT_WRITE)
+                selector.register(reader, selectors.EVENT_READ)
+                while len(acked) < len(ids):
+                    remaining = deadline - time.monotonic()
+                    if remaining <= 0:
+                        raise TimeoutError
+                    for key, _ in selector.select(remaining):
+                        if key.fd == writer:
+                            pending = pending[os.write(writer, pending[:65536]):]
+                            if not pending:
+                                selector.unregister(writer)
+                            continue
+                        data = os.read(reader, 65536)
+                        if not data:
+                            raise EOFError
+                        *lines, buffer = (buffer + data).split(b'\n')
+                        for line in lines:
+                            if len(acked) == len(ids) or line.decode(errors='replace') != ids[len(acked)]:
+                                code, message = 'transport_ack', 'Transport acknowledgment differs from the outbox.'
+                                raise ValueError
+                            acked.append(ids[len(acked)])
+                if buffer:
+                    code, message = 'transport_ack', 'Transport acknowledgment differs from the outbox.'
+                    raise ValueError
+        except (OSError, EOFError, TimeoutError, ValueError) as exc:
+            self.close(kill=True)
+            error = XocError(code, message)
+            error.acked = acked
+            raise error from exc
+        return acked
+
+
 class Collector:
     def __init__(self, root, plan_name, directory):
         plan_dir, result = checked_plan(root, plan_name)
@@ -162,11 +246,26 @@ class Collector:
         except BlockingIOError as exc:
             raise XocError('collector_running', 'Only one collector may own this evidence store.') from exc
 
-    def execute(self, args, payload, timeout=30):
-        result = subprocess.run(args, input=payload, capture_output=True, timeout=timeout)
-        if result.returncode:
-            raise XocError('collection_command', 'A local collection/analysis command failed.')
-        return result.stdout
+    def deliver(self, script, table, payload, ids, ack_code):
+        transports = self.__dict__.setdefault('transports', {})
+        if script not in transports:
+            transports[script] = Transport(self.engine.compose + ['exec', '-T', '--user', '999:999', 'siem',
+                                           '/var/ossec/framework/python/bin/python3', '-B', '/usr/local/lib/' + script])
+        error = None
+        try:
+            acked = transports[script].send(payload, ids)
+        except XocError as exc:
+            acked = exc.acked
+            error = XocError(ack_code, 'Wazuh transport acknowledgment differs from the outbox.') if exc.code == 'transport_ack' else exc
+        if acked:
+            with self.store.db:
+                self.store.db.executemany(f'UPDATE {table} SET sent=? WHERE id=?', [(now(), value) for value in acked])
+        if error:
+            raise error
+
+    def close(self):
+        for transport in self.__dict__.get('transports', {}).values():
+            transport.close()
 
     def read_files(self, source_id, service, user, path):
         if service:
@@ -318,13 +417,8 @@ class Collector:
                 self.accept_chunk('wazuh', 'wazuh-alerts', chunk)
         pending = self.store.pending()
         if pending:
-            command = self.engine.compose + ['exec', '-T', '--user', '999:999', 'siem',
-                        '/var/ossec/framework/python/bin/python3', '-B', '/usr/local/lib/xoc-queue.py']
-            ack = self.execute(command, b''.join(row['event'].encode() + b'\n' for row in pending)).decode().splitlines()
-            if ack != [r['id'] for r in pending]:
-                raise XocError('siem_transport', 'Wazuh transport acknowledgment differs from the outbox.')
-            with self.store.db:
-                self.store.db.executemany('UPDATE events SET sent=? WHERE id=?', [(now(), value) for value in ack])
+            self.deliver('xoc-queue.py', 'events', b''.join(row['event'].encode() + b'\n' for row in pending),
+                         [r['id'] for r in pending], 'siem_transport')
         # A successful send is NOT a decode acknowledgment. Read actual analysisd alerts.
         self.store.health('wazuh', 'ready')
 
@@ -338,13 +432,8 @@ class Collector:
                 self.accept_chunk('wazuh-archive', 'wazuh-archives', chunk)
         values = pending(self.store)
         if values:
-            command = self.engine.compose + ['exec', '-T', '--user', '999:999', 'siem',
-                       '/var/ossec/framework/python/bin/python3', '-B', '/usr/local/lib/xoc-native-queue.py']
-            ack = self.execute(command, b''.join(canonical(value)+b'\n' for value in values)).decode().splitlines()
-            if ack != [row['id'] for row in values]:
-                raise XocError('native_transport', 'Raw-source transport acknowledgment differs from its outbox.')
-            with self.store.db:
-                self.store.db.executemany('UPDATE native_inputs SET sent=? WHERE id=?', [(now(), value) for value in ack])
+            self.deliver('xoc-native-queue.py', 'native_inputs', b''.join(canonical(value)+b'\n' for value in values),
+                         [row['id'] for row in values], 'native_transport')
         return 'ready'
 
     def once(self):
