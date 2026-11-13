@@ -49,11 +49,26 @@ systemctl restart xocrange-osquery.service
 install -d -m 2755 /var/log/journal
 systemd-tmpfiles --create --prefix /var/log/journal
 journalctl --flush
+# Sysmon's eBPF perf ring buffer needs high-order contiguous pages. On a host
+# with a full page cache the first start can fail with ENOMEM ("Telemetry
+# failed to start", exit 6) and succeed a few seconds later; compact memory and
+# retry instead of failing the whole transaction. Still fail closed.
+start_sysmon() {
+    local attempt
+    for attempt in 1 2 3 4 5; do
+        if "$@" && systemctl is-active --quiet sysmon.service; then return 0; fi
+        echo "Sysmon did not start (attempt $attempt); compacting memory and retrying" >&2
+        { echo 1 > /proc/sys/vm/compact_memory; } 2>/dev/null || true
+        sleep 5
+        set -- systemctl restart sysmon.service
+    done
+    return 1
+}
 if systemctl cat sysmon.service >/dev/null 2>&1; then
-    systemctl enable --now sysmon.service
+    start_sysmon systemctl enable --now sysmon.service
     sysmon -c /etc/xocrange/sysmon.xml
 else
-    sysmon -accepteula -i /etc/xocrange/sysmon.xml
+    start_sysmon sysmon -accepteula -i /etc/xocrange/sysmon.xml
 fi
 systemctl enable sysmon.service
 systemctl enable auditd.service

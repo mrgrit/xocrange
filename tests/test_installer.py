@@ -110,3 +110,31 @@ esac
     assert calls.count("show -p ActiveState --value apt-daily-upgrade.service") == 3
     assert calls[-1] == "start apt-daily.timer"
     assert "Waiting for automatic package maintenance" in result.stdout
+
+
+@pytest.mark.parametrize("failures,expected", [(1, 0), (99, 1)])
+def test_sysmon_start_retries_a_transient_ring_buffer_failure(tmp_path, failures, expected):
+    # Sysmon's perf ring buffer needs contiguous pages; a first start can fail
+    # with ENOMEM and succeed after memory compaction. Persistent failure still fails.
+    text = (ROOT / "scripts/install-telemetry.sh").read_text()
+    function = text[text.index("start_sysmon() {"):text.index("if systemctl cat sysmon.service")]
+    tools = tmp_path / "bin"; tools.mkdir()
+    log = tmp_path / "systemctl.log"; log.write_text("")
+    (tools / "systemctl").write_text(f"""#!/bin/bash
+echo "$*" >> {log}
+starts=$(grep -cE "^(enable --now|restart) sysmon.service" {log})
+case "$*" in
+  "enable --now sysmon.service"|"restart sysmon.service") ((starts > {failures})) || exit 1 ;;
+  "is-active --quiet sysmon.service") ((starts > {failures})) || exit 3 ;;
+esac
+""")
+    (tools / "sleep").write_text("#!/bin/sh\n")
+    for tool in tools.iterdir():
+        tool.chmod(0o755)
+    script = "set -Eeuo pipefail\n" + function + "\nstart_sysmon systemctl enable --now sysmon.service\n"
+    result = subprocess.run(["bash", "-c", script], capture_output=True, text=True,
+                            env={"PATH": f"{tools}:/usr/bin:/bin"})
+    assert result.returncode == expected, result.stderr
+    calls = log.read_text().splitlines()
+    assert calls[0] == "enable --now sysmon.service"
+    assert calls.count("restart sysmon.service") == (1 if expected == 0 else 4)
