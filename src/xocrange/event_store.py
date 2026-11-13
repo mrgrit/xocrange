@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import sqlite3
+import time
 
 from .documents import canonical
 from .errors import XocError
@@ -259,28 +260,51 @@ class Store:
             result['status'] = 'degraded'
         return result
 
-    def prune(self, days=None):
+    def prune(self, days=None, budget=None, batch=64):
+        """Delete expired, fully handled rows; return True when none remain.
+
+        Keys are content hashes, so each deleted row touches index pages
+        scattered over the whole file. With a cold page cache (after an image
+        build or a reboot) one unbounded pass took minutes and stalled the
+        collector loop that calls it. With ``budget`` (seconds) the work is
+        done in small committed batches and stops at the deadline; the caller
+        continues on its next loop.
+        """
+        deadline = None if budget is None else time.monotonic() + budget
         days = self.policy['days'] if days is None else days
         cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat().replace("+00:00", "Z")
-        with self.db:
-            enabled=int(bool(self.cursor('indexer-enabled')))
-            self.db.execute("DELETE FROM events WHERE observed<? AND confirmed IS NOT NULL AND (?=0 OR indexed IS NOT NULL) AND NOT EXISTS (SELECT 1 FROM native_inputs n WHERE n.ref=events.ref AND n.confirmed IS NULL) AND (?=0 OR NOT EXISTS (SELECT 1 FROM wazuh_alerts a WHERE a.event_id=events.id AND a.indexed IS NULL))", (cutoff,enabled,enabled))
-            self.db.execute("DELETE FROM records WHERE observed<? AND ref NOT IN (SELECT ref FROM events) AND NOT EXISTS (SELECT 1 FROM native_inputs n WHERE n.ref=records.ref AND n.confirmed IS NULL)", (cutoff,))
-            self.db.execute('DELETE FROM wazuh_alerts WHERE observed<? AND (?=0 OR indexed IS NOT NULL)',(cutoff,int(bool(self.cursor('indexer-enabled')))))
-            self.db.execute('DELETE FROM processing_errors WHERE observed<?', (cutoff,))
-        self.db.execute("PRAGMA wal_checkpoint(TRUNCATE)")
-        self.compact()
+        enabled = int(bool(self.cursor('indexer-enabled')))
+        for table, condition, params in [
+            ('events', "observed<? AND confirmed IS NOT NULL AND (?=0 OR indexed IS NOT NULL) AND NOT EXISTS (SELECT 1 FROM native_inputs n WHERE n.ref=events.ref AND n.confirmed IS NULL) AND (?=0 OR NOT EXISTS (SELECT 1 FROM wazuh_alerts a WHERE a.event_id=events.id AND a.indexed IS NULL))", (cutoff, enabled, enabled)),
+            ('records', "observed<? AND ref NOT IN (SELECT ref FROM events) AND NOT EXISTS (SELECT 1 FROM native_inputs n WHERE n.ref=records.ref AND n.confirmed IS NULL)", (cutoff,)),
+            ('wazuh_alerts', 'observed<? AND (?=0 OR indexed IS NOT NULL)', (cutoff, enabled)),
+            ('processing_errors', 'observed<?', (cutoff,)),
+        ]:
+            while True:
+                if deadline is not None and time.monotonic() >= deadline:
+                    return False
+                with self.db:
+                    deleted = self.db.execute(f'DELETE FROM {table} WHERE rowid IN (SELECT rowid FROM {table} WHERE {condition} LIMIT ?)', (*params, batch)).rowcount
+                if deleted < batch:
+                    break
+        return self.compact(deadline=deadline)
 
-    def compact(self, max_pages=65536):
-        """Return free pages to the filesystem in bounded steps.
+    def compact(self, max_pages=65536, deadline=None, step=2048):
+        """Return free pages to the filesystem in bounded steps; True when none are left.
 
         Without this the file stays at its high-water mark: a 7 GB store held
         38 GB on disk, which every pre-install backup then had to copy.
         """
         if self.db.execute('PRAGMA auto_vacuum').fetchone()[0] != 2:
-            return 0
+            return True
+        remaining = int(max_pages)
         free = self.db.execute('PRAGMA freelist_count').fetchone()[0]
-        if free:
-            self.db.execute(f'PRAGMA incremental_vacuum({min(free, int(max_pages))})').fetchall()
-            self.db.execute("PRAGMA wal_checkpoint(TRUNCATE)")
-        return free - self.db.execute('PRAGMA freelist_count').fetchone()[0]
+        while free and remaining > 0:
+            if deadline is not None and time.monotonic() >= deadline:
+                break
+            pages = min(free, remaining, step if deadline is not None else remaining)
+            self.db.execute(f'PRAGMA incremental_vacuum({pages})').fetchall()
+            remaining -= pages
+            free = self.db.execute('PRAGMA freelist_count').fetchone()[0]
+        self.db.execute('PRAGMA wal_checkpoint(TRUNCATE)' if deadline is None or not free else 'PRAGMA wal_checkpoint(PASSIVE)')
+        return not free

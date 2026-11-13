@@ -17,6 +17,9 @@ from .errors import XocError
 from .event_store import Store, now
 from .lab import Docker, checked_plan
 
+# Seconds of retention work per collector loop (see Store.prune).
+MAINTENANCE_BUDGET = 3
+
 # Paths and identities are installer-owned, never taken from incoming records.
 FILES = (
     ("nftables", "fw-nftables", "fw", "0:0", "/var/log/nftables/events.log"),
@@ -492,17 +495,28 @@ class Collector:
                 self.store.health('native-indexer',getattr(exc,'code','native_indexer_failed'))
         return self.store.status()
 
+    def maintain(self, budget=MAINTENANCE_BUDGET):
+        """One bounded slice of retention work; True when the pass is complete.
+
+        Collection, delivery and export must keep running while expired rows
+        are removed, so a long pass is spread over several loops.
+        """
+        import sqlite3
+        from .retention import maintain
+        try:
+            if not self.store.prune(budget=budget):
+                return False
+            self.store.health('retention', maintain(self))
+        except (XocError, OSError, ValueError, sqlite3.DatabaseError):
+            self.store.health('retention', 'maintenance_failed')
+        return True
+
     def run(self):
-        last_maintenance = -300
+        last_maintenance, maintaining = -300, False
         while True:
             self.once()
-            if time.monotonic()-last_maintenance >= 300:
-                import sqlite3
-                from .retention import maintain
-                try:
-                    self.store.prune()
-                    self.store.health('retention', maintain(self))
-                except (XocError, OSError, ValueError, sqlite3.DatabaseError):
-                    self.store.health('retention', 'maintenance_failed')
-                last_maintenance = time.monotonic()
+            if maintaining or time.monotonic()-last_maintenance >= 300:
+                maintaining = not self.maintain()
+                if not maintaining:
+                    last_maintenance = time.monotonic()
             time.sleep(5)

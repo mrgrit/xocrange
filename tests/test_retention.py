@@ -80,6 +80,39 @@ def test_pruned_space_returns_to_the_filesystem(tmp_path):
     assert store.db.execute('PRAGMA page_count').fetchone()[0]<before
 
 
+def test_budgeted_prune_stops_at_the_deadline_and_resumes(tmp_path, monkeypatch):
+    from xocrange import event_store
+    store=Store(tmp_path/'store')
+    raw=(FIXTURES/'suricata-alert.json').read_bytes()
+    with store.transaction():
+        for n in range(40):store.ingest('suricata','ips',str(n),raw,observed='2000-01-01T00:00:00Z')
+        store.db.execute('UPDATE events SET confirmed=?,indexed=?',('2000-01-01','2000-01-01'))
+        store.set_cursor('indexer-enabled',True)
+    import itertools
+    clock=itertools.count()  # one tick per deadline check
+    monkeypatch.setattr(event_store.time,'monotonic',lambda:next(clock))
+    count=lambda:store.db.execute('SELECT (SELECT count(*) FROM events)+(SELECT count(*) FROM records)').fetchone()[0]
+    assert store.prune(budget=0) is False and count()==80
+    passes=[]
+    while not store.prune(budget=8,batch=5):
+        passes.append(count());assert len(passes)<100
+    assert len(passes)>=3 and passes==sorted(passes,reverse=True) and passes[0]<80
+    assert count()==0 and store.db.execute('PRAGMA freelist_count').fetchone()[0]==0
+
+
+def test_collector_runs_file_retention_only_after_the_store_pass_completes(monkeypatch):
+    from xocrange import retention
+    calls=[]
+    class FakeStore:
+        def __init__(self):self.results=[False,False,True]
+        def prune(self,budget):calls.append(('prune',budget));return self.results.pop(0)
+        def health(self,source,status):calls.append((source,status))
+    monkeypatch.setattr(retention,'maintain',lambda collector:'ready')
+    collector=Collector.__new__(Collector);collector.store=FakeStore()
+    assert [collector.maintain() for _ in range(3)]==[False,False,True]
+    assert calls==[('prune',3),('prune',3),('prune',3),('retention','ready')]
+
+
 def test_wazuh_dated_hardlinks_recover_unread_tail_without_duplicates(tmp_path):
     parent=tmp_path/'alerts';history=parent/'2026/Nov';history.mkdir(parents=True)
     active=parent/'alerts.json';active.write_bytes(b'first\nlast\n')
