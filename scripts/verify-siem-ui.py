@@ -138,7 +138,7 @@ r.on('error',e=>process.exit(['ERR_TLS_CERT_ALTNAME_INVALID','UNABLE_TO_VERIFY_L
     deadline=time.monotonic()+30
     ips_evidence=None
     while time.monotonic()<deadline:
-        ips_evidence=store.db.execute("SELECT id FROM events WHERE producer='suricata' AND observed>=? AND json_extract(event,'$.network.source.ip')='172.29.10.20' AND json_extract(event,'$.rule.id')='1000001' AND json_extract(event,'$.event.outcome')='blocked'",(cutoff,)).fetchone()
+        ips_evidence=store.db.execute("SELECT id FROM events WHERE producer='suricata' AND observed>=? AND json_extract(event,'$.network.source.ip')='10.20.30.20' AND json_extract(event,'$.rule.id')='1000001' AND json_extract(event,'$.event.outcome')='blocked'",(cutoff,)).fetchone()
         if ips_evidence:break
         time.sleep(1)
     checks['ips_inspects_decrypted_https']=stopped and ips_evidence is not None

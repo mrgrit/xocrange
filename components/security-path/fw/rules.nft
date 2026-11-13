@@ -14,12 +14,12 @@ table inet xoc_fw {
     chain forward {
         type filter hook forward priority filter; policy drop;
         ct state invalid drop
-        ip saddr 172.29.10.0/24 ip daddr 172.29.12.80 tcp dport 8080 ct state new limit rate 10/second burst 20 packets log prefix "[xoc-fw] ACCEPT " group 10 snaplen 128 queue-threshold 1
-        ip saddr 172.29.10.0/24 ip daddr 172.29.12.80 tcp dport 8080 counter name forwarded_web accept
-        ip saddr 172.29.12.80 ip daddr 172.29.10.0/24 tcp sport 8080 ct state established,related accept
-        ip saddr 172.29.10.20 ip daddr 172.29.12.80 tcp dport 8443 ct state new limit rate 10/second burst 20 packets log prefix "[xoc-fw] ACCEPT " group 10 snaplen 128 queue-threshold 1
-        ip saddr 172.29.10.20 ip daddr 172.29.12.80 tcp dport 8443 counter name forwarded_web accept
-        ip saddr 172.29.12.80 ip daddr 172.29.10.20 tcp sport 8443 ct state established,related accept
+        ip saddr 10.20.30.0/24 ip daddr 10.20.32.80 tcp dport 8080 ct state new limit rate 10/second burst 20 packets log prefix "[xoc-fw] ACCEPT " group 10 snaplen 128 queue-threshold 1
+        ip saddr 10.20.30.0/24 ip daddr 10.20.32.80 tcp dport 8080 counter name forwarded_web accept
+        ip saddr 10.20.32.80 ip daddr 10.20.30.0/24 tcp sport 8080 ct state established,related accept
+        ip saddr 10.20.30.20 ip daddr 10.20.32.80 tcp dport 8443 ct state new limit rate 10/second burst 20 packets log prefix "[xoc-fw] ACCEPT " group 10 snaplen 128 queue-threshold 1
+        ip saddr 10.20.30.20 ip daddr 10.20.32.80 tcp dport 8443 counter name forwarded_web accept
+        ip saddr 10.20.32.80 ip daddr 10.20.30.20 tcp sport 8443 ct state established,related accept
         limit rate 10/second burst 20 packets log prefix "[xoc-fw] DROP " group 10 snaplen 128 queue-threshold 1
     }
 }
@@ -28,7 +28,7 @@ flush table ip xoc_dnat
 table ip xoc_dnat {
     chain prerouting {
         type nat hook prerouting priority dstnat; policy accept;
-        ip daddr 172.29.10.1 tcp dport 8080 dnat to 172.29.12.80:8080
-        ip saddr 172.29.10.20 ip daddr 172.29.10.1 tcp dport 8443 dnat to 172.29.12.80:8443
+        ip daddr 10.20.30.1 tcp dport 8080 dnat to 10.20.32.80:8080
+        ip saddr 10.20.30.20 ip daddr 10.20.30.1 tcp dport 8443 dnat to 10.20.32.80:8443
     }
 }

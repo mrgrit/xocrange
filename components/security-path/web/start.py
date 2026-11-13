@@ -46,7 +46,7 @@ def render(raw):
         host = target["id"] + LEARNER_DOMAIN
         backend = f'http://{target["service"]}:{target["port"]}/'
         learner.extend(['<VirtualHost *:8443>', f'ServerName {host}',
-                        'RemoteIPHeader X-Xoc-Client-IP', 'RemoteIPInternalProxy 172.29.10.20',
+                        'RemoteIPHeader X-Xoc-Client-IP', 'RemoteIPInternalProxy 10.20.30.20',
                         'RequestHeader unset X-Xoc-Client-IP', 'RequestHeader set X-Forwarded-Proto "https"',
                         'ProxyPreserveHost On', f'ProxyPass / {backend}', f'ProxyPassReverse / {backend}']
                        + console + ['</VirtualHost>'])

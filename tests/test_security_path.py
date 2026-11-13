@@ -97,14 +97,14 @@ def test_backend_must_belong_to_declaring_component(security_checkout):
 
 def test_static_address_collision_is_rejected(security_checkout):
     path = security_checkout / "tests/fixtures/modules/security-probe/compose.yaml"
-    fragment = yaml_document(path); fragment["services"]["lab-client"]["networks"]["ext"]["ipv4_address"] = "172.29.10.1"
+    fragment = yaml_document(path); fragment["services"]["lab-client"]["networks"]["ext"]["ipv4_address"] = "10.20.30.1"
     path.write_text(yaml.safe_dump(fragment))
     with pytest.raises(XocError) as error:
         security_plan(security_checkout, probe=True)
     assert error.value.code == "address_conflict"
 
 
-@pytest.mark.parametrize("address", ["172.29.10.254", "172.29.10.0", "172.29.10.255", "172.29.99.10"])
+@pytest.mark.parametrize("address", ["10.20.30.254", "10.20.30.0", "10.20.30.255", "10.20.99.10"])
 def test_static_endpoint_must_be_usable_in_its_subnet(security_checkout, address):
     path = security_checkout / "tests/fixtures/modules/security-probe/compose.yaml"
     fragment = yaml_document(path); fragment["services"]["lab-client"]["networks"]["ext"]["ipv4_address"] = address
@@ -139,7 +139,7 @@ def test_reviewed_targets_get_learner_vhosts_behind_the_ingress():
     _, _, learner = render(json.dumps([{"id": "juice", "service": "juiceshop", "port": 3000, "public": True},
                                        {"id": "sample", "service": "lab-target", "port": 8080, "public": False}]))
     assert "<VirtualHost *:8443>" in learner and "ServerName juice.xoc.range" in learner
-    assert "http://juiceshop:3000/" in learner and "RemoteIPInternalProxy 172.29.10.20" in learner
+    assert "http://juiceshop:3000/" in learner and "RemoteIPInternalProxy 10.20.30.20" in learner
     assert "sample" not in learner and "lab-target" not in learner
 
 
@@ -214,3 +214,13 @@ def test_devices_filter_before_they_route():
         if role == 'ips':
             assert body.index(f'nft -f {table}') < body.index('suricata -T')
             assert 'queue num 0 bypass' not in (Path(__file__).resolve().parents[1] / 'components/security-path/ips/rules.nft').read_text()
+
+
+def test_networks_keep_the_kt66_address_plan(security_checkout):
+    compose = security_plan(security_checkout)["compose"]
+    subnets = {name: network["ipam"]["config"][0]["subnet"] for name, network in compose["networks"].items() if "ipam" in network}
+    assert subnets == {"ext": "10.20.30.0/24", "pipe": "10.20.31.0/24", "dmz": "10.20.32.0/24", "int": "10.20.40.0/24"}
+    assert compose["networks"]["int"]["internal"] is True
+    assert compose["networks"]["int"]["ipam"]["config"][0]["ip_range"] == "10.20.40.128/25"
+    assert compose["services"]["web"]["networks"] == {"dmz": {"ipv4_address": "10.20.32.80"}, "int": {"ipv4_address": "10.20.40.80"}}
+    assert compose["services"]["fw"]["networks"]["ext"] == {"ipv4_address": "10.20.30.1"}

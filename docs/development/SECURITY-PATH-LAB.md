@@ -25,9 +25,9 @@ Docker·SIEM 데이터를 별도 디스크로 배치하는 작업은 VM의 장�
 
 ```mermaid
 flowchart LR
-    client["lab-client · 172.29.10.10"] -->|"ext → 172.29.10.1:8080"| fw["fw · DNAT"]
-    fw -->|"pipe · 172.29.11.0/24"| ips["ips · NFQUEUE 0"]
-    ips -->|"dmz · 172.29.12.80:8080"| web["web · Apache / ModSecurity"]
+    client["lab-client · 10.20.30.10"] -->|"ext → 10.20.30.1:8080"| fw["fw · DNAT"]
+    fw -->|"pipe · 10.20.31.0/24"| ips["ips · NFQUEUE 0"]
+    ips -->|"dmz · 10.20.32.80:8080"| web["web · Apache / ModSecurity"]
     web -->|"int · HTTP proxy"| target["선택한 타깃"]
 ```
 
@@ -76,7 +76,7 @@ xoc lab up --plan security-lab --isolated-vm
 xoc lab verify --plan security-lab --isolated-vm
 ```
 
-`check`는 Ubuntu 26.04 VM, 로컬 rootful Docker, Compose, bridge netfilter, NFQUEUE 모듈, 전용 Docker 상태, 서브넷·호스트 경로 충돌을 확인한다. 다른 프로젝트 컨테이너가 있으면 중단한다. 기준 서브넷은 `172.29.10/24`, `172.29.11/24`, `172.29.12/24`다.
+`check`는 Ubuntu 26.04 VM, 로컬 rootful Docker, Compose, bridge netfilter, NFQUEUE 모듈, 전용 Docker 상태, 서브넷·호스트 경로 충돌을 확인한다. 다른 프로젝트 컨테이너가 있으면 중단한다. 기준 서브넷은 kt66과 같은 `10.20.30/24`(ext), `10.20.31/24`(pipe), `10.20.32/24`(dmz), `10.20.40/24`(int)다. int는 planner가 대역을 지정하고 고정 주소는 아래 절반(web `.80`), 자동 배정은 `10.20.40.128/25`를 쓴다.
 
 실행 전 lock과 현재 소스 해시, 생성 Compose를 다시 비교한다. 직접 수정한 Compose나 오래된 계획은 거부한다. `up` 성공은 컨테이너 시작을 의미하며 보안 경로 검증 성공을 의미하지 않는다.
 

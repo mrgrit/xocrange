@@ -47,7 +47,7 @@ def verify(root,name,output):
             checks[d+'_running_rule_restored']=('xoc:'+created[d] if d=='fw' else nonce+'-'+d) in current[d]['raw']
         checks['session_preserved']=call('session')['authenticated']
         def probe(path):
-            code="import urllib.request,urllib.error,json;u=urllib.request.Request('http://172.29.10.1:8080' + %r,headers={'Host':'sample.xoc.test'});\ntry:r=urllib.request.urlopen(u,timeout=4);print(json.dumps({'status':r.status}))\nexcept urllib.error.HTTPError as e:print(json.dumps({'status':e.code}))\nexcept Exception:print(json.dumps({'status':None}))" % path
+            code="import urllib.request,urllib.error,json;u=urllib.request.Request('http://10.20.30.1:8080' + %r,headers={'Host':'sample.xoc.test'});\ntry:r=urllib.request.urlopen(u,timeout=4);print(json.dumps({'status':r.status}))\nexcept urllib.error.HTTPError as e:print(json.dumps({'status':e.code}))\nexcept Exception:print(json.dumps({'status':None}))" % path
             return json.loads(engine.run(['exec','-T','lab-client','python','-B','-c',code],compose=True)).get('status')
         checks['ips_blocks_after_restart']=probe('/'+nonce+'-ips') is None
         checks['waf_blocks_after_restart']=probe('/'+nonce+'-waf')==403

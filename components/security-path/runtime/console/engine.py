@@ -168,8 +168,8 @@ def compile_policy(device,state):
             names.add(name)
             lines.append('set %s { type %s; flags interval; elements = { %s }; }' % (name,f['type'],f['elements']))
         lines += ['chain forward { type filter hook forward priority -5; policy accept;',
-                  'ip saddr 172.29.10.20 ip daddr 172.29.12.80 tcp dport 8443 return',
-                  'ip saddr 172.29.12.80 ip daddr 172.29.10.20 tcp sport 8443 return']
+                  'ip saddr 10.20.30.20 ip daddr 10.20.32.80 tcp dport 8443 return',
+                  'ip saddr 10.20.32.80 ip daddr 10.20.30.20 tcp sport 8443 return']
         for row in state['rules']:
             if not row['enabled']: continue
             f=dict(row['fields'],chain='forward',position='bottom',log=False)
@@ -185,12 +185,12 @@ def compile_policy(device,state):
             lines.append(text+' comment "xoc:'+row['id']+'"')
         lines += ['}','}','add table ip xoc_nat','delete table ip xoc_nat','table ip xoc_nat {',
                   'chain prerouting { type nat hook prerouting priority -110; policy accept;',
-                  'ip saddr 172.29.10.20 tcp dport 8443 return']
+                  'ip saddr 10.20.30.20 tcp dport 8443 return']
         for row in state['nat']:
             if row['enabled'] and row['fields'].get('kind','dnat')=='dnat':
                 lines.append(fw_builders.build_nat_cmd(row['fields']).split(' prerouting ',1)[1]+' comment "xoc:'+row['id']+'"')
         lines += ['}','chain postrouting { type nat hook postrouting priority 90; policy accept;',
-                  'ip saddr 172.29.10.20 tcp dport 8443 return','ip daddr 172.29.10.20 tcp sport 8443 return']
+                  'ip saddr 10.20.30.20 tcp dport 8443 return','ip daddr 10.20.30.20 tcp sport 8443 return']
         for row in state['nat']:
             if row['enabled'] and row['fields'].get('kind') in ('snat','masquerade'):
                 lines.append(fw_builders.build_nat_cmd(row['fields']).split(' postrouting ',1)[1]+' comment "xoc:'+row['id']+'"')

@@ -24,7 +24,7 @@ if a.load:
 end=time.monotonic()+DURATION
 counts={"ok":0,"failed":0}
 while time.monotonic()<end:
- start=time.monotonic();connection=http.client.HTTPConnection("172.29.10.1",8080,timeout=3)
+ start=time.monotonic();connection=http.client.HTTPConnection("10.20.30.1",8080,timeout=3)
  try:
   connection.request("GET","/",headers={"Host":"sample.xoc.test","Connection":"close"})
   response=connection.getresponse();response.read(16384);counts["ok" if response.status==200 else "failed"]+=1

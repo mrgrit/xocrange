@@ -11,7 +11,7 @@ import time
 from .documents import json_document, read_bytes, within, yaml_document
 from .errors import XocError
 from .events import Context, normalize
-from .network_policy import LAB_NETWORKS
+from .network_policy import BACKEND_NETWORK, LAB_NETWORKS
 from .planner import plan
 
 
@@ -75,7 +75,7 @@ def host_check(engine, project):
         checks["dedicated_daemon"] = all(f"com.docker.compose.project={project}" in row.get("Labels", "").split(",") for row in rows)
         network_ids = engine.run(["network", "ls", "--quiet"]).split()
         networks = json.loads(engine.run(["network", "inspect", *network_ids])) if network_ids else []
-        desired = [ipaddress.IPv4Network(pair[0]) for pair in LAB_NETWORKS.values()]
+        desired = [ipaddress.IPv4Network(pair[0]) for pair in (*LAB_NETWORKS.values(), BACKEND_NETWORK)]
         owned, overlaps = set(), []
         for network in networks:
             is_owned = (network.get("Labels") or {}).get("com.docker.compose.project") == project
@@ -161,12 +161,12 @@ def verify(engine):
     checks["landing_available"] = landing.get("status") == 200
     checks["selected_target_available"] = target.get("status") == 200
     body = json.loads(target["body"]) if target.get("status") == 200 else {}
-    checks["source_ip_and_forwarded_header"] = body.get("target") == "sample" and body.get("forwarded_for") == "172.29.10.10"
+    checks["source_ip_and_forwarded_header"] = body.get("target") == "sample" and body.get("forwarded_for") == "10.20.30.10"
     checks["fw_on_packet_path"] = counter("fw", "forwarded_web") > before_fw
     checks["ips_on_packet_path"] = counter("ips", "inspected") > before_ips
     denied_before = counter("fw", "blocked_input")
     checks["fw_denies_other_port"] = probe("--port", "8081").get("status") is None and counter("fw", "blocked_input") > denied_before
-    checks["no_direct_waf_bypass"] = probe("--address", "172.29.12.80").get("status") is None
+    checks["no_direct_waf_bypass"] = probe("--address", "10.20.32.80").get("status") is None
     target_container = engine.run(["ps", "--quiet", "lab-target"], compose=True).strip()
     target_info = json.loads(engine.run(["inspect", target_container]))[0]
     target_ip = next(value["IPAddress"] for key, value in target_info["NetworkSettings"]["Networks"].items() if key.endswith("_int"))
@@ -190,10 +190,10 @@ def verify(engine):
             normalized.extend(normalize(source, record, ctx))
         evidence[source] = normalized
     checks["ips_c1_block_evidence"] = any(event.get("rule", {}).get("id") == "1000001" and event["event"]["outcome"] == "blocked"
-                                          and event.get("network", {}).get("source", {}).get("ip") == "172.29.10.10"
+                                          and event.get("network", {}).get("source", {}).get("ip") == "10.20.30.10"
                                           for event in evidence["suricata"])
     checks["waf_c1_block_evidence"] = any(event.get("rule", {}).get("id") == "1000002" and event["event"]["outcome"] == "blocked"
-                                          and event.get("network", {}).get("source", {}).get("ip") == "172.29.10.10"
+                                          and event.get("network", {}).get("source", {}).get("ip") == "10.20.30.10"
                                           for event in evidence["modsecurity"])
     try:
         engine.run(["stop", "ips"], compose=True)

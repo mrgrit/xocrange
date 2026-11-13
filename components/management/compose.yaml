@@ -13,7 +13,7 @@ services:
     networks:
       user: {}
       ext:
-        ipv4_address: 172.29.10.20
+        ipv4_address: 10.20.30.20
     ports:
     - target: 8080
       published: 80
@@ -37,8 +37,8 @@ networks:
       com.docker.network.bridge.enable_ip_masquerade: 'false'
     ipam:
       config:
-      - subnet: 172.29.10.0/24
-        gateway: 172.29.10.254
+      - subnet: 10.20.30.0/24
+        gateway: 10.20.30.254
 volumes:
   ingress-config: {}
   web-tls: {}

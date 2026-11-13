@@ -5,14 +5,18 @@ from .documents import canonical
 from .errors import XocError
 
 LAB_NETWORKS = {
-    "ext": ("172.29.10.0/24", "172.29.10.254"),
-    "pipe": ("172.29.11.0/24", "172.29.11.254"),
-    "dmz": ("172.29.12.0/24", "172.29.12.254"),
+    "ext": ("10.20.30.0/24", "10.20.30.254"),
+    "pipe": ("10.20.31.0/24", "10.20.31.254"),
+    "dmz": ("10.20.32.0/24", "10.20.32.254"),
 }
+# The backend network keeps the kt66 internal range. Fragments only declare it
+# internal; the planner assigns this addressing. Static endpoints use the lower
+# half (web .80 as in kt66) and Docker allocates dynamic ones from the upper.
+BACKEND_NETWORK = ("10.20.40.0/24", "10.20.40.254", "10.20.40.128/25")
 LAB_ENDPOINTS = {
-    "fw": {"ext": {"ipv4_address": "172.29.10.1"}, "pipe": {"ipv4_address": "172.29.11.1"}},
-    "ips": {"pipe": {"ipv4_address": "172.29.11.2"}, "dmz": {"ipv4_address": "172.29.12.1"}},
-    "web": {"dmz": {"ipv4_address": "172.29.12.80"}, "int": {}},
+    "fw": {"ext": {"ipv4_address": "10.20.30.1"}, "pipe": {"ipv4_address": "10.20.31.1"}},
+    "ips": {"pipe": {"ipv4_address": "10.20.31.2"}, "dmz": {"ipv4_address": "10.20.32.1"}},
+    "web": {"dmz": {"ipv4_address": "10.20.32.80"}, "int": {"ipv4_address": "10.20.40.80"}},
 }
 
 
@@ -42,6 +46,13 @@ def security_role_policy(fragment):
             raise XocError("security_forwarding", "Only fw and ips may forward packets.")
 
 
+def backend_network(declared):
+    """The declared backend network with its planner-owned kt66 addressing."""
+    subnet, gateway, dynamic = BACKEND_NETWORK
+    return {**declared, "driver": "bridge",
+            "ipam": {"config": [{"subnet": subnet, "ip_range": dynamic, "gateway": gateway}]}}
+
+
 def check_addresses(compose):
     subnets, gateways, used = {}, {}, set()
     try:
@@ -55,6 +66,8 @@ def check_addresses(compose):
             if not any(subnet.subnet_of(block) for block in private_blocks) or not 16 <= subnet.prefixlen <= 30:
                 raise ValueError()
             if gateway not in subnet or gateway in (subnet.network_address, subnet.broadcast_address):
+                raise ValueError()
+            if "ip_range" in config and not ipaddress.IPv4Network(config["ip_range"], strict=True).subnet_of(subnet):
                 raise ValueError()
             if any(subnet.overlaps(other) for other in subnets.values()):
                 raise XocError("subnet_overlap", "Selected network subnets overlap.")

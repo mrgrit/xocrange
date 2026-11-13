@@ -13,7 +13,7 @@ import yaml
 from . import __version__
 from .documents import canonical, read_bytes, validate, within, yaml_document
 from .errors import XocError
-from .network_policy import attach_http_targets, check_addresses, security_role_policy
+from .network_policy import attach_http_targets, backend_network, check_addresses, security_role_policy
 from .registry import registrations
 
 # Unmodified upstream practice apps; reviewed against target-compose-fragment.
@@ -253,6 +253,8 @@ def plan(root: Path, *, preset="bootstrap", include=(), without=(), allow_fixtur
                 compose['services']['platform']['volumes'].append(socket + ':/run/xoc-console-' + device + ':ro')
     if 'siem-ui' in selected:
         compose['services']['web']['environment']['XOC_SIEM_UI'] = '1'
+    if 'int' in compose['networks']:
+        compose['networks']['int'] = backend_network(compose['networks']['int'])
     check_addresses(compose)
     attach_http_targets(compose, [entries[key]["manifest"] for key in selected], owners)
     services = compose["services"]

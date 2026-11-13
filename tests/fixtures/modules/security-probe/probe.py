@@ -5,7 +5,7 @@ import ipaddress
 import json
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--address", default="172.29.10.1")
+parser.add_argument("--address", default="10.20.30.1")
 parser.add_argument("--port", type=int, default=8080)
 parser.add_argument("--host", choices=["core.xoc.test", "sample.xoc.test"], default="core.xoc.test")
 parser.add_argument("--marker", choices=["ips-block", "waf-block"])

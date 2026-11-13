@@ -27,7 +27,7 @@ def verify(root,plan_name,output):
     def mutate(device,payload):
         state=ok(device);p=ok(device,'preview',{'version':state['version'],'payload':payload});result=ok(device,'apply',{'version':p['version'],'token':p['token']});return result,p
     def probe(path='/'):
-        code="import urllib.request,urllib.error,json;u=urllib.request.Request('http://172.29.10.1:8080' + %r,headers={'Host':'sample.xoc.test'});\ntry:r=urllib.request.urlopen(u,timeout=4);print(json.dumps({'status':r.status}))\nexcept urllib.error.HTTPError as e:print(json.dumps({'status':e.code}))\nexcept Exception:print(json.dumps({'status':None}))" % path
+        code="import urllib.request,urllib.error,json;u=urllib.request.Request('http://10.20.30.1:8080' + %r,headers={'Host':'sample.xoc.test'});\ntry:r=urllib.request.urlopen(u,timeout=4);print(json.dumps({'status':r.status}))\nexcept urllib.error.HTTPError as e:print(json.dumps({'status':e.code}))\nexcept Exception:print(json.dumps({'status':None}))" % path
         return json.loads(engine.run(['exec','-T','lab-client','python','-B','-c',code],compose=True))
     policy=client.request('/core/api/devices')[1]['devices'];originals={};changed=[]
     checks['anonymous_denied']=m.Session(secret['public_host']).request('/core/api/console/fw')[0]==401
@@ -40,7 +40,7 @@ def verify(root,plan_name,output):
             checks[device+'_locked_apply_denied']=request(device,'apply',{'version':originals[device]['version'],'token':'invalid'})[0]==403
             latest=next(x for x in client.request('/core/api/devices')[1]['devices'] if x['device']==device)
             assert client.request('/core/api/devices/'+device,{'write_enabled':True,'version':latest['version']})[0]==200
-        cases=[('fw',{'proto':'tcp','saddr':'172.29.10.10','dport':'8080','action':'drop','log':True},'/',None),
+        cases=[('fw',{'proto':'tcp','saddr':'10.20.30.10','dport':'8080','action':'drop','log':True},'/',None),
                ('ips',{'proto':'http','buffer':'http.uri','content':'xoc-console-ips-check','action':'drop'},'/xoc-console-ips-check',None),
                ('waf',{'variable':'REQUEST_URI','operator':'@contains','pattern':'xoc-console-waf-check','action':'deny'},'/xoc-console-waf-check',403)]
         for device,fields,path,expected in cases:
