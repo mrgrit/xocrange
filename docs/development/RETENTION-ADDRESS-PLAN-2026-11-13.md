@@ -149,4 +149,5 @@ K05는 서버 자신에서 보낸 요청만 확인했고(SIEM 출처 172.18.0.1,
 
 - HTTP(80)는 HTTPS로 308 전환되므로 위 결과가 실제 경로다.
 - `127.0.0.1`로 접속하면 docker-proxy를 거쳐 172.18.0.1로 기록된다(K05의 관찰). 로컬 루프백만의 특성이다.
+- 같은 절차를 `tests/integration/source_ip.py`로 만들어 다시 실행했다(7/7 통과: 요청 응답, namespace 제거, WAF·ingress 기록, 게이트웨이 주소 없음, SIEM apache-access·modsecurity 출처).
 - 실제 외부 PC로 같은 확인을 RC 후보에서 한 번 더 하면 된다. 가상화 소프트웨어의 NAT 네트워크를 쓰면 출처가 그 NAT 게이트웨이 주소로 보일 수 있다. 이는 VM 밖의 주소 변환이다.
