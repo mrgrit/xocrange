@@ -87,3 +87,23 @@ kt66 주소 체계 설치본에서 `xoc module remove/add`를 차례로 실행�
 - `workspaces.py`: 아카데미 리더가 설치되면 6F가 카탈로그 전용 층으로 열린다(`d015541`에서 의도한 동작). 시험이 2F만 열려 있다고 가정하던 것을 고치고, 6F 응답에 자산·실행이 없는지 확인을 추가했다.
 
 관찰: 로그인 제한(계정당 15분 10회)은 **성공한 로그인도 센다**. 시험을 연달아 돌리면 정상 비밀번호로도 15분간 429가 난다. 무차별 대입 방지로는 의도대로지만, 여러 사람이 같은 관리자 계정으로 자주 로그인하는 운영에서는 잠길 수 있다. 정책 유지 여부는 결정이 필요하다.
+
+## 6. 잘못된 선택의 실제 거부와 설치본 경계 점검
+
+설치본 `0d3140b…`에서 실제 명령으로 실행했다. 모두 종료 코드 2로 거부됐고, 실행 전후 `last-install.json`·`install-operation.json`이 그대로였다.
+
+| 수준 | 입력 | 거부 |
+|---|---|---|
+| 설치기 인자 | `--include Bad_ID` | Invalid module ID |
+| 설치기 인자 | 알 수 없는 옵션 | Unknown option |
+| 설치기 인자 | `--data-dir "/var/../x y"` | Invalid data directory |
+| 설치기 인자 | 다른 설치 식별자(`--expected-install`) | The installed selection changed |
+| 모듈 | `remove platform`·`security-path`·`management` | `required_component` |
+| 모듈 | `remove siem`(siem-ui 선택 상태) | `required_component`: siem 필요 |
+| 모듈 | `add no-such-module` | `unknown_component` |
+| 모듈 | 선택되지 않은 `remove target-juice` | `module_not_selected` |
+| planner(설치기 module-plan 단계와 같은 명령) | `--include siem-ui --without siem` | `required_component` |
+
+설치기의 조합 검사는 `module-plan` 단계(기본 패키지·소스 스냅숏 뒤)에서 같은 planner로 한다. 운영 중 선택 변경은 `xoc module`/`xoc update`가 설치기 실행 전에 같은 검사를 하므로 시스템을 건드리지 않고 거부된다.
+
+경계 점검: `scripts/check-boundary.py --installed --root <설치 릴리스>` — 설치 릴리스 파일 159개, inventory, 계획 Compose에서 위반 0건.
