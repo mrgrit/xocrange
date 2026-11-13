@@ -275,3 +275,26 @@ def test_operator_lock_waits_out_brief_maintenance_but_periodic_job_does_not(mon
     started = time.monotonic()
     with ops.operation_lock(wait=10, path=path):
         assert time.monotonic() - started >= 1
+
+
+def test_update_plans_the_staged_release_with_its_own_planner(tmp_path):
+    import shutil
+    from xocrange import lifecycle
+    from xocrange.errors import XocError
+    root = Path(__file__).resolve().parents[1]
+    staged = tmp_path / 'release'
+    lifecycle.copy_source(root, staged)
+    chosen = {'platform', 'security-path', 'management', 'fixture-security-probe'}
+    assert lifecycle.release_plan(staged, chosen)['lock']['selected']
+    # A policy constant changed together with its component is judged by the
+    # release's code, not by the code that runs the update.
+    policy = staged / 'src/xocrange/network_policy.py'
+    policy.write_text(policy.read_text().replace('10.20.30.', '10.20.130.'))
+    with pytest.raises(XocError) as error:
+        lifecycle.release_plan(staged, chosen)
+    assert error.value.code == 'security_topology'
+    for file in staged.rglob('*'):
+        if file.is_file() and b'10.20.30.' in file.read_bytes():
+            file.write_bytes(file.read_bytes().replace(b'10.20.30.', b'10.20.130.'))
+    assert lifecycle.release_plan(staged, chosen)['lock']['selected']
+    shutil.rmtree(staged)

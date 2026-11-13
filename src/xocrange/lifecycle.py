@@ -19,6 +19,40 @@ def selection_arguments(selected):
     return [arg for name in sorted(set(selected)-REQUIRED) for arg in ('--include', name)] + [arg for name in sorted(DEFAULT_OPTIONAL-set(selected)) for arg in ('--without', name)]
 
 
+RELEASE_PLAN = r"""
+import json, sys
+from pathlib import Path
+sys.path.insert(0, sys.argv[1] + '/src')
+from xocrange.errors import XocError
+from xocrange.planner import plan
+try:
+    result = plan(Path(sys.argv[1]), preset='security-path', include=json.loads(sys.argv[2]), allow_fixtures=True, allow_experimental=True)
+except XocError as exc:
+    print(json.dumps({'error': {'code': exc.code, 'message': str(exc)}})); sys.exit(2)
+print(json.dumps({'lock': result['lock']}))
+"""
+
+
+def release_plan(staged, chosen):
+    """Plan a staged release with its own planner.
+
+    The installed code knows only the installed topology and policy; when a
+    release changes a reviewed network or policy together with the components,
+    the old planner would reject a valid release. install.sh revalidates with
+    the same new code before any mutation.
+    """
+    import sys
+    result = subprocess.run([sys.executable, '-I', '-B', '-c', RELEASE_PLAN, str(staged), json.dumps(sorted(chosen))],
+                            capture_output=True, text=True, timeout=300)
+    try:
+        value = json.loads(result.stdout.strip().splitlines()[-1])
+    except (IndexError, ValueError):
+        raise XocError('release_plan_failed', 'The staged release could not plan its selection.') from None
+    if 'error' in value:
+        raise XocError(value['error']['code'], value['error']['message'])
+    return value
+
+
 def copy_source(source, destination):
     # Reuse the installer's explicitly bounded release contents, never .git/.env.
     import importlib.util, sys
@@ -76,7 +110,10 @@ def change(root, action, identifier=None, package=None, source=None, *, preview=
             entry = catalog(staged, allow_fixtures=True)[identifier]
             if entry['manifest']['kind'] == 'module':
                 shutil.rmtree(entry['path'].parent)
-        selected = plan(staged, preset='security-path', include=chosen, allow_fixtures=True, allow_experimental=True)
+        if action == 'update':
+            selected = release_plan(staged, chosen)
+        else:
+            selected = plan(staged, preset='security-path', include=chosen, allow_fixtures=True, allow_experimental=True)
         report = {'action':action, 'before':current['selected'], 'after':selected['lock']['selected'],
                   'plan_id':selected['lock']['plan_id'], 'preserves_data':True}
         if preview:
