@@ -89,7 +89,7 @@ function arrangeBuilding(outlines,mainIds,frame) {
    const outlines=new Map([...rooms].map(([id,room])=>[id,buildingOutline(room)]));
    const frame={width:Math.max(1,svg.clientWidth-22),height:Math.max(1,svg.clientHeight-22)};
    const layout=arrangeBuilding(outlines,data.floors.filter(f=>!['SITE','XOC'].includes(f.id)).map(f=>f.id),frame);
-   root.replaceChildren();root.setAttribute('data-building-layout','kt66-compact');
+   root.replaceChildren();root.setAttribute('data-building-layout','compact');
    for(const f of data.floors){
     const active=f.enabled&&data.allowed_floors.includes(f.id),preview=(data.preview_floors||[]).includes(f.id),[x,y]=layout.positions.get(f.id);
     const g=el('g',{'data-dc-floor':f.id,transform:`translate(${x} ${y})`,class:active?'dc-level-active':preview?'dc-level-preview':'dc-level-locked','aria-disabled':String(!active&&!preview)});
