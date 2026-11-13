@@ -18,6 +18,8 @@ K06의 현재 선택 구성 수집·SIEM 회귀와 K07 공통 보안을 구현�
 | K11 운영 | portable 백업·업데이트·자동 복구, 빈 VM 설치+복원, 로그 회전, 버전/이미지/패키지 목록, 최소 구성 자원 검증 | 장기 운영·다중 사용자 부하와 RC 권리 확정 |
 | K12 RC | 단계별 실행 증거와 미완료 범위 관리 | G1 전체 통합·배포 검증 |
 
+2026-11-13 운영 결함 수정([검증](OBSERVATION-VOLUME-VALIDATION-2026-11-13.md)): Sysmon 기록 대부분이 xoc 자신의 주기 작업(Manager 상태 확인, 배치마다 새로 띄우던 Wazuh 전송, 볼륨 조회)에서 나와 SIEM DB가 하루 12.9 GB로 늘던 문제를 발생원에서 줄였다. 같은 작업 중 드러난 IPS 시작 시 fail-open 구간(테이블 로드 전 전달), 설치 중 자동 업그레이드의 systemd 재실행으로 인한 설치 실패, 복원 직후 `lab verify` 경쟁도 고쳤다.
+
 ## K06 상세 범위
 
 - Wazuh Manager/API·Indexer·전용 Dashboard는 모두 4.14.10이다. Wazuh를 일반 OpenSearch 검색기로 대체한 구성이 아니다.
