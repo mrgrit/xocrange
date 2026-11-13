@@ -134,7 +134,8 @@ if ((${#ui_selection[@]})); then
 fi
 [[ $(nproc) -ge 2 ]] || fail 'At least 2 vCPUs are needed for this profile'
 exec 9>/run/lock/xocrange-install.lock
-flock -n 9 || fail 'Another xOC installation is in progress'
+# Log maintenance holds this lock briefly every minute; wait out that overlap.
+flock -w 120 9 || fail 'Another xOC installation is in progress'
 if [[ -n $expected_install ]]; then
     actual_install=$(python3 -c 'import json,pathlib; s=json.load(open("/var/lib/xocrange/last-install.json")); print(pathlib.Path(s["release"]).name+":"+s["plan"].removeprefix("install-"))')
     [[ $actual_install == "$expected_install" ]] || fail 'The installed selection changed; preview the operation again'
@@ -166,8 +167,32 @@ on_exit() {
             fi
         fi
     fi
+    resume_apt_maintenance
+}
+# Unattended upgrades can re-execute systemd during installation (a libc6
+# upgrade does). That drops in-flight `systemctl` jobs with "D-Bus connection
+# terminated" and fails a healthy install. Pause the periodic APT timers for
+# this run and let a run that already started finish first.
+paused_apt_timers=()
+pause_apt_maintenance() {
+    local timer unit waited=0
+    for timer in apt-daily.timer apt-daily-upgrade.timer; do
+        if systemctl is-active --quiet "$timer"; then
+            systemctl stop "$timer" && paused_apt_timers+=("$timer")
+        fi
+    done
+    for unit in apt-daily-upgrade.service apt-daily.service; do
+        while [[ $(systemctl show -p ActiveState --value "$unit" 2>/dev/null) == activating ]] && ((waited < 1800)); do
+            ((waited % 60)) || printf 'Waiting for automatic package maintenance (%s) to finish.\n' "$unit"
+            sleep 5; waited=$((waited + 5))
+        done
+    done
+}
+resume_apt_maintenance() {
+    if ((${#paused_apt_timers[@]})); then systemctl start "${paused_apt_timers[@]}" || true; fi
 }
 trap on_exit EXIT
+pause_apt_maintenance
 
 stage dedicated-host-check
 check_containers() {

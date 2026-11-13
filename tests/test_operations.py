@@ -261,3 +261,17 @@ def test_volume_paths_inspects_all_volumes_in_one_call(monkeypatch, tmp_path):
     with pytest.raises(XocError):
         ops.volume_paths()
 
+
+def test_operator_lock_waits_out_brief_maintenance_but_periodic_job_does_not(monkeypatch, tmp_path):
+    import fcntl, threading, time
+    monkeypatch.setattr(ops.os, 'geteuid', lambda: 0)
+    path = tmp_path / 'install.lock'
+    holder = path.open('a'); fcntl.flock(holder, fcntl.LOCK_EX)
+    with pytest.raises(XocError) as raised:
+        with ops.operation_lock(wait=0, path=path):
+            pass
+    assert raised.value.code == 'operation_busy'
+    threading.Timer(1.5, holder.close).start()
+    started = time.monotonic()
+    with ops.operation_lock(wait=10, path=path):
+        assert time.monotonic() - started >= 1

@@ -78,3 +78,35 @@ def test_installer_dry_run_does_not_require_root_or_docker():
 def test_invalid_installer_options_fail_before_host_operations(args):
     result = subprocess.run(["bash", str(ROOT / "install.sh"), *args], capture_output=True, text=True)
     assert result.returncode == 2 and "[xOC]" not in result.stdout
+
+
+def test_installer_pauses_apt_timers_and_waits_for_running_upgrade(tmp_path):
+    # A libc6 upgrade by unattended-upgrades re-executes systemd and drops the
+    # installer's in-flight systemctl jobs; the installer pauses APT timers.
+    text = (ROOT / "install.sh").read_text()
+    functions = text[text.index("paused_apt_timers=()"):text.index("trap on_exit EXIT\npause_apt_maintenance")]
+    tools = tmp_path / "bin"; tools.mkdir()
+    log = tmp_path / "systemctl.log"
+    (tools / "systemctl").write_text(f"""#!/bin/bash
+echo "$*" >> {log}
+case "$*" in
+  "is-active --quiet apt-daily.timer") exit 0 ;;
+  "is-active --quiet apt-daily-upgrade.timer") exit 3 ;;
+  "show -p ActiveState --value apt-daily-upgrade.service")
+    seen=$(grep -c "apt-daily-upgrade.service" {log})
+    if ((seen < 3)); then echo activating; else echo inactive; fi ;;
+  "show -p ActiveState --value apt-daily.service") echo inactive ;;
+esac
+""")
+    (tools / "sleep").write_text("#!/bin/sh\n")
+    for tool in tools.iterdir():
+        tool.chmod(0o755)
+    script = "set -Eeuo pipefail\n" + functions + "\npause_apt_maintenance\nresume_apt_maintenance\n"
+    result = subprocess.run(["bash", "-c", script], capture_output=True, text=True,
+                            env={"PATH": f"{tools}:/usr/bin:/bin"})
+    assert result.returncode == 0, result.stderr
+    calls = log.read_text().splitlines()
+    assert "stop apt-daily.timer" in calls and "stop apt-daily-upgrade.timer" not in calls
+    assert calls.count("show -p ActiveState --value apt-daily-upgrade.service") == 3
+    assert calls[-1] == "start apt-daily.timer"
+    assert "Waiting for automatic package maintenance" in result.stdout

@@ -16,6 +16,7 @@ import sqlite3
 import stat
 import subprocess
 import tarfile
+import time
 import tempfile
 
 from .errors import XocError
@@ -66,14 +67,25 @@ def private(path, *, exists=True):
 
 
 @contextmanager
-def operation_lock():
+def operation_lock(wait=120, path='/run/lock/xocrange-install.lock'):
+    """Serialize appliance operations.
+
+    Log maintenance takes this lock for about a second every minute, so an
+    operator command waits briefly instead of failing on that overlap; the
+    periodic job itself passes wait=0 and skips a busy minute.
+    """
     if os.geteuid() != 0:
         raise XocError('root_required', 'Appliance operations require sudo.')
-    with Path('/run/lock/xocrange-install.lock').open('a') as stream:
-        try:
-            fcntl.flock(stream, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError as exc:
-            raise XocError('operation_busy', 'Another installation, backup or restore is running.') from exc
+    with Path(path).open('a') as stream:
+        deadline = time.monotonic() + wait
+        while True:
+            try:
+                fcntl.flock(stream, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                break
+            except BlockingIOError as exc:
+                if time.monotonic() >= deadline:
+                    raise XocError('operation_busy', 'Another installation, backup or restore is running.') from exc
+                time.sleep(1)
         yield
 
 
