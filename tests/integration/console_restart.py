@@ -9,11 +9,12 @@ import uuid
 from xocrange.lab import Docker,checked_plan
 from xocrange.platform_setup import STATE
 from xocrange.ui_setup import private_json
+from admin_credential import admin_password
 
 
 def verify(root,name,output):
     spec=importlib.util.spec_from_file_location('probe',root/'scripts/verify-platform.py');m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
-    secret=private_json(STATE/'credentials.json');s=m.Session(secret['public_host']);assert s.login('admin',secret.get('admin_password',secret['bootstrap_password']))[0]==200
+    secret=private_json(STATE/'credentials.json');s=m.Session(secret['public_host']);assert s.login('admin',admin_password(secret))[0]==200
     directory,plan=checked_plan(root,name);engine=Docker(directory/'compose.yaml',plan['compose']['name'])
     checks={};created={};nonce='xoc-restart-'+uuid.uuid4().hex[:12]
     def call(path,body=None):

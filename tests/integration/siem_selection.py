@@ -18,6 +18,7 @@ from siem_lifecycle import (STATE, Installed, fingerprint, installation_lock,
     private_directory, save_new, anchor_integrity, common_identity)
 from xocrange.event_store import Store
 from xocrange.ui_setup import private_json
+from admin_credential import admin_password
 
 
 def run(*args):
@@ -66,7 +67,7 @@ def check_excluded(before,directory):
     spec=importlib.util.spec_from_file_location('core_probe',Path(last['release'])/'scripts/verify-platform.py')
     module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
     secret=private_json(STATE/'platform/credentials.json');session=module.Session(secret['public_host'])
-    code,body,_,_=session.login('admin',secret.get('admin_password',secret['bootstrap_password']))
+    code,body,_,_=session.login('admin',admin_password(secret))
     checks['core_login_without_siem']=code==200 and body.get('role')=='admin'
     checks['siem_link_disabled']=body.get('siem_available') is False
     checks['core_policies_read_without_siem']=session.request('/core/api/devices')[0]==200

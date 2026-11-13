@@ -11,6 +11,7 @@ from pathlib import Path
 import subprocess
 import sys
 import uuid
+from admin_credential import admin_password
 
 p=argparse.ArgumentParser();p.add_argument('--output',type=Path,required=True);a=p.parse_args()
 state=Path('/var/lib/xocrange');installed=json.loads((state/'last-install.json').read_text());root=Path(installed['release'])
@@ -29,7 +30,7 @@ try:
  check('anonymous_read_denied',anon.request(base)[0]==401)
  anon.request('/core/api/session')
  check('anonymous_write_denied',anon.request(base+'/records',{})[0]==401)
- check('admin_login',admin.login('admin',cred.get('admin_password',cred['bootstrap_password']))[0]==200)
+ check('admin_login',admin.login('admin',admin_password(cred))[0]==200)
  status,catalog,_,_=admin.request(base);check('catalog_339_pages',status==200 and catalog['courses'][0]['public_pages']==339)
  status,lesson,_,_=admin.request(base+'/lessons/'+cid+'/case-30');check('last_lesson_stops_at_339',status==200 and max(s['page'] for s in lesson['slides'])==339)
  check('unpublished_lesson_denied',admin.request(base+'/lessons/'+cid+'/case-31')[0]==404)

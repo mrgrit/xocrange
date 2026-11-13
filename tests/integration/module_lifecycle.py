@@ -17,6 +17,7 @@ from xocrange.lifecycle import copy_source
 from xocrange.events import Context, normalize
 from xocrange.documents import validate
 from siem_lifecycle import common_identity
+from admin_credential import admin_password
 
 p=argparse.ArgumentParser();p.add_argument('--package',type=Path,required=True);p.add_argument('--output',type=Path,required=True)
 p.add_argument('--isolated-vm',action='store_true');a=p.parse_args()
@@ -38,7 +39,7 @@ def login():
     spec=importlib.util.spec_from_file_location('gateway',root/'scripts/verify-platform.py')
     gateway=importlib.util.module_from_spec(spec);spec.loader.exec_module(gateway)
     file=ops.STATE/'platform/credentials.json';secret=json.loads(file.read_text())
-    session=gateway.Session(secret['public_host']);code,body,_,_=session.login('admin',secret.get('admin_password',secret['bootstrap_password']))
+    session=gateway.Session(secret['public_host']);code,body,_,_=session.login('admin',admin_password(secret))
     assert code==200
     if body.get('must_change_password'):
         password='K10-Acceptance!'+secrets.token_urlsafe(24)

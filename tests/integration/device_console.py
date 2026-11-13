@@ -8,12 +8,13 @@ import time
 from xocrange.lab import Docker,checked_plan
 from xocrange.platform_setup import STATE
 from xocrange.ui_setup import private_json, STATE as SIEM_STATE
+from admin_credential import admin_password
 
 
 def verify(root,plan_name,output):
     spec=importlib.util.spec_from_file_location('core_acceptance',root/'scripts/verify-platform.py');m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
     secret=private_json(STATE/'credentials.json');client=m.Session(secret['public_host']);checks={}
-    checks['login']=client.login('admin',secret.get('admin_password',secret['bootstrap_password']))[0]==200
+    checks['login']=client.login('admin',admin_password(secret))[0]==200
     siem_secret=private_json(SIEM_STATE/'credentials.json');siem=m.Session(secret['public_host'])
     checks['siem_authenticated']=siem.request('/siem/auth/login',{'username':'admin','password':siem_secret['admin']},headers={'osd-xsrf':'xoc-k08'})[0]==200
     checks['siem_native_session']=siem.request('/siem/api/login',{'idHost':'xoc','force':True},headers={'osd-xsrf':'xoc-k08'})[0]==200

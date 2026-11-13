@@ -8,19 +8,20 @@ p=argparse.ArgumentParser();p.add_argument('root',type=Path);p.add_argument('pla
 from xocrange.lab import Docker,checked_plan
 from xocrange.platform_setup import STATE
 from xocrange.ui_setup import private_json,owned_volume
+from admin_credential import admin_password
 spec=importlib.util.spec_from_file_location('gateway',a.root/'scripts/verify-platform.py');gateway=importlib.util.module_from_spec(spec);spec.loader.exec_module(gateway)
 directory,plan=checked_plan(a.root,a.plan);engine=Docker(directory/'compose.yaml',plan['compose']['name'])
 c=private_json(STATE/'credentials.json');s=gateway.Session(c['public_host']);checks={}
 for path in ('datacenter','registry','noc','library'):
     checks['anonymous_'+path+'_denied']=s.request('/core/api/'+path)[0]==401
-checks['login_through_security_path']=s.login('admin',c.get('admin_password',c['bootstrap_password']))[0]==200
+checks['login_through_security_path']=s.login('admin',admin_password(c))[0]==200
 code,data,headers,raw=s.request('/core/api/registry')
 checks['authenticated_registry']=code==200
 checks['selected_components_only']={v['id'] for v in data['components']}==set(plan['lock']['selected'])
 checks['selected_services_only']={v['service'] for v in data['assets']}==set(plan['compose']['services'])
 checks['fresh_observations']=data['observation']['fresh']
 checks['container_state_scope']=data['observation']['scope']=='container_state'
-checks['no_secrets_in_registry']=not any(str(c[key]).encode() in raw for key in ('secret_key','bootstrap_password','admin_password') if key in c)
+checks['no_secrets_in_registry']=not any(str(v).encode() in raw for v in [admin_password(c)]+[c[key] for key in ('secret_key','bootstrap_password','admin_password') if key in c])
 checks['no_store']='no-store' in headers.get('Cache-Control','')
 checks['no_web_docker_socket']=all('docker.sock' not in v for v in plan['compose']['services']['platform'].get('volumes',[]))
 checks['read_only_observation_mount']='platform-observation:/run/xoc-observation:ro' in plan['compose']['services']['platform']['volumes']
