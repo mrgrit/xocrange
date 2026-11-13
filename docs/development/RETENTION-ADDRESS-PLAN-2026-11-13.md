@@ -107,3 +107,31 @@ kt66 주소 체계 설치본에서 `xoc module remove/add`를 차례로 실행�
 설치기의 조합 검사는 `module-plan` 단계(기본 패키지·소스 스냅숏 뒤)에서 같은 planner로 한다. 운영 중 선택 변경은 `xoc module`/`xoc update`가 설치기 실행 전에 같은 검사를 하므로 시스템을 건드리지 않고 거부된다.
 
 경계 점검: `scripts/check-boundary.py --installed --root <설치 릴리스>` — 설치 릴리스 파일 159개, inventory, 계획 Compose에서 위반 0건.
+
+## 7. 분할 정리의 공정성, 상태 조회 잠금, Sysmon 시작 실패
+
+1절의 분할 정리를 배포한 뒤 장기 운영 표본과 상태를 보다가 세 가지 결함을 더 찾았다.
+
+**경보 행이 지워지지 않음**(`4f3ff5a`)
+- 배포(13:44) 이후 `wazuh_alerts`가 한 번도 정리되지 않았다. 보존 기준을 89분 넘긴 행이 91,875개였고 모두 색인 완료(삭제 가능) 상태였다. `retention` health가 1.7시간 갱신되지 않아 `xoc siem status`가 계속 `degraded`였다.
+- 원인: 조각마다 첫 표(events)부터 시작했다. events·records와 그 연쇄 삭제(native_inputs)에 매번 새로 만료된 행이 있어 3초 예산을 다 썼고, 마지막 표인 경보는 차례가 오지 않았다. 운영 DB에서 경보 행 삭제 비용은 행당 3.8 ms였다.
+- 수정: 기한에 걸린 표에서 다음 조각을 이어 시작해 패스마다 모든 표를 한 번씩 돈다. 패스가 끝나지 않았으면 5초 대기 대신 4초 조각을 쓴다(루프 주기는 같고 삭제 처리량은 늘어난다).
+- 회귀 테스트: 조각 사이마다 첫 표에 새 만료 행을 넣어도 경보가 모두 지워지는지 확인(이전 코드에서 실패).
+
+**상태 조회가 쓰기 잠금을 기다림**(`4f3ff5a`)
+- 저장소를 열 때 `PRAGMA auto_vacuum=INCREMENTAL`을 매번 실행했다. 값이 이미 같아도 쓰기 잠금을 잡으므로, collector가 쓰는 동안 `xoc siem status`가 30초 기다리다 `database is locked`로 실패했다. 장기 표본 5개가 이 때문에 비었다.
+- 수정: 이미 incremental이면 설정하지 않는다. 쓰기 트랜잭션이 열린 상태에서 저장소 열기·상태 조회가 되는 회귀 테스트를 추가했다.
+
+**Sysmon 일시적 시작 실패로 업데이트 롤백**(`7845a4f`)
+- 위 수정을 배포하던 `xoc update`가 `siem-telemetry`에서 실패해 자동 복원됐다(복원 후 모든 서비스 active, 설치본 `0d3140b` 유지).
+- 원인: Sysmon 시작 때 eBPF perf ring buffer용 연속 페이지 할당 실패(커널 `page allocation failure: order:6`, `libbpf: failed to mmap perf buffer: -ENOMEM`, sysmon 종료 코드 6). systemd 자동 재시작으로 10초 뒤 정상 시작했지만, 설치기는 첫 `systemctl enable --now` 실패로 중단했다. 페이지 캐시가 큰 장기 운영 호스트에서 생기는 메모리 단편화다.
+- 수정: 설치기가 메모리를 compaction하고 최대 5회 재시작한다. 끝내 active가 아니면 그대로 실패한다(fail closed).
+
+**Sysmon 실패 메시지가 격리 입력으로 남음**(`24f1de9`)
+- 위 시작 실패 때 Sysmon journal에 남은 두 줄(`libbpf: failed to mmap perf buffer … -ENOMEM`, `Telemetry failed to start …`)을 collector가 이벤트로 해석하지 못해 격리했다. 격리 입력은 보존 기간(하루) 동안 남으므로 Sysmon이 복구된 뒤에도 상태가 하루 내내 `degraded`였을 것이다.
+- 수정: 이 두 형식을 센서 진단 이벤트(`agent-failure`, 심각도 65 — 이벤트 유실 보고와 같은 수준)로 기록한다. 센서가 멈췄던 구간이 SIEM에 사건으로 남는다.
+
+**실행 검증**(설치본 `9b2dd86` → `dce4136`)
+- 공정성 수정 배포 후 만료 경보 116,946행이 약 10분 만에 500행 미만으로 줄었다. 이어서 빈 페이지 회수가 분당 약 10만 페이지(약 425 MB)씩 진행돼 retention health가 다시 갱신됐다. DB 사용량은 10.9 GB에서 9.84 GB로 줄었다.
+- Sysmon 재시도 수정이 들어간 설치(`9b2dd86`)에서는 Sysmon이 첫 시도에 시작돼 재시도 경로는 실행되지 않았다(단위 테스트로 일시 실패 복구·지속 실패 시 실패를 확인).
+- 진단 분류 수정 배포 후 `xoc siem retry`로 격리 2건을 다시 처리해 `agent-failure`(심각도 65) 진단 이벤트가 됐고, `xoc siem status`가 `ready`(대기 9, 지연 3초, 격리 0)로 돌아왔다.
