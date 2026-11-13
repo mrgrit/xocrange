@@ -110,7 +110,7 @@ def test_collector_runs_file_retention_only_after_the_store_pass_completes(monke
     monkeypatch.setattr(retention,'maintain',lambda collector:'ready')
     collector=Collector.__new__(Collector);collector.store=FakeStore()
     assert [collector.maintain() for _ in range(3)]==[False,False,True]
-    assert calls==[('prune',3),('prune',3),('prune',3),('retention','ready')]
+    assert calls==[('prune',4),('prune',4),('prune',4),('retention','ready')]
 
 
 def test_wazuh_dated_hardlinks_recover_unread_tail_without_duplicates(tmp_path):
@@ -247,3 +247,39 @@ def test_orphan_text_renditions_are_removed_after_their_json(tmp_path):
     removed=remove_orphan_text(tmp_path/'alerts/alerts.json',time.time()-2*86400)
     # Only the old text whose JSON is gone; a twin-backed or recent file stays.
     assert removed==1 and sorted(p.name for p in month.iterdir())==['ossec-alerts-08.json','ossec-alerts-08.log','ossec-alerts-09.log.gz']
+
+
+def test_opening_the_store_and_reading_status_do_not_wait_for_the_writer(tmp_path, monkeypatch):
+    import sqlite3
+    from xocrange import event_store
+    Store(tmp_path/'store').db.close()
+    writer=sqlite3.connect(tmp_path/'store/events.sqlite3',isolation_level=None)
+    writer.execute('BEGIN IMMEDIATE');writer.execute("INSERT INTO health VALUES('x','y','z')")
+    connect=sqlite3.connect
+    monkeypatch.setattr(event_store.sqlite3,'connect',lambda *a,**k:connect(*a,**{**k,'timeout':0.2}))
+    reader=Store(tmp_path/'store')
+    assert reader.db.execute('PRAGMA auto_vacuum').fetchone()[0]==2
+    assert reader.status()['pending']==0
+    writer.execute('ROLLBACK')
+
+
+def test_budgeted_prune_reaches_every_table_while_new_rows_keep_expiring(tmp_path, monkeypatch):
+    import itertools
+    from xocrange import event_store
+    store=Store(tmp_path/'store')
+    raw=(FIXTURES/'suricata-alert.json').read_bytes()
+    with store.transaction():
+        store.set_cursor('indexer-enabled',True)
+        store.db.executemany('INSERT INTO wazuh_alerts (id,observed,raw,sha256,document,indexed) VALUES (?,?,?,?,?,?)',
+                             [(f'alert-{n}','2000-01-01T00:00:00Z',b'{}','0'*64,'','2000-01-01') for n in range(30)])
+    clock=itertools.count()  # one tick per deadline check
+    monkeypatch.setattr(event_store.time,'monotonic',lambda:next(clock))
+    alerts=lambda:store.db.execute('SELECT count(*) FROM wazuh_alerts').fetchone()[0]
+    position=itertools.count()
+    for _ in range(12):
+        # Before each slice the first table again has freshly expired rows.
+        with store.transaction():
+            for _ in range(6):store.ingest('suricata','ips',str(next(position)),raw,observed='2000-01-01T00:00:00Z')
+            store.db.execute('UPDATE events SET confirmed=?,indexed=? WHERE confirmed IS NULL',('2000-01-01','2000-01-01'))
+        store.prune(budget=3,batch=5)
+    assert alerts()==0

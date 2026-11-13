@@ -33,8 +33,11 @@ class Store:
         self.db = sqlite3.connect(path, timeout=30)
         self.db.row_factory = sqlite3.Row
         # Takes effect for a new database (before any table exists); an older
-        # store keeps auto_vacuum=0 until an explicit offline VACUUM.
-        self.db.execute("PRAGMA auto_vacuum=INCREMENTAL")
+        # store keeps auto_vacuum=0 until an explicit offline VACUUM. Setting
+        # it takes the write lock even when unchanged, so a reader such as
+        # `xoc siem status` would wait behind the collector and time out.
+        if self.db.execute("PRAGMA auto_vacuum").fetchone()[0] != 2:
+            self.db.execute("PRAGMA auto_vacuum=INCREMENTAL")
         self.db.execute("PRAGMA journal_mode=WAL")
         self.db.execute("PRAGMA synchronous=FULL")
         self.db.execute("PRAGMA foreign_keys=ON")
@@ -274,19 +277,27 @@ class Store:
         days = self.policy['days'] if days is None else days
         cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat().replace("+00:00", "Z")
         enabled = int(bool(self.cursor('indexer-enabled')))
-        for table, condition, params in [
+        tables = [
             ('events', "observed<? AND confirmed IS NOT NULL AND (?=0 OR indexed IS NOT NULL) AND NOT EXISTS (SELECT 1 FROM native_inputs n WHERE n.ref=events.ref AND n.confirmed IS NULL) AND (?=0 OR NOT EXISTS (SELECT 1 FROM wazuh_alerts a WHERE a.event_id=events.id AND a.indexed IS NULL))", (cutoff, enabled, enabled)),
             ('records', "observed<? AND ref NOT IN (SELECT ref FROM events) AND NOT EXISTS (SELECT 1 FROM native_inputs n WHERE n.ref=records.ref AND n.confirmed IS NULL)", (cutoff,)),
             ('wazuh_alerts', 'observed<? AND (?=0 OR indexed IS NOT NULL)', (cutoff, enabled)),
             ('processing_errors', 'observed<?', (cutoff,)),
-        ]:
+        ]
+        # Resume at the table a deadline interrupted and visit every table once
+        # per pass. Starting each slice at the first table let it spend the
+        # whole budget on newly expired rows while the last table never ran.
+        start = getattr(self, '_prune_resume', 0)
+        for index in [*range(start, len(tables)), *range(start)]:
+            table, condition, params = tables[index]
             while True:
                 if deadline is not None and time.monotonic() >= deadline:
+                    self._prune_resume = index
                     return False
                 with self.db:
                     deleted = self.db.execute(f'DELETE FROM {table} WHERE rowid IN (SELECT rowid FROM {table} WHERE {condition} LIMIT ?)', (*params, batch)).rowcount
                 if deleted < batch:
                     break
+        self._prune_resume = 0
         return self.compact(deadline=deadline)
 
     def compact(self, max_pages=65536, deadline=None, step=2048):

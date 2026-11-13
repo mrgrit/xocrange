@@ -17,8 +17,9 @@ from .errors import XocError
 from .event_store import Store, now
 from .lab import Docker, checked_plan
 
-# Seconds of retention work per collector loop (see Store.prune).
-MAINTENANCE_BUDGET = 3
+# Seconds of retention work per collector loop (see Store.prune); while a
+# pass is unfinished it replaces the loop's 5 s idle wait.
+MAINTENANCE_BUDGET = 4
 
 # Paths and identities are installer-owned, never taken from incoming records.
 FILES = (
@@ -517,6 +518,9 @@ class Collector:
             self.once()
             if maintaining or time.monotonic()-last_maintenance >= 300:
                 maintaining = not self.maintain()
-                if not maintaining:
-                    last_maintenance = time.monotonic()
+                if maintaining:
+                    # An unfinished pass uses the idle wait: the loop period
+                    # stays the same and deletion keeps up with ingestion.
+                    continue
+                last_maintenance = time.monotonic()
             time.sleep(5)
