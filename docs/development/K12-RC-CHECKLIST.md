@@ -31,7 +31,7 @@
 | 전체 Community(기본) | 부분 | 이 VM 설치본, 매 업데이트 수용 검사 통과. 단 `presets/community-security.yaml`은 `ssh-lab`·Juice Shop·DVWA까지 포함하는데 설치기 기본값은 타깃을 넣지 않는다 | "전체 Community"의 정의(타깃·ssh-lab 기본 포함 여부, K05 미결정 사항)를 확정한 뒤 그 구성으로 검증 |
 | SIEM 제외 | 있음 | 빈 VM `--without siem`(K10-K11), SIEM 제외/재포함(K06-K07) | 재실행 |
 | 타깃 각각 제외 | 부분 | Juice Shop·DVWA 개별 추가/제거([K05](K05-TARGETS-VALIDATION-2026-11-11.md)). 기본 검증 타깃(`lab-target`) 제외 조합은 미검증 | 기본 타깃 제외가 허용되는 조합인지 정의 후 검증 |
-| 콘솔 각각 제외 | 부분 | `console-ips` 제외 설치(K09). `console-fw`·`console-waf` 개별 제외 실행 기록 없음 | 두 조합 실행 |
+| 콘솔 각각 제외 | 부분 | `console-ips` 제외 설치(K09). 2026-11-13 `console-fw` 제거 트랜잭션 실행 시작(결과 미확인), `console-fw` 재추가와 `console-waf` 제거·재추가는 미실행 | 결과 확인 후 나머지 3단계 실행. 메뉴·API 제외 확인은 관리자 로그인 필요 |
 | 잘못된 조합 거부 | 부분 | planner 단위 테스트(필수 제거·종속성 파괴 거부), 실제 `xoc module remove` 거부(K10) | 설치기 인자 수준의 거부 사례를 실제 실행으로 기록 |
 
 ### 3. 실제 보안 경로
@@ -60,7 +60,7 @@
 | console/API 직접 접근 거부 | 있음 | Core 보안 HTTPS 30항목, 직접 TCP 우회 차단(K07) | 재실행(`tests/integration`, 시험 계정 생성 포함) |
 | 익명/읽기전용의 쓰기 거부 | 있음 | K07 30항목, K09 39항목 | 재실행 |
 | 변경 전후 감사 | 있음 | 감사 전후 값·감사 실패 시 변경 취소(K07), 장비 콘솔 51항목(K08) | 재실행 |
-| 동시 apply/복원 | 부분 | 쓰기 잠금·오래된 검토 거부(K08). 장기·다중 사용자 동시 변경은 미검증 | 동시 apply 시험 시나리오 작성·실행 |
+| 동시 apply/복원 | 부분 | 쓰기 잠금·오래된 검토 거부(K08). 장비 broker 수준 동시 시험 `tests/integration/concurrent_apply.py` 작성(2026-11-13, **미실행**): 같은 버전 동시 preview·동시 apply 중 하나만 성공·나머지 409, 오래된 버전·교체된 검토 토큰 거부, rollback 복원 | broker 시험 실행. Core HTTPS 수준(로그인·DB 쓰기 잠금·감사) 동시 시험은 관리자 비밀번호 필요 |
 
 ### 6. 경계
 
@@ -114,8 +114,12 @@
 ## 이 VM에서 바로 할 수 있는 것
 
 - 5의 장기 운영 기록 시작(DB 크기·수집 지연·메모리를 주기적으로 남김)
-- 6 동시 apply 시험 작성·실행
+- 6 동시 apply 시험 실행(broker 수준, 스크립트 작성됨)
 - 7 콘솔 개별 제외 조합(`xoc module remove/add`)
 - 저장 효율(이벤트당 저장량) 설계
 
 1·2·3·8은 사용자 조작이나 별도 환경이 필요하다.
+
+## 로그인이 필요한 검증
+
+관리자 비밀번호가 초기값에서 바뀌어 있어, Core HTTPS 로그인이 필요한 통합 시험(`device_console.py`, `workspaces.py`, Core HTTPS 수준 동시 apply, 콘솔 메뉴 제외 확인)은 비밀번호 없이 실행할 수 없다. 이 시험들은 `/var/lib/xocrange/platform/credentials.json`의 `admin_password`(없으면 초기 비밀번호)를 읽는다. RC 검증 전에 시험 전용 관리자 계정 발급 방법이나 비밀번호 전달 방식을 정한다.
