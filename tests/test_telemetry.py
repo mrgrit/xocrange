@@ -82,6 +82,15 @@ def test_sysmon_stop_and_loss_diagnostics_are_not_process_observations():
     assert event['event']['action'] == 'agent-loss' and event['event']['severity'] == 65
 
 
+def test_sysmon_start_failure_is_a_sensor_failure_not_quarantined_input():
+    # Seen when the eBPF perf ring buffer could not be allocated (order-6 ENOMEM).
+    for raw in (b'libbpf: failed to mmap perf buffer on cpu #1: -ENOMEM',
+                b'Telemetry failed to start: perf ring buffer could not be started'):
+        event, = normalize('sysmon', raw, CTX)
+        assert event['event']['type'] == 'diagnostic' and event['event']['action'] == 'agent-failure'
+        assert event['event']['severity'] == 65 and 'sysmon' not in event
+
+
 def test_apache_403_is_failure_not_security_block_and_error_is_diagnostic():
     e, = normalize('apache-access', b'192.0.2.1 - - [07/Nov/2026:13:00:00 +0000] "GET /?token=DO-NOT-EXPORT HTTP/1.1" 403 12', CTX)
     assert e['event']['outcome'] == 'failure' and e['http']['status_code'] == 403

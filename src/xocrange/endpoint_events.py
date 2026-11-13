@@ -99,6 +99,12 @@ def sysmon(raw, ctx):
                    'Licensed under ', 'Using pugixml.', 'Loading configuration file with schema version ',
                    'Sysmon schema version: ', 'Configuration file validated.',
                    'Stopping....', 'Total events: ', 'Lost events: ')
+        # The sensor's own start failure (eBPF ring buffer, ENOMEM) is a
+        # telemetry gap to report, not unparseable input to quarantine.
+        failures = ('libbpf: ', 'Telemetry failed to start')
+        if len(payload) < 512 and payload.startswith(failures) and '<' not in payload:
+            return [make_event(raw, ctx, 'sysmon', discriminator='diagnostic', category='host',
+                               kind='diagnostic', action='agent-failure', severity=65)]
         if len(payload) < 512 and payload.startswith(banners) and '<' not in payload:
             lost = re.fullmatch(r'Lost events: (\d+), in \d+ notifications', payload)
             return [make_event(raw, ctx, 'sysmon', discriminator='diagnostic', category='host',
