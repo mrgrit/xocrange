@@ -24,7 +24,7 @@ value = {'schema_version':'xoc.release-inventory/0.1.0','created_at':timestamp()
          'python_packages':sorted([{'name':d.metadata['Name'],'version':d.version} for d in importlib.metadata.distributions()],key=lambda d:d['name'].lower()),
          'host_packages':run(['dpkg-query','-W','-f=${binary:Package}\t${Version}\n']).splitlines(), 'containers':{},
          'base_images':sorted({line.split()[1] for p in release.rglob('*Dockerfile*') if p.is_file() for line in p.read_text().splitlines() if line.startswith('FROM ')}),
-         'distribution_license':'pending-explicit-release-decision'}
+         'distribution_license':{'core':'PolyForm-Noncommercial-1.0.0 with LICENSE-EDUCATION.md','third_party':'upstream licenses, see NOTICE'}}
 for name in images['services']:
     container = 'xoc-core-security-path-'+name+'-1'
     packages = None

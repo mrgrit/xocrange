@@ -15,10 +15,16 @@ Adapted project sources
   datacenter-source.json, floor-design-source.json and wazuh-native-sources.json.
   The xOC logo is supplied by the project owner through xocrange_plan/README.md;
   its original location and unchanged file hash are in assets/branding/provenance.json.
-  The project owner, who holds the rights to mrgrit/kt66, grants distribution of
-  these adapted kt66 assets and the logo as part of xOC Range Core under the same
-  license (decision recorded 2026-11-14). The license grants no trademark rights:
+  The project owner, who holds the rights to mrgrit/kt66 and the console generator
+  projects, grants distribution of these adapted sources and the logo as part of
+  xOC Range Core under the same license (decision recorded 2026-11-14). The license grants no trademark rights:
   the xOC Range name and logo may identify only the project's own distributions.
+
+Vendored third-party file (not covered by the PolyForm terms):
+  components/siem-ui/wazuh-template.json — Wazuh, Inc., GPL-2.0, unchanged
+  (docs/licenses/WAZUH-GPL-2.0.txt, docs/provenance/wazuh-native-sources.json).
+  The Wazuh Dashboard image build applies a one-line, published patch that turns on
+  Manager certificate verification (components/siem-ui/dashboard.Dockerfile).
 
 Runtime dependencies retain their upstream copyright and license notices:
   Linux, nftables, Suricata, Wazuh Manager and related GPL components.
