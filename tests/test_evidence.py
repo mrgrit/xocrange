@@ -188,3 +188,12 @@ def test_only_range_services_can_be_inspected(sources):
                        {'type': 'file_exists', 'target': target, 'params': {'path': '/tmp/x'}},
                        {'type': 'process_running', 'target': target, 'params': {'name': 'python3'}},
                        {'type': 'port_listening', 'target': target, 'params': {'port': 22}}) == [('inconclusive', 0)] * 3
+
+
+def test_evidence_carries_bounded_excerpts_for_instructors(sources):
+    out = evaluate(sources, query({'type': 'wazuh_alert', 'target': 'siem', 'params': {'pattern': 'xoc-web-01'}},
+                                  {'type': 'c1_event', 'target': 'siem', 'params': {'producer': 'suricata', 'source_is_attacker': True}}))
+    alert, event = (r['evidence'][0] for r in out['results'])
+    assert alert['excerpt'] == 'rule 100201 L10 : xoc-web-01 marker'
+    assert ATTACKER in event['excerpt'] and 'xoc-evidence' not in event['excerpt']
+    assert all(len(e['excerpt']) <= 1000 for r in out['results'] for e in r['evidence'])

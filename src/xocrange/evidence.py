@@ -22,6 +22,33 @@ RESULT = 'xoc.evidence-result/0.1.0'
 MAX_EVIDENCE = 16
 MAX_FILE = 256 * 1024
 MAX_SCAN = 20000
+EXCERPT = 600  # characters of each evidence item shown to instructors (contract maximum 1000)
+
+
+def excerpt(text) -> str:
+    """Bounded, printable excerpt of one evidence item for instructor review."""
+    if isinstance(text, (bytes, bytearray, memoryview)):
+        text = bytes(text).decode('utf-8', 'replace')
+    text = ''.join(ch if ch.isprintable() else ' ' for ch in str(text))
+    return text[:EXCERPT]
+
+
+def alert_excerpt(raw) -> str:
+    try:
+        alert = json.loads(bytes(raw) if isinstance(raw, memoryview) else raw)
+        rule = alert.get('rule') or {}
+        return excerpt(f"rule {rule.get('id')} L{rule.get('level')} {rule.get('description', '')}: {alert.get('full_log', '')}")
+    except (ValueError, TypeError, AttributeError):
+        return excerpt(raw)
+
+
+def event_excerpt(event: str) -> str:
+    try:
+        data = json.loads(event)
+        data.pop('evidence', None)
+        return excerpt(json.dumps(data, ensure_ascii=False, sort_keys=True, separators=(',', ':')))
+    except ValueError:
+        return excerpt(event)
 # Raw device record sources by Assessor log name (collector FILES).
 LOG_SOURCES = {'nftables': 'nftables', 'suricata': 'suricata', 'modsec': 'modsecurity',
                'apache-access': 'apache-access', 'apache-error': 'apache-error'}
@@ -118,7 +145,7 @@ class Evaluator:
         rows = self.db.execute('SELECT id, observed, event FROM events WHERE ' + ' AND '.join(clauses)
                                + ' ORDER BY observed LIMIT ?', (*args, MAX_SCAN)).fetchall()
         evidence = [{'kind': 'c1_event', 'ref': 'c1:' + r[0], 'sha256': hashlib.sha256(r[2].encode()).hexdigest(),
-                     'observed_at': r[1]} for r in rows[:MAX_EVIDENCE]]
+                     'observed_at': r[1], 'excerpt': event_excerpt(r[2])} for r in rows[:MAX_EVIDENCE]]
         return len(rows) >= p.get('min_count', 1), len(rows), evidence, None
 
     def check_wazuh_alert(self, check):
@@ -138,7 +165,10 @@ class Evaluator:
             clauses.append('instr(CAST(raw AS TEXT), ?)>0'); args.append(p['pattern'])
         rows = self.db.execute('SELECT id, observed, sha256 FROM wazuh_alerts WHERE ' + ' AND '.join(clauses)
                                + ' ORDER BY observed LIMIT ?', (*args, MAX_SCAN)).fetchall()
-        evidence = [{'kind': 'alert', 'ref': 'wazuh:' + r[0], 'sha256': r[2], 'observed_at': r[1]} for r in rows[:MAX_EVIDENCE]]
+        evidence = []
+        for r in rows[:MAX_EVIDENCE]:
+            raw = self.db.execute('SELECT raw FROM wazuh_alerts WHERE id=?', (r[0],)).fetchone()[0]
+            evidence.append({'kind': 'alert', 'ref': 'wazuh:' + r[0], 'sha256': r[2], 'observed_at': r[1], 'excerpt': alert_excerpt(raw)})
         return bool(rows), len(rows), evidence, None
 
     def check_log_contains(self, check):
@@ -146,10 +176,11 @@ class Evaluator:
         if LOG_SERVICE[p['log']] != check['target']:
             raise XocError('log_target', 'The log does not belong to the requested device.')
         since, until = self.window(p)
-        rows = self.db.execute('SELECT ref, observed, sha256 FROM records WHERE source=? AND observed>=? AND observed<=? '
+        rows = self.db.execute('SELECT ref, observed, sha256, substr(CAST(raw AS TEXT), 1, 2000) FROM records WHERE source=? AND observed>=? AND observed<=? '
                                'AND instr(CAST(raw AS TEXT), ?)>0 ORDER BY observed LIMIT ?',
                                (LOG_SOURCES[p['log']], since, until, p['pattern'], MAX_SCAN)).fetchall()
-        evidence = [{'kind': 'c1_event', 'ref': r[0], 'sha256': r[2], 'observed_at': r[1]} for r in rows[:MAX_EVIDENCE]]
+        evidence = [{'kind': 'c1_event', 'ref': r[0], 'sha256': r[2], 'observed_at': r[1], 'excerpt': excerpt(r[3])}
+                    for r in rows[:MAX_EVIDENCE]]
         return bool(rows), len(rows), evidence, None
 
     # ── Device policy and service state ─────────────────────────
