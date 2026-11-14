@@ -20,6 +20,8 @@ K06의 현재 선택 구성 수집·SIEM 회귀와 K07 공통 보안을 구현�
 
 2026-11-13 밤 K12 진행([검증](RETENTION-ADDRESS-PLAN-2026-11-13.md)): 모듈 트랜잭션이 SIEM 수용에서 롤백된 원인(재시작 직후 보존 정리가 캐시가 빈 상태에서 3분 넘게 수집을 막음)을 루프당 3초 분할 정리로 수정했다. `xoc update`가 정책이 바뀐 릴리스를 설치된 planner로 미리 계획해 거부하던 결함을 고쳤다. 실습망을 kt66 주소 체계(ext 10.20.30, pipe 10.20.31, dmz 10.20.32, int 10.20.40)로 바꿔 배포했다. 그 위에서 `console-fw`·`console-waf` 개별 제외·재추가(메뉴·API 제외 확인), 장비 broker·Core HTTPS 수준 동시 apply(신규 `concurrent_core.py`), 로그인이 필요한 통합 시험(`device_console` 51, `workspaces` 78/85, `console_restart` 16, `academy_acceptance` 33)을 실행해 통과했다.
 
+2026-11-14 소유자 결정과 후속([기록](RC-FRESH-VM-2026-11-13.md#6-auditd-기록-중단의-표시와-자동-재개)): Core 라이선스를 PolyForm Noncommercial 1.0.0(`LICENSE`)과 교육용 추가 허락(`LICENSE-EDUCATION.md`)으로 정하고 kt66 자산·로고 배포 허락을 NOTICE에 기록했다. RC 범위는 설치기 기본 구성(ssh-lab·bootstrap 단독은 이후). 수업 전 초기화 `xoc siem clear`를 추가해 새 VM에서 검증했다. 디스크 고갈 뒤 auditd가 기록을 중단한 채 남고 SIEM은 `ready`로 표시하던 결함을 찾아, 중단 표시와 자동 재개로 고쳤다. 실제 외부 PC의 출처 IP 보존도 확인했다.
+
 2026-11-13 새 VM RC 검증([기록](RC-FRESH-VM-2026-11-13.md)): Docker도 없는 Ubuntu 26.04.1 VM에서 `sudo bash install.sh` 한 번으로 기본 전체 구성 설치(7분 30초, 수용 검사 15·6·8·52), 재부팅 17/17, 설치본 경계 160파일·통합 시험 8종 통과, 디스크 고갈(예약 미만·완전 소진) 중 서비스 유지와 해제 후 회복을 확인했다. 로그인 제한(실패만 계산)도 설치본에서 확인했다.
 
 2026-11-13 로그인 제한 정책 결정([공통 보안](COMMON-SECURITY.md)): 계정별 15분 10회·전체 100회 한도가 성공한 로그인도 세던 것을 실패한 로그인만 세도록 바꿨다(소유자 결정). 동시 추측이 한도를 넘지 않도록 시도를 먼저 세고 성공 시 되돌린다. 설치본 배포는 24시간 장기 운영 측정 이후.

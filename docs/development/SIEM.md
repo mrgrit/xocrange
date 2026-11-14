@@ -36,6 +36,8 @@ sudo xoc siem credentials             # 웹 주소와 관리자 자격 증명
 sudo xoc siem query --source auditd --confirmed --limit 20
 sudo xoc siem evidence --ref xoc-evidence:실제_참조값
 sudo xoc siem retry --source auditd
+sudo xoc siem clear                  # 지울 양만 보여 준다
+sudo xoc siem clear --yes            # 새 수업 전에 수집 기록을 모두 비운다
 ```
 
 Docker·Python·Microsoft Ubuntu 26.04 저장소·osquery 저장소·auditd를 설치기가 준비한다. 이미 있는 다른 Docker를 제거하거나 kt66 호스트를 변경하지 않는다. SIEM 제외 시 xOC collector/osquery/Sysmon 실행과 xOC audit 규칙을 해제하고 기존 수집 데이터는 보존한다. 일반 OS auditd 및 다른 감사 규칙은 유지한다.
@@ -55,6 +57,21 @@ Docker·Python·Microsoft Ubuntu 26.04 저장소·osquery 저장소·auditd를 �
 Wazuh queue에 넣었다고 바로 성공 처리하지 않는다. 실제 `alerts.json`에 같은 event ID·producer·원본 hash가 나타나야 `--confirmed` 조회 대상이 된다. 전송 중 재시작 시 재전송할 수 있지만 검색 저장소는 event ID로 중복 제거한다. `status`는 파싱 격리 건수, 소스 상태, 미분석 건수와 가장 오래 대기한 시간, Sysmon journal의 실제 발생 시각 대비 지연을 표시한다. 누적 journal은 한 회차 최대 5초/4096건씩 처리하며 120초 이상 뒤처지면 `lagging`으로 표시한다.
 
 Native 입력은 별도 ID·frame hash·전송/처리 상태를 갖는다. `archives.json`에서 같은 입력 ID·source·frame hash와 해당 소스의 decoder를 확인해야 분석 완료로 처리한다. 경보가 없는 정상/level 0/no_log 결과도 이 경로로 확인한다. Native 경보는 `xoc.input_id`·`xoc.event_id`·`xoc.evidence_ref`로 연결한다. 재전송으로 새 Wazuh ID가 생겨도 같은 입력의 동일 분석 결과는 첫 원본 한 건을 유지한다. 규칙·분석 결과가 달라진 경우는 별도 경보로 보관한다. [형식·검증 범위](WAZUH-RAW-SOURCES.md)
+
+### auditd 기록 중단
+
+Ubuntu의 기본 `auditd.conf`는 로그 파티션이 차면 auditd 기록을 중단(`SUSPEND`)하고, 공간이 돌아와도 스스로 재개하지 않는다. xOC는 이 호스트 설정을 바꾸지 않는다. 1분 주기 로그 관리 작업이 auditd 상태 보고(`/run/audit/auditd.state`)를 요청해 중단을 확인하고, 여유 공간이 2 GiB 이상이면 재개를 지시한다. 중단된 동안 `xoc siem status`는 `sensor-auditd`를 `logging_suspended`로 표시한다. 중단 기간의 감사 기록은 auditd가 남기지 않았으므로 복구되지 않는다.
+
+### 수업 전 초기화 (`siem clear`)
+
+교육용 설치에서는 이전 실습의 경보가 새 실습 분석에 섞이지 않게 `sudo xoc siem clear --yes`로 처음 상태에서 다시 시작한다. `--yes` 없이 실행하면 지울 증거 DB·장비 로그 크기만 보여 주고 아무것도 바꾸지 않는다. 설치·백업과 같은 작업 잠금을 잡고 collector를 멈춘 상태에서 다음을 지운 뒤 collector를 다시 시작한다.
+
+- 로컬 증거 DB(원본·C1·Wazuh 경보·전송 대기열). 설치기가 기록한 Indexer 매핑·규칙 판본 표시는 유지한다.
+- 검색 인덱스 `xoc-events-*`·`wazuh-alerts-4.x-*`·`wazuh-archives-4.x-*`(웹 관제 선택 시). 대시보드·인덱스 패턴·템플릿은 유지한다.
+- Wazuh `alerts`·`archives` 로그와 날짜별 회전본. `ossec.log` 등 Manager 운영 로그는 유지한다.
+- 방화벽(nftables)·IPS(Suricata)·WAF(Apache·ModSecurity) 로그와 `.xoc-*` 회전본. 장비 콘솔의 최근 로그도 비워진다.
+
+장비 로그는 실행 중인 장비가 덧붙이기 모드로 쓰므로 파일을 0바이트로 줄이고, 볼륨 안의 링크를 따라가지 않는다. 호스트의 auditd·journald(Sysmon)·osquery 로그는 운영체제 기록이라 지우지 않고, 수집 위치를 현재 끝으로 옮겨 이전 내용을 다시 수집하지 않는다. 계정·장비 정책·Core 감사 기록·학습 기록·등록된 에이전트·보관 정책은 유지한다. 되돌릴 수 없으므로 보존해야 할 기록은 먼저 `xoc backup create`로 남긴다.
 
 ## 검증
 

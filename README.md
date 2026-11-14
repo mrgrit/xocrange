@@ -157,6 +157,7 @@ sudo xoc siem credentials
 sudo xoc siem query --source suricata --confirmed --limit 10
 sudo xoc siem query --source sysmon --confirmed --limit 10
 sudo xoc siem retry --source auditd
+sudo xoc siem clear --yes   # 새 수업 전에 SIEM·장비 로그를 모두 비우기
 ```
 
 `--confirmed`는 실제 Wazuh 분석 결과를 확인한 이벤트만 조회한다. 원본은 관리자 전용 저장소에 보관하며 `evidence.ref`로 연결된다. 정상 HTTP 403을 보안 장비 차단으로 오인하지 않으며, ModSecurity 요청과 탐지 메시지는 별도 이벤트로 구분한다. [8종 매핑·수집·운영 제한](docs/development/SIEM.md)
@@ -194,7 +195,11 @@ sudo xoc update --source /절대경로/새소스
 - [착수 준비 기록](docs/development/READINESS.md) · [소스 기준선](docs/provenance/source-baseline-2026-11-07.json)
 - [전체 계획과 WBS 이미지](DEVELOPMENT-PLAN.md)
 
-Core는 보안 로그·운영 감사·수동 실습·선택형 장비 콘솔을 담당한다. 플랫폼 채점·대전·AI 근무자는 유료 모듈 책임이다. 기존 kt66 및 콘솔 코드는 출처·변경·배포 권리를 검토한 기능 단위로 이식한다. 구체적인 배포 라이선스는 검토 중이며, 이 저장소의 문서가 기존 코드의 라이선스를 변경하지 않는다.
+Core는 보안 로그·운영 감사·수동 실습·선택형 장비 콘솔을 담당한다. 플랫폼 채점·대전·AI 근무자는 유료 모듈 책임이다. 기존 kt66 및 콘솔 코드는 출처·변경·배포 권리를 검토한 기능 단위로 이식한다.
+
+## 라이선스
+
+xOC Range Core 자체 코드와 프로젝트 자산은 [PolyForm Noncommercial License 1.0.0](LICENSE)으로 배포한다. 비상업 용도(개인 학습·연구, 교육기관·공공기관 사용)는 무료이며, 학교·대학의 수업·학생 실습·교내 훈련은 [교육용 추가 허락](LICENSE-EDUCATION.md)으로 명시 허용한다. 판매·호스팅 서비스·제3자 대상 유료 교육 등 상업 용도는 별도 상용 라이선스가 필요하다. Suricata·Wazuh·DVWA 같은 서드파티 구성요소는 각자의 원 라이선스를 따른다([NOTICE](NOTICE)).
 
 로고는 계획 저장소 README에 등록된 원본을 그대로 사용했다. [출처와 SHA-256](assets/branding/provenance.json)을 함께 보관한다.
 

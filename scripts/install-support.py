@@ -11,7 +11,8 @@ import shutil
 import tempfile
 
 
-FILES = ("install.sh", "pyproject.toml", "README.md", "requirements.lock", "NOTICE", "content-lock.json")
+FILES = ("install.sh", "pyproject.toml", "README.md", "requirements.lock", "NOTICE", "LICENSE",
+         "LICENSE-EDUCATION.md", "content-lock.json")
 DIRECTORIES = ("src/xocrange", "components", "presets", "contracts", "modules.d",
                "scripts", "tests/fixtures/modules/security-probe", "assets/branding", "contents")
 

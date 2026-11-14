@@ -33,7 +33,9 @@ Core는 무료 제공 기능 범위다. 설치 단위는 필수 platform과 선�
 
 ## 미결정 사항
 
-M6 Windows, C8 경험 기록, infraops의 M4/M15 책임 분할, 구체적인 라이선스 문안은 기존 착수안의 보류 상태를 유지한다. 이 항목의 확정을 기다리며 Core C1·설치 기반 개발을 멈추지 않는다.
+M6 Windows, C8 경험 기록, infraops의 M4/M15 책임 분할은 기존 착수안의 보류 상태를 유지한다.
+
+2026-11-14 소유자 결정: Core 자체 코드와 프로젝트 자산(kt66 선별 SVG·SIEM 규칙, 로고)은 PolyForm Noncommercial 1.0.0(`LICENSE`)과 교육용 추가 허락(`LICENSE-EDUCATION.md`)으로 배포한다. 서드파티는 재라이선스하지 않는다. Community RC의 기본 구성은 설치기 기본값이며 `ssh-lab`과 bootstrap 단독 설치는 RC 이후로 미룬다. 이 항목의 확정을 기다리며 Core C1·설치 기반 개발을 멈추지 않는다.
 
 ## 완료 검증
 

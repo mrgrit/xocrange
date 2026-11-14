@@ -1,9 +1,12 @@
 xOC Range Core — third-party and source provenance notice
 
-This notice records attribution and distribution boundaries. It does not replace
-or relicense upstream software. The Core distribution license remains an explicit
-release decision, as recorded in docs/adr/0001-core-boundaries.md. The roadmap's
-PolyForm Noncommercial proposal has not been silently applied to third-party code.
+Required Notice: Copyright 2026 the xOC Range project owner (github.com/mrgrit)
+
+xOC Range Core's own source code and project assets are licensed under the
+PolyForm Noncommercial License 1.0.0 (LICENSE), with the additional permission
+for education in LICENSE-EDUCATION.md. Commercial use requires a separate
+commercial license. Third-party software keeps its own license and is not
+relicensed by these terms; see "Runtime dependencies" below.
 
 Adapted project sources
   mrgrit/kt66: architectural SVG floor/rack geometry, selected native SIEM rules.
@@ -12,7 +15,10 @@ Adapted project sources
   datacenter-source.json, floor-design-source.json and wazuh-native-sources.json.
   The xOC logo is supplied by the project owner through xocrange_plan/README.md;
   its original location and unchanged file hash are in assets/branding/provenance.json.
-  These project-specific assets still require an explicit distribution grant at RC.
+  The project owner, who holds the rights to mrgrit/kt66, grants distribution of
+  these adapted kt66 assets and the logo as part of xOC Range Core under the same
+  license (decision recorded 2026-11-14). The license grants no trademark rights:
+  the xOC Range name and logo may identify only the project's own distributions.
 
 Runtime dependencies retain their upstream copyright and license notices:
   Linux, nftables, Suricata, Wazuh Manager and related GPL components.
