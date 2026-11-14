@@ -319,7 +319,9 @@ def host_sources(engine, result):
         cid = container(service) if service in result['compose']['services'] else None
         if not cid:
             return []
-        return [line.strip() for line in engine.run(['top', cid, '-eo', 'comm']).splitlines()[1:] if line.strip()]
+        # Docker needs a PID column in the ps output (`-eo comm` alone is refused).
+        rows = engine.run(['top', cid, '-o', 'pid,comm']).splitlines()[1:]
+        return [row.split(None, 1)[1].strip() for row in rows if len(row.split(None, 1)) == 2]
 
     return Sources(STATE / 'siem' / 'events.sqlite3', policy=policy, pid=pid, processes=processes)
 
