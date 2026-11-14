@@ -143,3 +143,58 @@ def test_trust_key_cannot_be_redirected(issuer, tmp_path):
     (tmp_path/'trust/ephemeral-test.pem').symlink_to(tmp_path/'key.pem')
     with pytest.raises(c7.Denied, match='entitlement_path'):
         c7.load(tmp_path, '0.1.0', NOW)
+
+
+def test_collection_identity_follows_the_verified_grant(issuer, tmp_path):
+    """ADR-0008 §7: C1 tenant/range come from a verified grant, else the Community identity."""
+    from xocrange.entitlements import collection_identity
+    from xocrange.event_store import Store
+    sign, keys = issuer
+    directory = tmp_path/'entitlement'
+    assert collection_identity(ROOT, directory) == ('community', 'local')
+    (directory/'trust').mkdir(parents=True)
+    (directory/'trust/ephemeral-test.pem').write_text(keys['ephemeral-test'])
+    (directory/'identity.json').write_text(json.dumps(IDENTITY))
+    (directory/'license.json').write_text(json.dumps(sign()))
+    assert collection_identity(ROOT, directory) == ('school-one', 'range-one')
+    tampered = sign(); tampered['payload']['range_id'] = 'range-two'
+    (directory/'license.json').write_text(json.dumps(tampered))
+    assert collection_identity(ROOT, directory) == ('community', 'local')
+    store = Store(tmp_path/'store', identity=('school-one', 'range-one'))
+    line = json.dumps({'timestamp': '2026-11-14T00:00:00.000000+0000', 'event_type': 'alert', 'src_ip': '10.20.30.9', 'src_port': 1,
+                       'dest_ip': '10.20.32.80', 'dest_port': 80, 'proto': 'TCP', 'alert': {'signature_id': 1, 'severity': 2, 'action': 'allowed', 'signature': 'x'}}).encode()
+    store.ingest('suricata', 'ips-eve', 1, line, observed='2026-11-14T00:00:01Z')
+    event = json.loads(store.db.execute('SELECT event FROM events').fetchone()[0])
+    assert (event['tenant_id'], event['range_id']) == ('school-one', 'range-one')
+
+
+def _grant_dir(tmp_path, sign, keys):
+    directory = tmp_path/'entitlement'; (directory/'trust').mkdir(parents=True)
+    (directory/'trust/ephemeral-test.pem').write_text(keys['ephemeral-test'])
+    (directory/'identity.json').write_text(json.dumps(IDENTITY))
+    (directory/'license.json').write_text(json.dumps(sign()))
+    return directory
+
+
+def test_evidence_volumes_only_for_the_entitled_module(checkout, issuer, tmp_path):
+    """ADR-0008 §3/§4: the evidence socket and credentials reach only the declaring commercial module."""
+    sign, keys = issuer
+    directory = _grant_dir(tmp_path, sign, keys)
+    import shutil
+    shutil.copytree(ROOT/'components', checkout/'components', dirs_exist_ok=True)
+    module(checkout, 'M7', commercial=True, minimum_tier='live-fire', version='1.2.0',
+           requires={'components': ['siem'], 'capabilities': ['evidence-query']})
+    compose = plan(checkout, include=['M7'], entitlement_dir=directory, allow_experimental=True)['compose']
+    assert compose['services']['m7']['volumes'] == ['evidence-M7:/run/xoc-evidence:ro', 'module-M7-credentials:/run/xoc-module:ro']
+    assert {'evidence-M7', 'module-M7-credentials'} <= set(compose['volumes'])
+    others = [n for n, s in compose['services'].items() if n != 'm7' and any('evidence-M7' in v or 'module-M7' in v for v in s.get('volumes', []))]
+    assert others == []
+
+
+def test_evidence_query_is_refused_to_community_modules(checkout):
+    import shutil
+    shutil.copytree(ROOT/'components', checkout/'components', dirs_exist_ok=True)
+    module(checkout, 'free-ext', requires={'components': ['siem'], 'capabilities': ['evidence-query']})
+    with pytest.raises(XocError) as exc:
+        plan(checkout, include=['free-ext'], allow_experimental=True)
+    assert exc.value.code == 'capability_not_permitted'

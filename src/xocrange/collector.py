@@ -230,7 +230,8 @@ class Collector:
             if not mount.is_absolute() or any(p.is_symlink() for p in (mount, *mount.parents)):
                 raise XocError('untrusted_log_volume', 'Log volume path is not a local, direct directory.')
             self.volumes[service] = (name, mount, base)
-        self.store = Store(directory)
+        from .entitlements import collection_identity
+        self.store = Store(directory, identity=collection_identity(root))
         self.indexer = None
         if 'siem-ui' in result['lock']['selected']:
             from .indexer import Client

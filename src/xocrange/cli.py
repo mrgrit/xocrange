@@ -67,10 +67,13 @@ def parser():
     licensing.add_argument('--institution')
     licensing.add_argument('--range', dest='range_id')
     modules = commands.add_parser('module', help='Install/remove selected modules; preserve settings and evidence')
-    modules.add_argument('action', choices=['list','add','remove'])
+    modules.add_argument('action', choices=['list','add','remove','credentials'])
     modules.add_argument('identifier', nargs='?')
     modules.add_argument('--package', type=Path)
     modules.add_argument('--preview', action='store_true')
+    modules.add_argument('--from', dest='source_dir', type=Path, help='credentials: directory with range-control.url, client.crt, client.key, ca.crt')
+    evidence = commands.add_parser('evidence', help='Read-only evidence socket for entitled modules (ADR-0008)')
+    evidence.add_argument('action', choices=['serve'])
     backup = commands.add_parser('backup', help='Consistent private backup, verification and transactional restore')
     backup.add_argument('action', choices=['create','verify','restore'])
     backup.add_argument('path', type=Path)
@@ -114,11 +117,27 @@ def run(args):
     if args.command in ('module','update'):
         from . import lifecycle, operations as ops
         if args.command == 'update':
-            return lifecycle.change(args.root, 'update', source=args.source, preview=args.preview)
+            value = lifecycle.change(args.root, 'update', source=args.source, preview=args.preview)
+            if not args.preview:
+                from .evidence import reload_service
+                reload_service()
+            return value
+        if args.action == 'credentials':
+            from .evidence import install_credentials
+            if not args.identifier or not args.source_dir:
+                raise XocError('usage', 'xoc module credentials <id> --from <dir>')
+            return install_credentials(args.identifier, args.source_dir)
         if args.action == 'list':
             state = ops.installed()
             return {'selected':state['selected'], 'release':state['release']}
-        return lifecycle.change(args.root, args.action, args.identifier, args.package, preview=args.preview)
+        value = lifecycle.change(args.root, args.action, args.identifier, args.package, preview=args.preview)
+        if not args.preview:
+            from .evidence import reload_service
+            reload_service()
+        return value
+    if args.command == 'evidence':
+        from .evidence import serve
+        return serve()
     if args.command == 'license':
         from .entitlements import manage
         if args.action != 'status' and not args.file:

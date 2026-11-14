@@ -98,5 +98,24 @@ Environment=PYTHONDONTWRITEBYTECODE=1
 [Install]
 WantedBy=xocrange-core.service
 EOF
+# ADR-0008: serves sockets only for installed, entitled modules that require
+# evidence-query; with none it exits at once and stays inactive.
+cat > /etc/systemd/system/xocrange-evidence.service <<EOF
+[Unit]
+Description=xOC read-only evidence sockets for entitled modules
+Requires=xocrange-core.service
+After=xocrange-core.service xocrange-collector.service
+PartOf=xocrange-core.service
+[Service]
+ExecStart=$runtime/bin/xoc --root $release evidence serve
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=yes
+Environment=PYTHONDONTWRITEBYTECODE=1
+[Install]
+WantedBy=xocrange-core.service
+EOF
 systemctl daemon-reload
 systemctl enable --now xocrange-collector.service
+systemctl enable --now xocrange-evidence.service

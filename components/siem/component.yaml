@@ -14,6 +14,7 @@ requires:
   capabilities: []
 provides:
 - events.search
+- evidence-query
 conflicts: []
 networks:
 - int

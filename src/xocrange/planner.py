@@ -89,6 +89,14 @@ def reject_interpolation(value):
             reject_interpolation(child)
 
 
+EVIDENCE = "evidence-query"
+
+
+def evidence_volumes(identifier):
+    """(volume, mount target) pairs a module receives under ADR-0008."""
+    return ((f"evidence-{identifier}", "/run/xoc-evidence"), (f"module-{identifier}-credentials", "/run/xoc-module"))
+
+
 def plan(root: Path, *, preset="bootstrap", include=(), without=(), allow_fixtures=False, allow_experimental=False,
          entitlement_dir=None, entitlement_action='install'):
     root = root.resolve()
@@ -253,6 +261,19 @@ def plan(root: Path, *, preset="bootstrap", include=(), without=(), allow_fixtur
                 compose['services']['platform']['volumes'].append(socket + ':/run/xoc-console-' + device + ':ro')
     if 'siem-ui' in selected:
         compose['services']['web']['environment']['XOC_SIEM_UI'] = '1'
+    # ADR-0008: an entitled commercial module that requires evidence-query gets its own
+    # evidence socket and credentials volumes; nothing else (and no network) can reach them.
+    for identifier in selected:
+        manifest = entries[identifier]["manifest"]
+        if EVIDENCE not in manifest["requires"]["capabilities"]:
+            continue
+        if manifest["kind"] != "module" or not manifest["commercial"]:
+            raise XocError("capability_not_permitted", "Only commercial modules may use evidence-query.")
+        for volume, target in (evidence_volumes(identifier)):
+            compose.setdefault('volumes', {})[volume] = {}
+            for name, owner in owners.items():
+                if owner == identifier:
+                    compose['services'][name].setdefault('volumes', []).append(f'{volume}:{target}:ro')
     if 'int' in compose['networks']:
         compose['networks']['int'] = backend_network(compose['networks']['int'])
     check_addresses(compose)

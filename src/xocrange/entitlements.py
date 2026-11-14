@@ -1,6 +1,7 @@
 """Host adapter to the single C7 implementation shipped in the platform image."""
 import types
 import json
+import re
 import os
 import shutil
 import tempfile
@@ -28,6 +29,28 @@ def grant(root, directory=DEFAULT):
         return api.load(directory, __version__)
     except (api.Denied, OSError) as exc:
         raise XocError(getattr(exc, 'code', 'entitlement_unavailable'), 'C7 entitlement validation failed.') from exc
+
+
+COMMUNITY_IDENTITY = ('community', 'local')
+_IDENTIFIER = re.compile(r'[a-zA-Z0-9][a-zA-Z0-9_.-]{0,63}')
+
+
+def collection_identity(root, directory=DEFAULT):
+    """C1 tenant/range for newly collected events (ADR-0008 §7).
+
+    A verified commercial grant binds the appliance to its institution and range;
+    without one (or if it cannot be verified) Core keeps the Community identity.
+    """
+    try:
+        value = grant(root, directory)
+    except XocError:
+        return COMMUNITY_IDENTITY
+    if not value:
+        return COMMUNITY_IDENTITY
+    identity = (value.get('institution_id'), value.get('range_id'))
+    if all(isinstance(v, str) and _IDENTIFIER.fullmatch(v) for v in identity):
+        return identity
+    return COMMUNITY_IDENTITY
 
 
 def authorize(root, manifest, action, directory=DEFAULT):
@@ -148,6 +171,9 @@ def manage(root, action, *, file=None, key_id=None, institution=None, range_id=N
         finally:
             if staging.exists():
                 shutil.rmtree(staging)
+        # Events collected from now on carry the activated institution/range (ADR-0008 §7).
+        import subprocess
+        subprocess.run(['systemctl', 'try-restart', 'xocrange-collector'], capture_output=True, timeout=60)
         return manage(root, 'status', directory=directory)
     except api.Denied as exc:
         raise XocError(exc.code, 'Entitlement activation was rejected.') from exc
