@@ -63,8 +63,19 @@ K12 RC 체크리스트의 1번(빈 VM 한 번 설치), 2번(재부팅), 5번 중
 - 손실 범위: 디스크가 찬 동안 생산자(Apache·ModSecurity·osquery)가 쓰지 못한 줄은 원본에 없다. 쓰다가 잘린 4줄은 원본에 잘린 채 남아 `invalid_event`/`invalid_json`으로 격리됐다. 격리 건수 때문에 상태는 보존 기간(1일) 동안 `degraded`로 남는다. 손상된 입력을 정상으로 처리하지 않는다는 점에서 의도된 동작이다.
 - collector·Core의 재시작 0회, 컨테이너 재시작 0회, 해당 시간 collector/Core 저널의 오류 0줄.
 
+## 5. 실제 외부 PC의 출처 IP
+
+같은 네트워크의 Windows PC(192.168.0.84) 브라우저로 `https://192.168.0.76/rc-external-pc-check`를 열었다(인증서 경고 후 404, 없는 경로를 일부러 요청). 2026-11-14 00:09:08 UTC.
+
+| 위치 | 기록된 출처 |
+|---|---|
+| ingress 로그 | 192.168.0.84(해당 시각 6줄) |
+| WAF access log | `192.168.0.84 - - [14/Nov/2026:00:09:08 +0000] "GET /rc-external-pc-check HTTP/1.1" 404` |
+| SIEM C1 `network.source.ip` | apache-access 1건(`failure`)·ModSecurity 2건(`observed`) 모두 192.168.0.84, Wazuh 확인·색인 완료 |
+
+Docker 게이트웨이 주소(172.18.0.1)는 나타나지 않았다.
+
 ## 남은 것
 
-- 실제 외부 PC의 출처 IP(이 VM과 같은 네트워크의 PC로 가능).
 - 24시간 장기 운영 분석(개발 VM, 2026-11-14 16:30 UTC 이후).
 - 최종 RC 커밋이 정해지면 같은 VM에서 설치·재부팅을 다시 실행한다.
