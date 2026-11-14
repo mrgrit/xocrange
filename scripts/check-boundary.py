@@ -2,7 +2,8 @@
 """Check that Core artifacts carry no paid-module functionality (K12 G1 boundary).
 
 Source only:      python3 scripts/check-boundary.py
-Installed (root): sudo xoc-python scripts/check-boundary.py --installed
+Installed (root): release=$(readlink -f /opt/xocrange/current)
+                  sudo /opt/xocrange/venvs/${release##*/}/bin/python scripts/check-boundary.py --installed
 """
 import argparse
 import json
