@@ -6,6 +6,8 @@
 
 선택한 기능으로 구성하는 보안 운영 실습 환경. Core의 공통 계약 위에 Live Fire·Joint Force 모듈을 연결한다.
 
+**처음 쓰는 경우:** [사용자 안내](docs/USER-GUIDE.md) · [RC 릴리스 노트(초안)](RELEASE-NOTES.md)
+
 ## 설치 후 접속 · 계정 확인
 
 설치한 **xOC 서버의 터미널**에서 아래 명령으로 주소와 관리자 초기 접속 정보를 확인한다. Windows PC에서는 먼저 `ssh 사용자명@서버IP`로 서버에 접속하면 된다.
@@ -27,7 +29,7 @@ sudo xoc siem credentials
 
 처음 로그인하면 Core 초기 비밀번호를 변경해야 한다. 이후에는 변경한 비밀번호를 사용한다. 위 명령은 UI에서 변경한 비밀번호를 조회하거나 초기화하지 않는다. 고정 공용 비밀번호는 없으며 실제 비밀번호는 README나 Git에 기록하지 않는다. 로컬 인증서를 사용하는 경우 설치된 서버의 `/etc/xocrange/ca.crt`를 접속 PC에서 신뢰 등록한다.
 
-**개발 초기 단계:** Ubuntu 26.04 VM에서 자동 설치와 fw·IPS·WAF의 실제 통신·차단을 검증했다. 공통 관리 로그인·역할·세션·감사와 8종 보안 로그의 C1 정규화·원본 보관·Wazuh Manager/API·Indexer·전용 Dashboard와 C1 통합 검색을 연결했다. 운영 장비 형태의 FW·IPS·WAF 콘솔 초안을 연결했다. 층별 데이터센터 시각화·운영 개요·NOC 2층·번들 자료실을 연결했다. 전체 Community 배포본은 개발 중이다. `bootstrap`은 설치 기반 확인용 health 서비스다.
+**Community RC 준비 단계:** 빈 Ubuntu 26.04 VM의 한 번 설치·재부팅·디스크 고갈·실제 외부 PC 출처 보존을 검증했다. RC의 기본 구성은 설치기 기본값(보안 경로·SIEM·웹 관제·콘솔 3종·관리 화면·데이터센터·NOC 2층·아카데미)이며, 장기 운영 측정과 최종 재검증을 거쳐 확정한다([K12 체크리스트](docs/development/K12-RC-CHECKLIST.md)). `bootstrap`은 설치 기반 확인용 health 서비스다.
 
 ## 지금 실행할 수 있는 것
 
