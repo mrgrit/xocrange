@@ -283,3 +283,44 @@ def test_budgeted_prune_reaches_every_table_while_new_rows_keep_expiring(tmp_pat
             store.db.execute('UPDATE events SET confirmed=?,indexed=? WHERE confirmed IS NULL',('2000-01-01','2000-01-01'))
         store.prune(budget=3,batch=5)
     assert alerts()==0
+
+
+def audit_host(tmp_path, monkeypatch, report, comm='auditd'):
+    import signal
+    from xocrange import log_maintenance
+    run = tmp_path/'run'; run.mkdir(parents=True); (run/'auditd.pid').write_text('4242\n')
+    proc = tmp_path/'proc'; (proc/'4242').mkdir(parents=True); (proc/'4242'/'comm').write_text(comm+'\n')
+    sent = []
+    def kill(pid, sig):
+        sent.append((pid, sig))
+        if sig == signal.SIGCONT:   # auditd writes its state report on SIGCONT
+            (run/'auditd.state').write_text(report)
+    monkeypatch.setattr(log_maintenance.os, 'kill', kill)
+    return log_maintenance, run, proc, sent
+
+
+@pytest.mark.parametrize('free,expected', [(0, 'suspended'), (1, 'resumed')])
+def test_auditd_suspended_by_a_full_disk_is_resumed_once_space_returns(tmp_path, monkeypatch, free, expected):
+    import signal
+    lm, run, proc, sent = audit_host(tmp_path, monkeypatch, 'writing to logs = yes\nlogging suspended = yes\n')
+    assert lm.audit_logging(run, tmp_path, wait=1, proc=proc, free=1 if free else 10**18) == expected
+    assert [s for _, s in sent] == ([signal.SIGCONT, signal.SIGUSR2] if expected == 'resumed' else [signal.SIGCONT])
+    assert 'logging suspended = yes' in lm.audit_state(run)
+
+
+def test_auditd_resume_leaves_a_writing_or_foreign_process_alone(tmp_path, monkeypatch):
+    import signal
+    lm, run, proc, sent = audit_host(tmp_path, monkeypatch, 'logging suspended = no\n')
+    assert lm.audit_logging(run, tmp_path, wait=1, proc=proc, free=1) == 'writing'
+    assert [s for _, s in sent] == [signal.SIGCONT]
+    lm, run, proc, sent = audit_host(tmp_path/'other', monkeypatch, '', comm='python3')
+    assert lm.audit_logging(run, tmp_path, wait=1, proc=proc, free=1) == 'inactive' and sent == []
+
+
+def test_stale_auditd_state_report_is_ignored(tmp_path):
+    import time
+    from xocrange.log_maintenance import audit_state
+    (tmp_path/'auditd.state').write_text('logging suspended = yes\n')
+    assert audit_state(tmp_path) == 'logging suspended = yes\n'
+    os.utime(tmp_path/'auditd.state', (time.time()-600, time.time()-600))
+    assert audit_state(tmp_path) is None

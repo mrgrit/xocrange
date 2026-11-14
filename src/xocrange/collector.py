@@ -448,6 +448,12 @@ class Collector:
             statuses = probe.stdout.splitlines()
             for index, unit in enumerate(units):
                 self.store.health('sensor-' + unit.removesuffix('.service'), 'ready' if index < len(statuses) and statuses[index] == 'active' else 'inactive')
+            # An active auditd can still have stopped writing (full partition);
+            # log maintenance refreshes this report every minute and resumes it.
+            from .log_maintenance import audit_state
+            report = audit_state()
+            if report and 'logging suspended = yes' in report:
+                self.store.health('sensor-auditd', 'logging_suspended')
             try:
                 running = self.engine.run(['ps', '--status', 'running', '--services'], compose=True).splitlines()
                 self.store.health('wazuh-process', 'ready' if 'siem' in running else 'inactive')

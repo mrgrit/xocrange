@@ -4,6 +4,8 @@ import json
 import os
 from pathlib import Path
 import re
+import shutil
+import signal
 import sqlite3
 import time
 from . import operations as ops
@@ -53,6 +55,55 @@ def removable(path, states, opened, *, now=None, siem=True):
     return any(head.startswith(base64.b64decode(v.get('anchor', ''))) and (v.get('anchor') or not info.st_size) for v in candidates)
 
 
+AUDIT_RUN = Path('/run/audit')
+# Resume only with the same free space the SIEM keeps for itself.
+AUDIT_RESUME_FREE = 2*1024**3
+
+
+def audit_state(run=AUDIT_RUN, max_age=180):
+    """auditd's own state report if recent; None when unavailable or stale."""
+    path = run/'auditd.state'
+    try:
+        if path.is_symlink() or time.time()-path.stat().st_mtime > max_age:
+            return None
+        return path.read_text(errors='replace')
+    except OSError:
+        return None
+
+
+def audit_logging(run=AUDIT_RUN, log_directory=Path('/var/log/audit'), wait=3.0, proc=Path('/proc'), free=AUDIT_RESUME_FREE):
+    """Resume auditd after its partition was full.
+
+    Ubuntu's auditd.conf uses disk_full_action/admin_space_left_action=SUSPEND,
+    and auditd never resumes by itself once space returns: the host audit
+    source then stays silent for good. The host-owned configuration is not
+    changed; auditd is asked for its state (SIGCONT, as `auditctl --signal
+    state`) and told to resume (SIGUSR2, `--signal resume`) when space is back.
+    Signals instead of auditctl keep this minute job from spawning processes
+    that Sysmon would record.
+    """
+    try:
+        pid = int((run/'auditd.pid').read_text().strip())
+        if (proc/str(pid)/'comm').read_text().strip() != 'auditd':
+            return 'inactive'
+        state = run/'auditd.state'
+        before = state.stat().st_mtime_ns if state.exists() else 0
+        os.kill(pid, signal.SIGCONT)
+        deadline = time.monotonic()+wait
+        while (state.stat().st_mtime_ns if state.exists() else 0) == before:
+            if time.monotonic() >= deadline:
+                return 'unknown'
+            time.sleep(0.05)
+        if 'logging suspended = yes' not in state.read_text(errors='replace'):
+            return 'writing'
+        if shutil.disk_usage(log_directory).free < free:
+            return 'suspended'
+        os.kill(pid, signal.SIGUSR2)
+        return 'resumed'
+    except (OSError, ValueError):
+        return 'unknown'
+
+
 def maintain():
     state = ops.installed(); selected = set(state['selected'])
     volumes = ops.volume_paths(); states = {}
@@ -79,4 +130,5 @@ def maintain():
         ops.command(['docker','--context','default','kill','--signal','HUP',ops.PROJECT+'-ips-1'])
     if 'web-logs' in affected:
         ops.command(['docker','--context','default','exec','--user','33:33',ops.PROJECT+'-web-1','apache2ctl','graceful'])
-    return {'rotated':[n for _,n in rotated],'removed':len(removed),'unread_generations_preserved':True}
+    return {'rotated':[n for _,n in rotated],'removed':len(removed),'unread_generations_preserved':True,
+            'auditd':audit_logging()}
