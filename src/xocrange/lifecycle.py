@@ -53,6 +53,17 @@ def release_plan(staged, chosen):
     return value
 
 
+def carry_modules(release, staged, chosen):
+    """Keep installed external module packages across an update when the new source
+    does not ship them (they were added with `xoc module add --package`)."""
+    for identifier in sorted(chosen):
+        installed, target = release/'modules.d'/identifier, staged/'modules.d'/identifier
+        if (installed/'module.yaml').is_file() and not target.exists():
+            if any(p.is_symlink() for p in (installed, *installed.rglob('*'))):
+                raise XocError('module_symlink', 'Installed module packages must contain regular files only.')
+            shutil.copytree(installed, target)
+
+
 def copy_source(source, destination):
     # Reuse the installer's explicitly bounded release contents, never .git/.env.
     import importlib.util, sys
@@ -111,6 +122,7 @@ def change(root, action, identifier=None, package=None, source=None, *, preview=
             if entry['manifest']['kind'] == 'module':
                 shutil.rmtree(entry['path'].parent)
         if action == 'update':
+            carry_modules(Path(current['release']), staged, chosen)
             selected = release_plan(staged, chosen)
         else:
             selected = plan(staged, preset='security-path', include=chosen, allow_fixtures=True, allow_experimental=True)

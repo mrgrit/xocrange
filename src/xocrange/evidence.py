@@ -361,8 +361,8 @@ def handle(connection, module, uid, sources):
         response = evaluate(sources, request)
         connection.sendall(canonical(response) + b'\n')
         audit(module, request, response)
-    except (XocError, ValueError, OSError) as exc:
-        code = getattr(exc, 'code', 'invalid_request')
+    except Exception as exc:  # noqa: BLE001 — every failure gets an answer and an audit line
+        code = exc.code if isinstance(exc, XocError) else ('invalid_request' if isinstance(exc, ValueError) else 'internal_error')
         try:
             connection.sendall(canonical({'error': code}) + b'\n')
         except OSError:

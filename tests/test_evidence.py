@@ -165,3 +165,16 @@ def test_socket_handler_rejects_garbage(sources, tmp_path, monkeypatch):
     client.sendall(b'{"schema_version": "xoc.evidence-query/0.1.0", "checks": "rm -rf /"}\n')
     ev.handle(server, 'M15', os.getuid(), sources)
     assert json.loads(client.recv(65536)) == {'error': 'schema_violation'}
+
+
+def test_socket_handler_answers_internal_errors(sources, tmp_path, monkeypatch):
+    import xocrange.evidence as ev
+    monkeypatch.setattr(ev, 'AUDIT', tmp_path / 'audit.jsonl')
+    def broken(*args, **kwargs):
+        import sqlite3
+        raise sqlite3.OperationalError('malformed JSON')
+    monkeypatch.setattr(ev, 'evaluate', broken)
+    server, client = socket.socketpair()
+    client.sendall(json.dumps(query({'type': 'wazuh_alert', 'target': 'siem', 'params': {'rule_id': '1'}})).encode() + b'\n')
+    ev.handle(server, 'M15', os.getuid(), sources)
+    assert json.loads(client.recv(65536)) == {'error': 'internal_error'}
