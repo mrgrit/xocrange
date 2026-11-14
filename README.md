@@ -29,7 +29,7 @@ sudo xoc siem credentials
 
 처음 로그인하면 Core 초기 비밀번호를 변경해야 한다. 이후에는 변경한 비밀번호를 사용한다. 위 명령은 UI에서 변경한 비밀번호를 조회하거나 초기화하지 않는다. 고정 공용 비밀번호는 없으며 실제 비밀번호는 README나 Git에 기록하지 않는다. 로컬 인증서를 사용하는 경우 설치된 서버의 `/etc/xocrange/ca.crt`를 접속 PC에서 신뢰 등록한다.
 
-**Community RC 준비 단계:** 빈 Ubuntu 26.04 VM의 한 번 설치·재부팅·디스크 고갈·실제 외부 PC 출처 보존을 검증했다. RC의 기본 구성은 설치기 기본값(보안 경로·SIEM·웹 관제·콘솔 3종·관리 화면·데이터센터·NOC 2층·아카데미)이며, 장기 운영 측정과 최종 재검증을 거쳐 확정한다([K12 체크리스트](docs/development/K12-RC-CHECKLIST.md)). `bootstrap`은 설치 기반 확인용 health 서비스다.
+**Community RC 준비 단계:** 빈 Ubuntu 26.04 VM의 한 번 설치·재부팅·디스크 고갈·실제 외부 PC 출처 보존을 검증했다. RC의 기본 구성은 설치기 기본값(보안 경로·SIEM·웹 관제·콘솔 3종·관리 화면·데이터센터·NOC 2층·아카데미)이며, 24시간 장기 운영을 측정했고([기록](docs/development/LONGRUN-2026-11-14.md)) 최종 재검증을 거쳐 확정한다([K12 체크리스트](docs/development/K12-RC-CHECKLIST.md)). `bootstrap`은 설치 기반 확인용 health 서비스다.
 
 ## 지금 실행할 수 있는 것
 

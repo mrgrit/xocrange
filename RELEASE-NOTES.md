@@ -20,7 +20,7 @@ xOC Range Core는 방화벽·IPS·WAF·SIEM으로 이루어진 보안 운영 실
 
 ## 요구 사양
 
-Ubuntu Server 26.04 LTS amd64 전용 VM 또는 서버. 기본 구성(SIEM 웹 관제 포함)은 8 GiB RAM 이상이 필요하고 16 GiB를 권장한다. `--without siem-ui`이면 4 GiB. 장기 운영 측정이 끝나면 권장 사양을 확정한다([사용자 안내 9절](docs/USER-GUIDE.md#9-권장-사양)).
+Ubuntu Server 26.04 LTS amd64 전용 VM 또는 서버. 기본 구성(SIEM 웹 관제 포함)은 8 GiB RAM 이상이 필요하고 16 GiB를 권장한다. `--without siem-ui`이면 4 GiB. 디스크는 100 GB 이상(최소 60 GB)을 권장한다. 24시간 연속 운영에서 메모리 최대 6.0 GiB, 수집 지연 최대 9초, SIEM 저장 최대 17.6 GiB를 측정했다([사용자 안내 9절](docs/USER-GUIDE.md#9-권장-사양)).
 
 ## 이번 RC에서 검증한 것
 
@@ -61,7 +61,7 @@ Core 자체 코드와 프로젝트 자산은 [PolyForm Noncommercial 1.0.0](LICE
 
 ## RC 확정 전 남은 일
 
-1. 24시간 이상 장기 운영 측정 분석과 SIEM 포함 권장 사양 확정.
+1. ~~24시간 이상 장기 운영 측정 분석과 SIEM 포함 권장 사양 확정~~(2026-11-14 완료).
 2. 최종 RC 커밋으로 새 VM 설치·재부팅 재실행.
 3. 버전 번호·태그 결정.
 4. 공개 배포 준비: 저장소 공개(설치 스크립트만 받은 경우와 `git clone`은 공개 저장소에서 소스를 받는다), 서드파티 라이선스 전수 감사 결과를 RC inventory와 대조.
