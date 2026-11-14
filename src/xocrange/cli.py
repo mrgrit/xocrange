@@ -88,7 +88,8 @@ def parser():
     lab.add_argument("--plan", required=True, help="plan directory name beneath .local/plans")
     lab.add_argument("--isolated-vm", action="store_true", help="confirm this is the dedicated lab VM")
     siem = commands.add_parser("siem", help="local evidence, Wazuh decoding and search")
-    siem.add_argument("action", choices=("collect", "once", "status", "query", "evidence", "retry", "credentials"))
+    siem.add_argument("action", choices=("collect", "once", "status", "query", "evidence", "retry", "credentials", "clear"))
+    siem.add_argument("--yes", action="store_true", help="clear: confirm removing all collected evidence and device logs")
     siem.add_argument("--plan")
     siem.add_argument("--store", type=Path, default=Path('/var/lib/xocrange/siem'))
     siem.add_argument("--source", choices=SOURCES)
@@ -153,6 +154,11 @@ def run(args):
             from .ui_setup import STATE, private_json
             secret=private_json(STATE/'credentials.json')
             return {'url':'https://'+secret['public_host']+'/siem/','username':'admin','password':secret['admin'],'ca_certificate':'/etc/xocrange/ca.crt'}
+        if args.action == 'clear':
+            from .operations import operation_lock
+            from .siem_clear import clear
+            with operation_lock():
+                return clear(args.store, confirmed=args.yes)
         if args.action in ('collect', 'once'):
             if not args.plan:
                 raise XocError('missing_plan', 'Collection requires a validated --plan.')
