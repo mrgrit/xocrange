@@ -121,12 +121,15 @@ class Evaluator:
         p = check['params']
         since, until = self.window(p)
         clauses, args = ['observed>=?', 'observed<=?'], [since, until]
+        # The stored alert is `raw` (the search `document` column is empty since K12 storage
+        # changes); guard so one malformed record cannot fail the whole query.
+        alert = "(CASE WHEN json_valid(CAST(raw AS TEXT)) THEN CAST(raw AS TEXT) END)"
         if 'rule_id' in p:
-            clauses.append("json_extract(document, '$.rule.id')=?"); args.append(p['rule_id'])
+            clauses.append(f"json_extract({alert}, '$.rule.id')=?"); args.append(p['rule_id'])
         if 'min_level' in p:
-            clauses.append("CAST(json_extract(document, '$.rule.level') AS INTEGER)>=?"); args.append(p['min_level'])
+            clauses.append(f"CAST(json_extract({alert}, '$.rule.level') AS INTEGER)>=?"); args.append(p['min_level'])
         for group in p.get('groups') or []:
-            clauses.append("EXISTS (SELECT 1 FROM json_each(document, '$.rule.groups') WHERE value=?)"); args.append(group)
+            clauses.append(f"EXISTS (SELECT 1 FROM json_each({alert}, '$.rule.groups') WHERE value=?)"); args.append(group)
         if 'pattern' in p:
             clauses.append('instr(CAST(raw AS TEXT), ?)>0'); args.append(p['pattern'])
         rows = self.db.execute('SELECT id, observed, sha256 FROM wazuh_alerts WHERE ' + ' AND '.join(clauses)

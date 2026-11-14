@@ -28,8 +28,11 @@ def sources(tmp_path):
     store.ingest('suricata', 'ips-eve', 3, suricata(ATTACKER, 9100003), observed='2026-11-14T03:00:00.000000Z')
     alert = {'rule': {'id': '100201', 'level': 10, 'groups': ['xoc', 'web_attack']}, 'full_log': 'xoc-web-01 marker'}
     raw = json.dumps(alert).encode()
+    # Real stores keep the alert in `raw` with an empty `document` (verified on an installed Core).
     store.db.execute('INSERT INTO wazuh_alerts(id, observed, raw, sha256, document) VALUES (?,?,?,?,?)',
-                     ('a1', '2026-11-14T00:12:00.000000Z', raw, 'f' * 64, json.dumps(alert)))
+                     ('a1', '2026-11-14T00:12:00.000000Z', raw, 'f' * 64, ''))
+    store.db.execute('INSERT INTO wazuh_alerts(id, observed, raw, sha256, document) VALUES (?,?,?,?,?)',
+                     ('a2', '2026-11-14T00:13:00.000000Z', b'not json', 'e' * 64, ''))
     store.db.commit()
     policy = tmp_path / 'ips-policy'; policy.mkdir()
     (policy / 'current.conf').write_text('alert http any any -> any any (msg:"xoc"; sid:9100001;)\n')
