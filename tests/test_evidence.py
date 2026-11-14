@@ -178,3 +178,13 @@ def test_socket_handler_answers_internal_errors(sources, tmp_path, monkeypatch):
     client.sendall(json.dumps(query({'type': 'wazuh_alert', 'target': 'siem', 'params': {'rule_id': '1'}})).encode() + b'\n')
     ev.handle(server, 'M15', os.getuid(), sources)
     assert json.loads(client.recv(65536)) == {'error': 'internal_error'}
+
+
+def test_only_range_services_can_be_inspected(sources):
+    sources.pid = lambda service: os.getpid()
+    sources.processes = lambda service: ['python3']
+    for target in ('siem', 'platform', 'indexer', 'm15-assessor'):
+        assert results(sources,
+                       {'type': 'file_exists', 'target': target, 'params': {'path': '/tmp/x'}},
+                       {'type': 'process_running', 'target': target, 'params': {'name': 'python3'}},
+                       {'type': 'port_listening', 'target': target, 'params': {'port': 22}}) == [('inconclusive', 0)] * 3

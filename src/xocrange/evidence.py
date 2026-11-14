@@ -29,6 +29,7 @@ LOG_SERVICE = {'nftables': 'fw', 'suricata': 'ips', 'modsec': 'web', 'apache-acc
 # Applied device policy written by the console brokers (planner console-*-state volumes).
 POLICY_FILES = {'fw': 'current.conf', 'ips': 'current.conf', 'waf': 'current.conf'}
 # Files may be read only below these prefixes; device configuration is device_config.
+RANGE_SERVICES = ('fw', 'ips', 'web')
 FILE_PREFIXES = ('/tmp/', '/var/tmp/', '/dev/shm/', '/var/www/html/')
 
 
@@ -51,8 +52,11 @@ def parse(value: str) -> datetime:
 class Sources:
     """Where evidence lives. Production wiring is in `host_sources`; tests pass fakes."""
 
-    def __init__(self, store: Path, policy: dict | None = None, pid=None, processes=None, now=None):
+    def __init__(self, store: Path, policy: dict | None = None, pid=None, processes=None, now=None, services=None):
         self.store = Path(store)
+        # Services whose files, ports and processes may be inspected: the range's security
+        # devices and learner targets only, never Core infrastructure or other modules.
+        self.services = frozenset(services if services is not None else RANGE_SERVICES)
         self.policy = policy or {}            # device -> directory holding current.conf
         self.pid = pid or (lambda service: None)            # service -> host pid of its main process
         self.processes = processes or (lambda service: [])  # service -> process names
@@ -177,6 +181,7 @@ class Evaluator:
         return listening, int(listening), [{'kind': 'service_state', 'ref': f'service:{check["target"]}', 'sha256': digest}], None
 
     def check_process_running(self, check):
+        self.allowed(check['target'])
         names = self.sources.processes(check['target'])
         running = check['params']['name'] in names
         digest = hashlib.sha256(canonical(sorted(set(names)))).hexdigest()
@@ -196,7 +201,12 @@ class Evaluator:
         passed = data is not None and hashlib.sha256(data).hexdigest() == check['params']['sha256']
         return passed, int(passed), self.file_evidence(check, data), None
 
+    def allowed(self, service):
+        if service not in self.sources.services:
+            raise XocError('service_not_allowed', 'Only range devices and learner targets can be inspected.')
+
     def service_pid(self, service):
+        self.allowed(service)
         pid = self.sources.pid(service)
         if not pid:
             raise XocError('service_unavailable', 'The service is not running on this appliance.')
@@ -323,7 +333,9 @@ def host_sources(engine, result):
         rows = engine.run(['top', cid, '-o', 'pid,comm']).splitlines()[1:]
         return [row.split(None, 1)[1].strip() for row in rows if len(row.split(None, 1)) == 2]
 
-    return Sources(STATE / 'siem' / 'events.sqlite3', policy=policy, pid=pid, processes=processes)
+    targets = {t['service'] for t in result.get('registry', {}).get('targets', [])}
+    return Sources(STATE / 'siem' / 'events.sqlite3', policy=policy, pid=pid, processes=processes,
+                   services=set(RANGE_SERVICES) | targets)
 
 
 def audit(module, request, response=None, error=None):
