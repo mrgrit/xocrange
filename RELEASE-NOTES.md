@@ -1,6 +1,11 @@
-# xOC Range Core Community — RC 릴리스 노트 (초안)
+# xOC Range Core Community 0.1.0 릴리스 노트
 
-상태: **RC 후보 초안.** 버전 번호·태그는 RC 확정 때 정한다. 확정 전 남은 일은 [아래](#rc-확정-전-남은-일)와 [K12 체크리스트](docs/development/K12-RC-CHECKLIST.md)에 있다.
+버전 **0.1.0**, 태그 `v0.1.0`, 2026-11-15. 첫 공개 Community 릴리스다. 출시 판정 근거는 [K12 체크리스트](docs/development/K12-RC-CHECKLIST.md)와 [최종 RC 재실행](docs/development/RC-FINAL-2026-11-15.md)에 있다.
+
+```bash
+git clone --branch v0.1.0 https://github.com/mrgrit/xocrange.git
+cd xocrange && sudo bash install.sh
+```
 
 xOC Range Core는 방화벽·IPS·WAF·SIEM으로 이루어진 보안 운영 실습 환경을 Ubuntu 서버 한 대에 설치 명령 한 번으로 구성한다. Community는 키 없이 동작하며, 학교·대학의 수업과 개인 학습에 무료로 쓸 수 있다. 설치와 사용은 [사용자 안내](docs/USER-GUIDE.md)를 본다.
 
@@ -22,19 +27,23 @@ xOC Range Core는 방화벽·IPS·WAF·SIEM으로 이루어진 보안 운영 실
 
 Ubuntu Server 26.04 LTS amd64 전용 VM 또는 서버. 기본 구성(SIEM 웹 관제 포함)은 8 GiB RAM 이상이 필요하고 16 GiB를 권장한다. `--without siem-ui`이면 4 GiB. 디스크는 100 GB 이상(최소 60 GB)을 권장한다. 24시간 연속 운영에서 메모리 최대 6.0 GiB, 수집 지연 최대 9초, SIEM 저장 최대 17.6 GiB를 측정했다([사용자 안내 9절](docs/USER-GUIDE.md#9-권장-사양)).
 
-## 이번 RC에서 검증한 것
+## 이번 릴리스에서 검증한 것
+
+최종 소스로 새 VM에서 다시 실행한 결과다(2026-11-15). 출처 IP·디스크 고갈은 2026-11-13~14 실행 결과다.
 
 | 검증 | 결과 |
 |---|---|
-| 빈 VM 한 번 설치 | Docker도 없는 새 Ubuntu 26.04.1 VM에서 7분 30초, 수용 검사 15·6·8·52 통과 |
+| 빈 VM 한 번 설치 | Docker도 없는 새 Ubuntu 26.04.1 VM(8 vCPU·15 GiB·100 GB)에서 8분 30초, 수용 검사 11·15·6·8·52 통과 |
+| 같은 VM 재설치 | 4분, 계정·학습 기록 보존 |
 | 재부팅 | 17/17, 증거 24건 보존 |
-| 통합 시험 | Core 보안 31, 장비 콘솔 51, 콘솔 재시작 16, 작업공간 78, 아카데미 33, 동시 적용 12·13 |
+| 통합 시험 | Core 보안 31, 장비 콘솔 51, 콘솔 재시작 16, 작업공간 78, 아카데미 33, 동시 적용 12·13, 모의 외부 클라이언트 출처 IP 7 |
 | 출처 IP | 실제 외부 PC의 주소가 ingress·WAF·SIEM까지 그대로 기록 |
 | 디스크 고갈 | 예약 공간 미만·완전 소진 중에도 서비스 유지, 해제 후 회복과 멈춘 동안의 로그 수집 |
-| 경계 | 배포물에 유료·AI·채점 코드 없음(설치본 160개 파일 점검) |
+| 경계 | 배포물에 유료·AI·채점 코드 없음(설치본 162개 파일 점검) |
 | `xoc siem clear` | 12/12, 이후 8종 수집과 SIEM 웹 검사 52/52 |
+| 웹 요청 User-Agent | 실습 요청 원본에 기록, 스캐너 이름은 Wazuh 규칙 111303 경보 |
 
-상세 기록: [새 VM 검증](docs/development/RC-FRESH-VM-2026-11-13.md), [보존·주소 체계 검증](docs/development/RETENTION-ADDRESS-PLAN-2026-11-13.md).
+상세 기록: [최종 RC 재실행](docs/development/RC-FINAL-2026-11-15.md), [새 VM 검증](docs/development/RC-FRESH-VM-2026-11-13.md), [보존·주소 체계 검증](docs/development/RETENTION-ADDRESS-PLAN-2026-11-13.md).
 
 ## 이전 개발 버전에서 바뀐 점
 
@@ -62,9 +71,9 @@ Ubuntu Server 26.04 LTS amd64 전용 VM 또는 서버. 기본 구성(SIEM 웹 �
 
 Core 자체 코드와 프로젝트 자산은 [PolyForm Noncommercial 1.0.0](LICENSE)과 [교육용 추가 허락](LICENSE-EDUCATION.md)을 따른다. 서드파티 구성요소(Suricata·Wazuh·Apache·ModSecurity·DVWA·Juice Shop 등)는 각자의 라이선스를 유지한다([NOTICE](NOTICE), [DEPENDENCIES](docs/development/DEPENDENCIES.md)).
 
-## RC 확정 전 남은 일
+## 출시 전 정리 기록
 
-1. ~~24시간 이상 장기 운영 측정 분석과 SIEM 포함 권장 사양 확정~~(2026-11-14 완료).
-2. 최종 RC 커밋으로 새 VM 설치·재부팅 재실행.
-3. 버전 번호·태그 결정.
-4. 공개 배포 준비: 저장소 공개(설치 스크립트만 받은 경우와 `git clone`은 공개 저장소에서 소스를 받는다), 서드파티 라이선스 전수 감사 결과를 RC inventory와 대조.
+- 24시간 이상 장기 운영 측정과 SIEM 포함 권장 사양 확정(2026-11-14).
+- 최종 소스로 새 VM 설치·재부팅·통합 시험 재실행(2026-11-15).
+- 서드파티 라이선스와 설치본 inventory 대조(2026-11-14), 공개 전 저장소 전체 이력의 비밀값·개인정보 점검(2026-11-15).
+- 저장소 공개와 버전 `0.1.0` 확정(소유자, 2026-11-15).
