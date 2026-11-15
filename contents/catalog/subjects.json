@@ -1,0 +1,12 @@
+[
+  {
+    "id": "xoc-web-defense",
+    "title": "웹 침해 대응",
+    "subtitle": "요청 분석 · WAF · 애플리케이션 방어"
+  },
+  {
+    "id": "xoc-host-defense",
+    "title": "리눅스·네트워크 침해 대응",
+    "subtitle": "인증 · 권한 · 지속성 · 증거 보존"
+  }
+]

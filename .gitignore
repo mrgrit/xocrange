@@ -15,6 +15,4 @@ __pycache__/
 .pytest_cache/
 *.egg-info/
 
-# Pinned external content module, populated by scripts/fetch-contents.py.
-/contents/
-/.content-download-*/
+*.pptx

@@ -1,0 +1,13 @@
+xOC Range content source notice
+
+Author: 전두용. The owner-authorized Wazuh threat-hunting deck pages 1–339
+and mapped REV01 manuscript excerpts retain their original source provenance in
+academy/wazuh-threat-hunting/source-map.json. The full deck, speaker notes,
+pages after 339 and unrelated manuscript sections are excluded.
+
+The existing authoring scenarios preserve the reviewed tw2 runtime contract.
+The 23 additional training entries contain title metadata only; no training
+body, credentials or engine code was imported from those tracks.
+
+This repository does not change or grant an upstream license. Runtime engine
+code and student submissions are maintained outside the content package.

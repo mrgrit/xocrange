@@ -1,0 +1,122 @@
+{
+  "title": "2.7  조사 기록 쓰기",
+  "kind": "body",
+  "blocks": [
+    {
+      "type": "p",
+      "text": "조사 기록에는 확인한 사실과 판단을 나누어 적는다. 사실은 기록에 있는 값과 그 출처이고, 판단은 사실을 근거로 내린 결론이다. 근거가 부족한 판단은 적지 않고 추가 조사 항목으로 남긴다. 2.1의 사례를 다음과 같이 정리한다."
+    },
+    {
+      "type": "table",
+      "head": [
+        "항목",
+        "사례 기록"
+      ],
+      "rows": [
+        [
+          "대상·위치",
+          "bastion · /var/log/auth.log"
+        ],
+        [
+          "원문 시각",
+          "11월 1일 14:22:35 (KST)"
+        ],
+        [
+          "출발지·계정",
+          "10.20.30.254(xOC Range VM의 ext망 주소) · book03_probe"
+        ],
+        [
+          "확인한 사실",
+          "존재하지 않는 계정으로 접속했고 암호 인증에 실패했다."
+        ],
+        [
+          "탐지 근거",
+          "규칙 5710 · 수준 5"
+        ],
+        [
+          "기록 식별",
+          "wazuh-alerts-4.x-2026.11.01 · WfiPlaEBEYWT20nnUNlQ"
+        ],
+        [
+          "추가 조사",
+          "xOC Range VM에서 같은 시각의 접속, 같은 출발지의 다른 계정 실패(5760)와 성공(5715)"
+        ],
+        [
+          "현재 판단",
+          "로그인 시도 1건 확인. 침입 여부는 미확인."
+        ]
+      ],
+      "widths": [
+        30,
+        97
+      ],
+      "keep": true
+    },
+    {
+      "type": "p",
+      "text": "기록 식별의 두 값은 경보 JSON의 _index와 _id이다. _index는 경보가 저장된 인덱스 이름이고, _id는 그 안에서 경보를 구분하는 식별자이다."
+    },
+    {
+      "type": "h",
+      "text": "사실과 판단 구분"
+    },
+    {
+      "type": "table",
+      "head": [
+        "문장",
+        "구분 · 이유"
+      ],
+      "rows": [
+        [
+          "10.20.30.254에서 book03_probe로 암호 인증이 실패했다.",
+          "사실 · 원문에 있다."
+        ],
+        [
+          "공격자가 bastion에 무차별 대입 공격을 했다.",
+          "판단 · 반복 횟수의 근거가 없다."
+        ],
+        [
+          "공격자의 IP는 10.20.30.254이다.",
+          "판단 · 이 주소는 xOC Range VM이다(2.2)."
+        ],
+        [
+          "침입은 없었다.",
+          "판단 · 성공 기록을 아직 찾지 않았다."
+        ]
+      ],
+      "widths": [
+        70,
+        57
+      ],
+      "keep": true
+    },
+    {
+      "type": "p",
+      "text": "사건 노트의 조사 기록에는 1.8의 형식에 맞춰 한 줄로 요약한다."
+    },
+    {
+      "type": "code",
+      "text": "14:22:36 | bastion | 5710 | 10.20.30.254 |\n없는 계정 book03_probe 암호 인증 실패 |\nwazuh-alerts-4.x-2026.11.01 · WfiPlaEBEYWT20nnUNlQ"
+    },
+    {
+      "type": "p",
+      "text": "빈 조사 기록 양식은 examples/rev01/chapter02/investigation.txt에 있다. 3장에서는 Wazuh 화면에서 이 경보와 2.2에서 직접 남긴 기록을 검색한다."
+    },
+    {
+      "type": "image",
+      "path": "assets/illustrations/chapter02/evidence.png",
+      "caption": "삽화. 기록 대조.",
+      "width_mm": 45,
+      "align": "right",
+      "asset": "162cdf4780d61ca4751ea1b77f006913ceed84267cca9d2af55008c3c7559fec.png"
+    }
+  ],
+  "break": false,
+  "level": "section",
+  "source": {
+    "file": "volume01-chapter02.json",
+    "section_index": 7,
+    "revision": "REV01",
+    "mapping_status": "pending-review"
+  }
+}

@@ -1,0 +1,87 @@
+{
+  "title": "9.4  예약 작업",
+  "kind": "body",
+  "blocks": [
+    {
+      "type": "p",
+      "text": "실습 24. cron은 정해진 시각에 명령을 반복 실행하는 서비스이다. /etc/cron.d/의 파일은 한 줄에 시간 다섯 칸(분 시 일 월 요일), 실행 계정, 명령을 적는다. 다섯 칸이 모두 *이면 매분이다. 공격자는 여기에 외부에서 내용을 받아 root로 실행하는 줄을 넣어 반복 실행 수단을 남긴다. 실습 파일에는 실행 계정 이름을 결과 파일에 적는 명령만 넣는다. [6]"
+    },
+    {
+      "type": "command",
+      "id": "C09-17",
+      "where": "xocrange-bastion · root 관리 셸",
+      "purpose": "bastion에 cron이 있고 실행 중인지 확인한다.",
+      "text": "command -v cron\nservice cron status",
+      "syntax": "command -v는 명령의 경로를 출력한다. service 이름 status는 서비스 상태를 출력한다.",
+      "result": "/usr/sbin/cron과 cron is running이 나오면 C09-19로 간다. 출력이 없거나 cron: unrecognized service이면 다음 명령으로 설치한다. 처음 상태를 사건 노트에 적는다."
+    },
+    {
+      "type": "command",
+      "id": "C09-18",
+      "where": "xocrange-bastion · root 관리 셸",
+      "purpose": "(cron이 없는 경우만) cron을 설치하고 시작한다.",
+      "text": "apt-get update\napt-get install -y --no-install-recommends cron\nservice cron start",
+      "syntax": "apt-get update는 패키지 목록을 갱신하고, install -y는 확인 없이 설치한다. --no-install-recommends는 추천 패키지를 함께 설치하지 않는다.",
+      "result": "설치가 끝나고 Starting periodic command scheduler cron …이 나온다. 기록 환경도 cron이 없어 이 단계를 거쳤다."
+    },
+    {
+      "type": "command",
+      "id": "C09-19",
+      "where": "bastion · ccc SSH 셸",
+      "purpose": "매분 실행되는 실습 예약 작업을 만든다.",
+      "text": "printf '%s\\n' \\\n  '* * * * * root id -un >> /tmp/book09-cron-result' \\\n  | sudo tee /etc/cron.d/book09-lab",
+      "syntax": "작은따옴표가 *와 >>를 지금의 셸이 해석하지 않게 묶는다. 파일 안의 >>는 cron이 실행할 때 결과 파일 끝에 덧붙이는 기호이다. id -un은 실행 계정 이름을 출력한다.",
+      "result": "한 줄이 출력되고 파일이 생긴다. 시각을 공격 일지에 적는다."
+    },
+    {
+      "type": "query",
+      "id": "Q09-05",
+      "where": "Windows · Discover · wazuh-alerts-*",
+      "purpose": "예약 작업 파일의 생성을 찾는다.",
+      "text": "agent.name: \"bastion\" AND\nsyscheck.path: \"/etc/cron.d/book09-lab\"",
+      "syntax": "Q09-01과 같은 형식이다.",
+      "result": "554가 나온다. 기록에서는 07:51:42였다. 추가 경보에는 diff가 없다."
+    },
+    {
+      "type": "command",
+      "id": "C09-20",
+      "where": "bastion · ccc SSH 셸",
+      "purpose": "다음 분이 지난 뒤 예약 작업이 실제로 실행되었는지 확인한다.",
+      "text": "date\ncat /tmp/book09-cron-result\ngrep book09 /var/log/syslog | tail -n 2",
+      "syntax": "date로 분이 바뀌었는지 본다. cron은 실행한 명령을 syslog에 남기며, grep으로 실습 파일 이름이 든 줄을 찾는다.",
+      "result": "결과 파일에 root가 한 줄 이상 있고, syslog에 CRON[…]: (root) CMD (id -un >> /tmp/book09-cron-result) 줄이 있다. 결과 파일이 없으면 C09-17의 서비스 상태와 파일 한 줄의 형식을 확인한다."
+    },
+    {
+      "type": "p",
+      "text": "554는 예약 작업이 등록되었다는 기록이고, 실행되었다는 기록이 아니다. 실행 근거는 결과 파일과 cron의 실행 기록이다. cron이 실행한 명령 줄(CMD)은 syslog에 남는다. auth.log에는 cron 세션의 열림·닫힘만 남으므로 auth.log 경보로는 무엇을 실행했는지 알 수 없다. 추가 경보에는 내용 차이가 붙지 않으므로, 실제 사건에서는 파일을 지우기 전에 내용을 읽고 보존한다. 명령 줄에 curl·wget과 파이프가 있으면 외부에서 받은 내용을 실행하는 작업이다."
+    },
+    {
+      "type": "command",
+      "id": "C09-21",
+      "where": "bastion · ccc SSH 셸",
+      "purpose": "(원상복구) 예약 작업과 결과 파일을 지운다.",
+      "text": "sudo cat /etc/cron.d/book09-lab\nsudo rm /etc/cron.d/book09-lab /tmp/book09-cron-result\nls -l /etc/cron.d/book09-lab /tmp/book09-cron-result",
+      "syntax": "지울 파일 내용을 확인한 뒤 두 파일만 지운다.",
+      "result": "ls가 두 경로 모두 No such file or directory를 출력한다. Q09-05에 553이 더해진다. 1분 뒤 결과 파일이 다시 생기지 않는지 확인한다."
+    },
+    {
+      "type": "image",
+      "path": "assets/screens/chapter09/cron-fields.png",
+      "caption": "화면 9-3. 예약 작업 파일 삭제 경보.",
+      "width_mm": 90,
+      "asset": "b01eea6ff8be9fd62aae3692309f3d4103abff14010379827b0ee97a54f6a93a.png"
+    },
+    {
+      "type": "p",
+      "text": "C09-17에서 cron이 원래 멈춰 있었다면 bastion 관리 셸에서 service cron stop으로 처음 상태로 돌린다. 설치한 패키지는 남겨 둔다. 예약 파일을 지우면 다음 실행이 멈추지만 이미 실행 중인 프로세스는 계속된다."
+    }
+  ],
+  "break": false,
+  "level": "section",
+  "source": {
+    "file": "volume01-chapter09.json",
+    "section_index": 4,
+    "revision": "REV01",
+    "mapping_status": "pending-review"
+  }
+}

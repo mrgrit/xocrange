@@ -1,0 +1,170 @@
+{
+  "title": "5.5  SQL 인젝션",
+  "kind": "body",
+  "blocks": [
+    {
+      "type": "p",
+      "text": "SQL은 데이터베이스에서 자료를 조회·변경하는 언어이다. DVWA의 사용자 조회는 입력한 id를 다음 SQL 문장의 따옴표 안에 그대로 붙여 실행한다. 이 코드는 xocrange-dvwa 컨테이너의 /var/www/html/vulnerabilities/sqli/source/low.php에 있다. [1]"
+    },
+    {
+      "type": "code",
+      "text": "SELECT first_name, last_name\nFROM users\nWHERE user_id = '1';"
+    },
+    {
+      "type": "p",
+      "text": "SQL 인젝션은 입력값이 SQL 문법의 일부로 해석되어 원래 조회의 의미가 바뀌는 취약점이다. 입력을 SQL 문자열에 그대로 결합하면 생긴다. Discover의 DQL은 저장된 기록을 검색하는 식이고, 여기의 SQL은 애플리케이션이 데이터베이스에 보내는 문장이다. [5]"
+    },
+    {
+      "type": "image",
+      "path": "assets/figures/chapter05/sql-context.png",
+      "caption": "도식 5-5. 입력값을 SQL 문자열에 결합하는 처리.",
+      "width_mm": 127,
+      "asset": "a04b88a59bab80ae0326ec3966d057c3703debd1f0f76b63097f7ffaa61606e7.png"
+    },
+    {
+      "type": "p",
+      "text": "User ID에 다음 값을 넣는다. 공격 동작을 유도하려고 보내는 이런 입력을 페이로드(payload)라고 한다. 복사용 파일은 examples/rev01/chapter05/B05-03-sqli.txt이다. -- 뒤에 공백이 한 칸 있다."
+    },
+    {
+      "type": "code",
+      "text": "1' UNION SELECT user,password FROM users-- "
+    },
+    {
+      "type": "table",
+      "head": [
+        "부분",
+        "의도"
+      ],
+      "rows": [
+        [
+          "1'",
+          "작은따옴표로 원래 문자열 값을 닫는다."
+        ],
+        [
+          "UNION SELECT user,password",
+          "원래 조회 결과에 계정명과 저장된 암호값 두 열을 덧붙인다."
+        ],
+        [
+          "FROM users",
+          "그 값을 users 테이블에서 읽는다."
+        ],
+        [
+          "-- 와 공백",
+          "MySQL에서 뒤에 남은 원래 SQL을 주석으로 만든다."
+        ]
+      ],
+      "widths": [
+        42,
+        85
+      ],
+      "keep": true
+    },
+    {
+      "type": "box",
+      "kind": "field",
+      "text": [
+        "공격 일지 기록을 여기서 시작한다. 공격을 보낼 때마다 시각(KST) | 실행 위치 | 출발지 IP | 대상 | 입력 | 응답을 한 줄로 적는다. 입력에는 복사용 파일 이름(B05-03 등)을 쓰면 된다."
+      ]
+    },
+    {
+      "type": "box",
+      "kind": "predict",
+      "text": [
+        "DVWA는 Low 단계라 입력을 검사하지 않는다. 그 앞의 WAF는 어떻게 할까? 응답 코드를 예측한다."
+      ]
+    },
+    {
+      "type": "list",
+      "style": "number",
+      "items": [
+        "User ID에 위 값을 붙여 넣는다.",
+        "Network를 비우고 **Submit**을 누른다. 공격 일지에 시각을 적는다."
+      ]
+    },
+    {
+      "type": "image",
+      "path": "assets/screens/chapter05/browser/sqli-input.png",
+      "caption": "화면 5-9. User ID에 SQL 구문 입력.",
+      "width_mm": 100,
+      "asset": "3025ab3f90d3aa728d85ea7974536e3fa22867d3d32fb24bc9295336630e71b1.png"
+    },
+    {
+      "type": "image",
+      "path": "assets/screens/chapter05/browser/sqli-blocked.png",
+      "caption": "화면 5-10. SQL 요청의 거부 응답.",
+      "width_mm": 100,
+      "asset": "10d6f065810b6f52415370b124718d504bc7bdf4c26fd22eece14260db89ade1.png"
+    },
+    {
+      "type": "p",
+      "text": "Forbidden 화면이 나온다. Network의 문서 요청에서 Status Code 403과 Payload의 id 값을 확인한다. 403은 서버가 요청 수행을 거부했다는 응답 코드이다. 누가 거부했는지는 5.6에서 확인한다."
+    },
+    {
+      "type": "image",
+      "path": "assets/screens/chapter05/browser/sqli-headers.png",
+      "caption": "화면 5-11. SQL 요청의 URL과 응답 코드.",
+      "width_mm": 127,
+      "asset": "71a0d4301094623aaa035281f808fa69e654ab541722258ba68715966373a3e6.png"
+    },
+    {
+      "type": "query",
+      "id": "Q05-02",
+      "where": "Windows · Discover · wazuh-alerts-*",
+      "purpose": "SQL 실습 경로에 UNION을 보낸 요청의 경보를 찾는다.",
+      "text": "agent.name: \"web\" AND data.url: *vulnerabilities/sqli/*\nAND data.url: *UNION*",
+      "syntax": "별표(*)는 임의의 문자열과 일치한다. 두 data.url 조건을 AND로 묶어 경로와 문자열을 모두 포함한 URL을 고른다.",
+      "result": "요청 시각의 행이 나온다. rule.id·data.id·data.url을 조사 기록에 적는다."
+    },
+    {
+      "type": "image",
+      "path": "assets/screens/chapter05/browser/sqli-data.png",
+      "caption": "화면 5-12. SQL 입력과 응답 코드.",
+      "width_mm": 127,
+      "asset": "50856f99e4d36bbd09c34e95844373031e98cabee103a0216b96dc60f644ff8d.png"
+    },
+    {
+      "type": "image",
+      "path": "assets/screens/chapter05/browser/sqli-rule.png",
+      "caption": "화면 5-13. SQL 인젝션 탐지 설명.",
+      "width_mm": 127,
+      "asset": "7ebbcaab397379fce130f6bad96bcb2eab95f527bc509e6f68c82c2bf0f27f2b.png"
+    },
+    {
+      "type": "table",
+      "head": [
+        "필드",
+        "이 사례의 값과 해석"
+      ],
+      "rows": [
+        [
+          "data.url",
+          "%27은 작은따옴표, +는 공백, %2C는 쉼표이다. UNION SELECT 구문이 들어 있다."
+        ],
+        [
+          "data.id",
+          "403 · 웹 서버가 거부 응답을 보냈다."
+        ],
+        [
+          "rule.id · 설명",
+          "31103 · SQL injection attempt."
+        ]
+      ],
+      "widths": [
+        30,
+        97
+      ]
+    },
+    {
+      "type": "p",
+      "text": "규칙 31103은 접속 로그의 URL에 union+, select+, %20from%20 같은 문자열이 있으면 일치한다. 판정 근거는 URL 문자열이므로, 도식 5-3에서 이 경보가 보여 주는 것은 2 지점(웹 서버 도착)까지이다. 화면의 &amp;는 매개변수 구분 기호 &를 HTML로 표기한 것이다. [6]"
+    }
+  ],
+  "break": false,
+  "level": "section",
+  "source": {
+    "file": "volume01-chapter05.json",
+    "section_index": 5,
+    "revision": "REV01",
+    "mapping_status": "pending-review"
+  }
+}

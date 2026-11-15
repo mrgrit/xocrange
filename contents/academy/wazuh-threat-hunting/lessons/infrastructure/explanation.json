@@ -1,0 +1,88 @@
+{
+  "title": "4.1  로그가 검색되기까지",
+  "kind": "body",
+  "blocks": [
+    {
+      "type": "p",
+      "text": "bastion의 로그는 다음 경로로 Discover에 나타난다. bastion의 Wazuh 에이전트(Agent)가 로그 파일의 새 줄을 읽어 Manager로 보낸다. Manager는 xocrange-siem 컨테이너에서 실행되며, 받은 로그를 디코더와 규칙으로 분석해 파일에 저장한다. Filebeat는 Manager가 저장한 파일을 Indexer로 보내는 프로그램으로, xOC Range이 Manager와 같은 컨테이너에 구성한다. [1]"
+    },
+    {
+      "type": "image",
+      "path": "assets/figures/chapter04/collection-path.png",
+      "caption": "도식 4-2. bastion 로그의 수집·검색 경로.",
+      "width_mm": 127,
+      "asset": "055c3db39500e43c043656f90e8bb6fa4875fa61722fe3f27db7fee0a736e90e.png"
+    },
+    {
+      "type": "p",
+      "text": "Manager는 받은 로그를 두 갈래로 저장한다. 받은 로그 전체는 아카이브(archives.json)에, 규칙에 일치하고 저장 기준 수준 이상인 기록은 경보(alerts.json)에 저장한다. 두 파일이 각각 wazuh-archives-*와 wazuh-alerts-* 인덱스가 된다. xOC Range은 아카이브 저장과 전송을 켜 둔다. [3]"
+    },
+    {
+      "type": "image",
+      "path": "assets/figures/chapter04/storage.png",
+      "caption": "도식 4-3. 아카이브와 경보 저장.",
+      "width_mm": 127,
+      "asset": "0943892906a66559292e649e12eed6641016e956e3f607ed03001487f6fd93ec.png"
+    },
+    {
+      "type": "p",
+      "text": "각 단계는 다음 위치에서 확인한다. 이 표의 순서가 4.11의 문제 해결 순서이다."
+    },
+    {
+      "type": "table",
+      "head": [
+        "단계",
+        "확인 위치",
+        "절"
+      ],
+      "rows": [
+        [
+          "원본 기록",
+          "bastion의 /var/log/auth.log",
+          "4.3"
+        ],
+        [
+          "수집 설정",
+          "bastion 에이전트의 ossec.conf",
+          "4.2"
+        ],
+        [
+          "전달",
+          "Discover · wazuh-archives-*",
+          "4.4"
+        ],
+        [
+          "분석",
+          "Ruleset Test · Manager의 디코더·규칙 파일",
+          "4.5~4.8"
+        ],
+        [
+          "경보",
+          "Discover · wazuh-alerts-*",
+          "4.9"
+        ]
+      ],
+      "widths": [
+        24,
+        85,
+        18
+      ],
+      "keep": true
+    },
+    {
+      "type": "box",
+      "kind": "blind",
+      "text": [
+        "경보 검색 화면에는 마지막 단계의 결과만 보인다. 경보가 0건일 때 기록이 원본에서 멈췄는지, 전달되지 않았는지, 규칙에 일치하지 않았는지는 앞 단계를 차례로 확인해야 알 수 있다."
+      ]
+    }
+  ],
+  "break": false,
+  "level": "section",
+  "source": {
+    "file": "volume01-chapter04.json",
+    "section_index": 1,
+    "revision": "REV01",
+    "mapping_status": "pending-review"
+  }
+}

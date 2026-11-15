@@ -1,0 +1,294 @@
+{
+  "id": "case-27",
+  "title": "27 · 시스템 바이너리 변경",
+  "source_pages": [
+    305,
+    312
+  ],
+  "slides": [
+    {
+      "page": 305,
+      "title": "리눅스 · 27 / 61",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "리눅스 · 27 / 61"
+        },
+        {
+          "type": "text",
+          "text": "27 시스템 바이너리 변조 (백도어)"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  리눅스 · 27"
+        },
+        {
+          "type": "text",
+          "text": "공격"
+        },
+        {
+          "type": "text",
+          "text": "/usr/bin/ssh, /bin/ls 등을 트로이 버전으로 바꿔 암호를 훔치거나 흔적을 숨김"
+        },
+        {
+          "type": "text",
+          "text": "탐지 포인트"
+        },
+        {
+          "type": "text",
+          "text": "시스템 경로의 파일 수정(룰 550). 패키지 업데이트 시간과 불일치"
+        },
+        {
+          "type": "text",
+          "text": "검색 원리"
+        },
+        {
+          "type": "text",
+          "text": "바이너리 경로 + modified 이벤트로 좁힘"
+        },
+        {
+          "type": "text",
+          "text": "주요 필드"
+        },
+        {
+          "type": "text",
+          "text": "syscheck.path · syscheck.sha256_after"
+        },
+        {
+          "type": "text",
+          "text": "결과 해석"
+        },
+        {
+          "type": "text",
+          "text": "syscheck.sha256_after를 패키지 원본 해시(rpm -V, debsums)와 대조. 한두 파일만 바뀌었으면 백도어 의심"
+        },
+        {
+          "type": "text",
+          "text": "원본 교재 검증 기록 · 원본 DQL 그대로 동작"
+        }
+      ]
+    },
+    {
+      "page": 306,
+      "title": "27 실습 ① 공격 실행 — 시스템 바이너리 변조 (백도어)",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "27 실습 ① 공격 실행 — 시스템 바이너리 변조 (백도어)"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  리눅스 · 27"
+        },
+        {
+          "type": "image",
+          "asset": "42ab8224b2acb7887a6a229f0fd05f75119a041cd7265faa1fb7327999348cbd.png",
+          "alt": "교재 306페이지 예시 화면"
+        },
+        {
+          "type": "text",
+          "text": "공격자 VM 에서 학생이 직접 입력하는 명령과 실제 결과. # 줄은 설명, 노란색은 확인할 결과"
+        }
+      ]
+    },
+    {
+      "page": 307,
+      "title": "27 구문 풀이 — 시스템 바이너리 변조 (백도어)",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "27 구문 풀이 — 시스템 바이너리 변조 (백도어)"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  리눅스 · 27"
+        },
+        {
+          "type": "text",
+          "text": "printf '\\x00xOC Range' >> /usr/bin/yes"
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "시스템 프로그램 끝에 바이트를 덧붙여 '트로이 목마로 바꿔치기'를 흉내 → 해시가 달라진다"
+        },
+        {
+          "type": "text",
+          "text": "cp /root/yes.orig /usr/bin/yes"
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "실습 뒤 원복 (이 변경도 550 으로 남는다)"
+        }
+      ]
+    },
+    {
+      "page": 308,
+      "title": "27 실습 ② 검색 준비 — 시스템 바이너리 변조 (백도어)",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "27 실습 ② 검색 준비 — 시스템 바이너리 변조 (백도어)"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  리눅스 · 27"
+        },
+        {
+          "type": "text",
+          "text": "인덱스 패턴"
+        },
+        {
+          "type": "text",
+          "text": "wazuh-alerts-*"
+        },
+        {
+          "type": "text",
+          "text": "시간 범위"
+        },
+        {
+          "type": "text",
+          "text": "Last 15 minutes (실습 직후)"
+        },
+        {
+          "type": "text",
+          "text": "DQL — 검색창에 직접 입력 → Enter"
+        },
+        {
+          "type": "text",
+          "text": "rule.id:550 AND syscheck.path:(/bin/* or /sbin/* or /usr/bin/* or /usr/sbin/* or /lib/* or /usr/lib/*)"
+        },
+        {
+          "type": "text",
+          "text": "추가할 컬럼"
+        },
+        {
+          "type": "text",
+          "text": "agent.name  ·  rule.id  ·  rule.description  ·  syscheck.path  ·  syscheck.sha256_before  ·  syscheck.sha256_after"
+        },
+        {
+          "type": "text",
+          "text": "xOC Range 결과"
+        },
+        {
+          "type": "text",
+          "text": "2 hits"
+        }
+      ]
+    },
+    {
+      "page": 309,
+      "title": "27 결과 화면 ① — 결과 수와 시간 분포",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "27 결과 화면 ① — 결과 수와 시간 분포"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  리눅스 · 27"
+        },
+        {
+          "type": "image",
+          "asset": "5e15811f04c61a185ac7dd970523cb80f7557da398ebc6028f2d740b8688b0a7.png",
+          "alt": "교재 309페이지 예시 화면"
+        },
+        {
+          "type": "text",
+          "text": "2 hits"
+        },
+        {
+          "type": "text",
+          "text": "검색창 아래 hits = 찾은 건수, 막대 = 시간대별 건수. 실습 직후라 막대가 한곳에 몰려 있다"
+        }
+      ]
+    },
+    {
+      "page": 310,
+      "title": "27 결과 화면 ② — 결과 표",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "27 결과 화면 ② — 결과 표"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  리눅스 · 27"
+        },
+        {
+          "type": "image",
+          "asset": "c923581eac0035f9679214d73ce6211856fef3e89a990d131dc89b958b033410.png",
+          "alt": "교재 310페이지 예시 화면"
+        },
+        {
+          "type": "text",
+          "text": "결과 표 — 위: 시간 · 에이전트 · 룰 / 아래: 같은 행의 나머지 열 (한 행 = 로그 한 건)"
+        }
+      ]
+    },
+    {
+      "page": 311,
+      "title": "27 결과 화면 ③ — 문서 펼치기 (Table)",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "27 결과 화면 ③ — 문서 펼치기 (Table)"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  리눅스 · 27"
+        },
+        {
+          "type": "image",
+          "asset": "2bf539b5ea2ba8be3fe6b1416cc5e750a8d18ab7f7152ed0befcf65dc628b632.png",
+          "alt": "교재 311페이지 예시 화면"
+        },
+        {
+          "type": "text",
+          "text": "행 왼쪽 > 를 눌러 펼친 화면. 노란색 = 검색 조건과 맞은 부분"
+        }
+      ]
+    },
+    {
+      "page": 312,
+      "title": "27 결과 읽는 법 — 시스템 바이너리 변조 (백도어)",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "27 결과 읽는 법 — 시스템 바이너리 변조 (백도어)"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  리눅스 · 27"
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "550 + syscheck.path:/usr/bin/… — sha256_before 와 sha256_after 가 다르다"
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "패키지 원본 해시(debsums, rpm -V)와 비교. 업데이트 시각과 안 맞으면 백도어 의심"
+        },
+        {
+          "type": "text",
+          "text": "원본 자료와 달라진 점 — xOC Range 보강: /usr/bin·/usr/sbin 실시간 감시 추가 (원본은 12시간 주기라 '지연')"
+        }
+      ]
+    }
+  ]
+}

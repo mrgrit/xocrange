@@ -264,9 +264,7 @@ for ((i=0; i<${#selection[@]}; i+=2)); do
 done
 if $content_selected; then
     stage content-module
-    python3 "$source_directory/scripts/fetch-contents.py" --root "$source_directory"
-    # Keep the cache in a user's checkout owned by that user, not root-only.
-    chown -R --no-dereference "$(stat -c %u:%g "$source_directory")" "$source_directory/contents"
+    python3 "$source_directory/scripts/verify-contents.py" --root "$source_directory"
 fi
 stage source-snapshot
 release=$(python3 "$source_directory/scripts/install-support.py" snapshot "$source_directory" "$prefix/releases")
