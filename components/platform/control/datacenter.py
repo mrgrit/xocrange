@@ -4,7 +4,8 @@ from django.http import JsonResponse
 import re
 from django.views.decorators.http import require_GET
 from .security import protected
-from .workspace import registry, snapshot, panels
+from .workspace import registry, snapshot, panels, document
+from datetime import datetime, timezone
 
 
 # 6F–8F are the requested academy, live-fire and student-company extension.
@@ -28,7 +29,22 @@ FLOORS = [
 RACKS = [
     dict(id='R-2F-01', title='네트워크 · 보안 · 웹 서비스', floor='2F', aisle='A', units=42, position=[3, 3]),
     dict(id='R-2F-02', title='SIEM · Core 관리', floor='2F', aisle='A', units=42, position=[3, 5]),
+    # Lab switching (ADR 0010): the four lab bridges shown as switches, with the routing they carry.
+    dict(id='R-2F-03', title='실습망 스위치 · 라우팅', floor='2F', aisle='A', units=42, position=[5.6, 3]),
 ]
+SEGMENT_TITLES = {'ext': '외부망(EXT)', 'pipe': '파이프망(PIPE)', 'dmz': 'DMZ', 'int': '내부망(INT)'}
+SEGMENT_ROLES = {
+    'ext': '외부에서 들어온 요청이 처음 닿는 구간입니다. 진입 게이트웨이(ingress)와 방화벽의 외부 인터페이스가 연결됩니다.',
+    'pipe': '방화벽과 IPS 사이의 통과 구간입니다. 방화벽을 지난 트래픽만 IPS로 전달됩니다.',
+    'dmz': 'IPS와 웹 방화벽 사이의 구간입니다. 외부에 공개하는 웹 서비스의 앞단입니다.',
+    'int': '웹 방화벽 뒤의 내부망입니다. 실습 타깃과 내부 서비스가 연결되며 외부로 직접 나가지 않습니다.',
+}
+ROUTING_ROLES = {
+    'ingress': 'ext 구간의 진입점입니다. 외부 HTTPS 요청을 받아 방화벽 쪽으로 넘깁니다.',
+    'fw': 'ext ↔ pipe 구간을 잇는 라우터 역할도 합니다.',
+    'ips': 'pipe ↔ dmz 구간을 잇는 라우터 역할도 합니다.',
+    'web': 'dmz ↔ int 구간을 잇는 리버스 프록시입니다.',
+}
 DESCRIPTIONS = {
     'ingress': '외부 HTTPS 연결을 받아 FW → IPS → WAF 보안 검사 경로로 전달하는 진입 게이트웨이입니다.',
     'fw': 'nftables 방화벽입니다. FORWARD 필터 정책과 NAT로 네트워크 구간 사이의 접근을 제어합니다.',
@@ -60,6 +76,37 @@ def device_metadata(asset, available_panels):
                         'shell_command':'sudo docker exec -it "$(' + selector + ')" sh'})
 
 
+
+def network_observation(plan_id):
+    """The host observer's lab network view, if fresh and for this installation."""
+    try:
+        value = document('NETWORK_FILE', '/run/xoc-observation/network.json')
+        age = (datetime.now(timezone.utc) - datetime.fromisoformat(value['observed_at'])).total_seconds()
+        if value.get('schema_version') == 'xoc.network/0.1.0' and value.get('plan_id') == plan_id and 0 <= age <= 45 \
+                and isinstance(value.get('segments'), list):
+            return value
+    except (OSError, ValueError, KeyError, TypeError):
+        pass
+    return None
+
+
+def network_assets(network):
+    """Switch devices for rack R-2F-03 from the observed lab bridges (read-only)."""
+    out = []
+    for segment in (network or {}).get('segments', []):
+        if segment.get('id') not in SEGMENT_TITLES:
+            continue
+        bridge = segment.get('bridge') if isinstance(segment.get('bridge'), str) and re.fullmatch(r'[a-z0-9-]{1,15}', segment['bridge']) else None
+        state = {'up': 'running', 'down': 'exited'}.get(segment.get('state'), 'unknown')
+        out.append(dict(asset_id='net-' + segment['id'], service='sw-' + segment['id'], title='실습망 스위치 · ' + SEGMENT_TITLES[segment['id']],
+                        kind='switch', rack_id='R-2F-03', floor='2F', zones=[segment['id']], health={'state': state},
+                        description=SEGMENT_ROLES[segment['id']] + ' 실제로는 호스트의 Docker 브리지이며, 연결된 장비 사이의 프레임을 MAC 주소 표로 전달합니다.',
+                        web_console=None, segment=segment,
+                        access={'kind': 'host_readonly', 'direct_ssh': False,
+                                'shell_command': ('ip -s link show ' + bridge + '\nbridge fdb show br ' + bridge) if bridge else ''}))
+    return out
+
+
 @require_GET
 @protected('registry.read')
 def endpoint(request, floor=None):
@@ -83,6 +130,14 @@ def endpoint(request, floor=None):
                            and a['tenant_id'] == 'community' and a['range_id'] == 'local']
         available_panels = panels(data, request.user.profile.role)
         value['assets'] = [device_metadata(a, available_panels) for a in value['assets']]
+        network = network_observation(data['plan_id'])
+        routers = {r.get('service'): r for r in (network or {}).get('routers', []) if isinstance(r, dict)}
+        for a in value['assets']:
+            if a['service'] in routers:
+                a['network'] = routers[a['service']]
+                a['description'] += ' ' + ROUTING_ROLES.get(a['service'], '')
+        value['assets'] += network_assets(network)
+        value['network_observation'] = {'fresh': network is not None, 'observed_at': network.get('observed_at') if network else None}
         ssh_username = settings.CONFIG.get('ssh_username')
         if not isinstance(ssh_username, str) or not re.fullmatch(r'[a-z_][a-z0-9_-]{0,31}', ssh_username):
             ssh_username = None

@@ -14,7 +14,7 @@ xOC Range(본문 호칭 `xoc`)의 Core/Community 구현 저장소. kt66을 상�
 
 ## 지켜야 할 설계 규칙
 
-- **Core에 유료 기능을 넣지 않는다.** Assessor·채점·대전 실행(M15), AI 근무자·LLM 호출·모델·GPU(M5/M7/M9), 시설·주입기(M4)는 Core 이미지·Compose·Dockerfile·entrypoint 어디에도 포함하지 않는다. Core는 기록 저장까지만, 채점은 하지 않는다. Core 화면에 정답을 노출하지 않는다.
+- **Core에 유료 기능을 넣지 않는다.** Assessor·채점·대전 실행(M15), AI 근무자·LLM 호출·모델·GPU(M5/M7/M9), 시설 시뮬레이터·장애 주입기(M4)는 Core 이미지·Compose·Dockerfile·entrypoint 어디에도 포함하지 않는다. Core는 기록 저장까지만, 채점은 하지 않는다. Core 화면에 정답을 노출하지 않는다. 시설 표시(설명·기준값)와 실습망 스위치·라우터 표시는 Core다(ADR 0010).
 - **계약으로만 연결한다.** 모듈 간 직접 호출 대신 C1~C7 계약(`src/xocrange/contracts/`)을 쓴다. 계약 변경 시 버전과 호환성 검사를 같이 고친다.
 - C1 이벤트의 `tenant_id`/`range_id`는 서버 측 수집원 등록에서만 온다. 원본 입력의 값을 신뢰하지 않는다.
 - C7: Community는 키 없이 동작한다. 저장소에는 검증 공개키만 둔다. 개인 서명키·테스트 키를 배포 빌드에서 신뢰하지 않는다.

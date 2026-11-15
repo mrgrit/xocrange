@@ -53,7 +53,7 @@ def test_c4_registration_without_contract_fails():
 def registry_files(app,tmp_path,monkeypatch):
     from django.conf import settings
     data=build_registry(planned(),INSTALLATION)
-    files={name:tmp_path/name for name in ('REGISTRY_FILE','OBSERVATION_FILE','BUNDLE_FILE')}
+    files={name:tmp_path/name for name in ('REGISTRY_FILE','OBSERVATION_FILE','BUNDLE_FILE','NETWORK_FILE')}
     for name,path in files.items():monkeypatch.setattr(settings,name,str(path),raising=False)
     files['REGISTRY_FILE'].write_text(json.dumps(data))
     files['BUNDLE_FILE'].write_text(json.dumps(bundle(ROOT)))

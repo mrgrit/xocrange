@@ -1,6 +1,7 @@
 """Data-center floor boundaries; purchase flags never grant Core access."""
 from copy import deepcopy
 import json
+from datetime import datetime, timezone
 import pytest
 from test_registry import registry_files
 from test_platform_security import application, app, login, send
@@ -107,14 +108,15 @@ def test_racks_and_device_access_follow_selected_inventory(app,registry_files):
     registry,_,_=registry_files
     login(app)
     data=app.get('/core/api/datacenter').json()
-    assert [(r['id'],r['position']) for r in data['racks']]==[('R-2F-01',[3,3]),('R-2F-02',[3,5])]
+    assert [(r['id'],r['position']) for r in data['racks']]==[('R-2F-01',[3,3]),('R-2F-02',[3,5]),('R-2F-03',[5.6,3])]
+    assert next(r for r in data['racks'] if r['id']=='R-2F-03')['asset_ids']==[] and not data['network_observation']['fresh']
     ids=[i for r in data['racks'] for i in r['asset_ids']]
     assert len(ids)==len(set(ids))==len(registry['assets'])
     assert set(ids)=={a['asset_id'] for a in registry['assets']}
     for asset in data['assets']:
         assert asset['description']
         assert asset['asset_id'] in next(r['asset_ids'] for r in data['racks'] if r['id']==asset['rack_id'])
-        assert asset['access']['kind']=='container_via_host' and not asset['access']['direct_ssh']
+        assert asset["access"]["kind"]=="container_via_host" and not asset["access"]["direct_ssh"]
         assert 'label=com.docker.compose.service='+asset['service'] in asset['access']['shell_command']
         assert asset['web_console'] is None or asset['web_console'] in {p['route'] for p in data['panels']}
     assert next(a for a in data['assets'] if a['service']=='ips')['web_console'] is None
@@ -137,3 +139,41 @@ def test_service_command_injection_fails_closed(app,registry_files):
     files['REGISTRY_FILE'].write_text(json.dumps(data));login(app)
     r=app.get('/core/api/datacenter')
     assert r.status_code==503 and 'assets' not in r.json()
+
+
+def network_document(plan_id, observed_at=None):
+    return {'schema_version':'xoc.network/0.1.0','plan_id':plan_id,
+            'observed_at':observed_at or datetime.now(timezone.utc).isoformat(),
+            'segments':[{'id':'ext','internal':False,'subnet':'10.20.30.0/24','gateway':'10.20.30.254','bridge':'br-16dbbff96956',
+                         'state':'up','mtu':1500,'counters':{'rx_packets':5,'tx_packets':7},
+                         'endpoints':[{'service':'fw','ip':'10.20.30.1','prefix':24,'mac':'ca:9a:40:c3:9e:dd'}],
+                         'mac_table':[{'mac':'ca:9a:40:c3:9e:dd','port':'veth1','owner':'fw'}]},
+                        {'id':'pipe','internal':False,'subnet':'10.20.31.0/24','gateway':'10.20.31.254','bridge':'br-$(id)',
+                         'state':'down','mtu':1500,'counters':{},'endpoints':[],'mac_table':[]},
+                        {'id':'mgmt','subnet':'172.18.0.0/16','state':'up','endpoints':[],'mac_table':[]}],
+            'routers':[{'service':'fw','interfaces':[{'name':'eth0','segment':'ext','addresses':['10.20.30.1/24'],'mac':'ca:9a:40:c3:9e:dd'}],
+                        'routes':[{'dst':'10.20.32.0/24','via':'10.20.31.2','dev':'eth1'}],'neighbors':[]}]}
+
+
+def test_lab_switches_and_routing_come_from_a_fresh_host_observation(app,registry_files):
+    """ADR 0010: the four lab bridges appear as switches on R-2F-03 and fw/ips/web carry their routing."""
+    registry,files,_=registry_files
+    login(app,'viewer')
+    files['NETWORK_FILE'].write_text(json.dumps(network_document(registry['plan_id'])))
+    data=app.get('/core/api/datacenter').json()
+    switches=[a for a in data['assets'] if a['kind']=='switch']
+    assert [a['asset_id'] for a in switches]==['net-ext','net-pipe']            # unknown segments are not shown
+    assert next(r for r in data['racks'] if r['id']=='R-2F-03')['asset_ids']==['net-ext','net-pipe']
+    ext,pipe=switches
+    assert ext['health']['state']=='running' and pipe['health']['state']=='exited'
+    assert ext['access']['kind']=='host_readonly' and 'bridge fdb show br br-16dbbff96956' in ext['access']['shell_command']
+    assert pipe['access']['shell_command']=='' and '$(id)' not in json.dumps(pipe['access'])   # unsafe bridge names give no command
+    assert ext['segment']['mac_table'][0]['owner']=='fw'
+    fw=next(a for a in data['assets'] if a['service']=='fw')
+    assert fw['network']['routes'][0]['via']=='10.20.31.2' and '라우터' in fw['description']
+    assert data['network_observation']['fresh']
+    # A stale or foreign observation shows no switches.
+    files['NETWORK_FILE'].write_text(json.dumps(network_document('other-plan')))
+    assert not [a for a in app.get('/core/api/datacenter').json()['assets'] if a['kind']=='switch']
+    files['NETWORK_FILE'].write_text(json.dumps(network_document(registry['plan_id'],'2026-01-01T00:00:00+00:00')))
+    assert not [a for a in app.get('/core/api/datacenter').json()['assets'] if a['kind']=='switch']
