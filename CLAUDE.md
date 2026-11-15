@@ -40,7 +40,7 @@ python -m pytest -q --ignore=tests/browser   # 단위·계약 테스트 (약 2~3
 - 설치: `sudo bash install.sh` (Ubuntu 26.04 amd64 전용). 설치본은 `/opt/xocrange/releases/<hash>` + `current` 링크, 런타임 상태는 `/var/lib/xocrange`, 설정·비밀은 `/etc/xocrange`.
 - 상태: `sudo xoc siem status`, `sudo xoc doctor`, `systemctl status xocrange-core xocrange-collector xocrange-osquery`.
 - 소스 갱신 반영: `sudo xoc update --source <절대경로>` (설치 전 백업 생성 → 실패 시 자동 복원). 운영 설치본을 직접 수정하지 않는다.
-- 디스크: SIEM DB(`/var/lib/xocrange/siem/events.sqlite3`)는 incremental auto-vacuum으로 정리 때마다 빈 페이지를 반환한다. 실제 사용량은 `xoc siem status`의 `storage.used_bytes`로 본다. 설치 전 백업(`/var/lib/xocrange/backups`)은 자동 삭제되지 않으므로 주기적으로 최신 1개만 남긴다.
+- 디스크: SIEM DB(`/var/lib/xocrange/siem/events.sqlite3`)는 incremental auto-vacuum으로 정리 때마다 빈 페이지를 반환한다. 실제 사용량은 `xoc siem status`의 `storage.used_bytes`로 본다. 설치 전 복구 지점(`/var/lib/xocrange/backups/before-install-*`)은 설치·업데이트 성공 후 최신 1개만 남고 자동 정리된다(`operations.prune_checkpoints`). 그 밖의 이름으로 만든 수동 백업은 자동 삭제되지 않는다.
 
 ## 작업 방식
 

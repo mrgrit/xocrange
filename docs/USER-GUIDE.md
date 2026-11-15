@@ -121,6 +121,10 @@ sudo xoc recover                    # 정전·중단 뒤 남은 작업 정리
 
 백업에는 비밀번호·키·로그가 들어 있으니 root만 읽을 수 있게 보관하고 외부에 올리지 않는다. 업데이트는 서비스를 잠시 멈추고 복구 지점을 만든 뒤 진행하며, 검사에 실패하면 이전 설정·데이터·이미지로 되돌린다.
 
+업데이트·재설치의 복구 지점은 `/var/lib/xocrange/backups/before-install-<시각>-<번호>`에 생기며 설치 상태 전체(주로 SIEM DB)를 복사하므로 SIEM DB 크기만큼 디스크를 쓴다. 성공하면 방금 만든 것 하나만 남기고 이전 복구 지점은 자동으로 지운다. `xoc backup create`로 직접 만든 백업(다른 이름)은 지우지 않으므로 필요 없어진 것은 직접 정리한다(`sudo du -sh /var/lib/xocrange/backups/*`).
+
+2026-11-15 이전 개발 버전을 `git clone`으로 설치했다면 아카데미 콘텐츠를 내려받던 `contents/` 폴더가 저장소에 새로 포함된 같은 경로와 겹쳐 `git pull`이 멈춘다. `mv contents ../contents.old` 후 `git pull`, `python3 scripts/verify-contents.py`로 확인하고 업데이트한다. 저장소 파일을 직접 고친 적이 있으면 먼저 `git stash`로 보관한다.
+
 ## 7. 문제 해결
 
 | 증상 | 확인 |
