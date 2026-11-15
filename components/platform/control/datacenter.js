@@ -11,7 +11,7 @@ window.DataCenter=(()=>{
  function num(n){return Number.isInteger(n)?n.toLocaleString('ko-KR'):'-';}
  function networkDetail(a){
   if(a.kind==='switch'&&a.segment){const s=a.segment,c=s.counters||{};
-   return `<section class="dc-net"><h4>스위치 정보</h4><dl class="dc-facts"><div><dt>대역 · 게이트웨이(호스트)</dt><dd>${esc(s.subnet||'-')} · ${esc(s.gateway||'-')}</dd></div><div><dt>브리지 · 상태 · MTU</dt><dd>${esc(s.bridge||'-')} · ${esc(s.state)} · ${esc(s.mtu??'-')}</dd></div><div><dt>수신 / 송신 패킷</dt><dd>${num(c.rx_packets)} / ${num(c.tx_packets)}</dd></div>${s.internal?'<div><dt>외부 연결</dt><dd>없음(내부 전용 망)</dd></div>':''}</dl>
+   return `<section class="dc-net"><h4>스위치 정보</h4><dl class="dc-facts"><div><dt>대역 · 게이트웨이(호스트)</dt><dd>${esc(s.subnet||'-')} · ${esc(s.gateway||'-')}</dd></div><div><dt>브리지 · 상태 · MTU</dt><dd>${esc(s.bridge||'-')} · ${esc(s.state)} · ${esc(s.mtu??'-')}</dd></div><div><dt>수신 / 송신 패킷</dt><dd>${num(c.rx_packets)} / ${num(c.tx_packets)}</dd></div>${s.internal?'<div><dt>인터넷 직접 연결</dt><dd>없음 — 진입점과 구간 라우터를 거쳐서만 통신</dd></div>':''}</dl>
    <h4>연결된 장비</h4>${table(['장비','IP','MAC'],(s.endpoints||[]).map(e=>[e.service,e.ip?e.ip+'/'+(e.prefix??''):'-',e.mac]))}
    <h4>MAC 주소 표 <small>최근 학습한 항목</small></h4>${table(['MAC','포트','장비'],(s.mac_table||[]).map(m=>[m.mac,m.port,m.owner||'외부·호스트']))}</section>`;}
   if(a.network){const n=a.network;
