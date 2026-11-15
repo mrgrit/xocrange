@@ -1,0 +1,326 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "C2 judgment record v0.1",
+  "description": "One verdict about one mission requirement. Produced by the Assessor (check), the grader (rubric) or an instructor (override); consumed by Range Control and Debrief. Records are append-only: a correction is a new record that names the one it supersedes.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "judgment_id",
+    "tenant_id",
+    "range_id",
+    "battle_id",
+    "mission",
+    "subject",
+    "kind",
+    "result",
+    "evidence",
+    "judged_at",
+    "judge"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "xoc.judgment/0.1.0"
+    },
+    "judgment_id": {
+      "$ref": "#/definitions/hash"
+    },
+    "tenant_id": {
+      "$ref": "#/definitions/id"
+    },
+    "range_id": {
+      "$ref": "#/definitions/id"
+    },
+    "battle_id": {
+      "$ref": "#/definitions/id"
+    },
+    "mission": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scenario_id",
+        "scenario_sha256",
+        "side",
+        "order"
+      ],
+      "properties": {
+        "scenario_id": {
+          "$ref": "#/definitions/id"
+        },
+        "scenario_sha256": {
+          "$ref": "#/definitions/hash"
+        },
+        "mission_id": {
+          "$ref": "#/definitions/id"
+        },
+        "side": {
+          "enum": [
+            "red",
+            "blue"
+          ]
+        },
+        "order": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 99
+        }
+      }
+    },
+    "subject": {
+      "description": "Pseudonymous participant and team identifiers issued by Range Control; never names or e-mail addresses.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "participant_id"
+      ],
+      "properties": {
+        "participant_id": {
+          "$ref": "#/definitions/id"
+        },
+        "team_id": {
+          "$ref": "#/definitions/id"
+        }
+      }
+    },
+    "kind": {
+      "enum": [
+        "check",
+        "rubric",
+        "override"
+      ]
+    },
+    "check": {
+      "description": "Required when kind is check. params_sha256 binds the verdict to the exact parameters that were evaluated.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "check_id",
+        "type",
+        "target",
+        "params_sha256"
+      ],
+      "properties": {
+        "check_id": {
+          "$ref": "#/definitions/id"
+        },
+        "type": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]{0,40}$"
+        },
+        "target": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]{0,40}$"
+        },
+        "params_sha256": {
+          "$ref": "#/definitions/hash"
+        }
+      }
+    },
+    "result": {
+      "enum": [
+        "passed",
+        "failed",
+        "inconclusive",
+        "error"
+      ]
+    },
+    "score": {
+      "description": "Only rubric and override records carry points; check points are derived by Range Control from the mission definition.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "awarded",
+        "max"
+      ],
+      "properties": {
+        "awarded": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        },
+        "max": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000
+        }
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "maxItems": 32,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "kind",
+          "ref",
+          "sha256"
+        ],
+        "properties": {
+          "kind": {
+            "enum": [
+              "c1_event",
+              "alert",
+              "device_config",
+              "service_state",
+              "file",
+              "attacker_record",
+              "submission"
+            ]
+          },
+          "ref": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "sha256": {
+            "$ref": "#/definitions/hash"
+          },
+          "observed_at": {
+            "$ref": "#/definitions/time"
+          }
+        }
+      }
+    },
+    "window": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "since",
+        "until"
+      ],
+      "properties": {
+        "since": {
+          "$ref": "#/definitions/time"
+        },
+        "until": {
+          "$ref": "#/definitions/time"
+        }
+      }
+    },
+    "reason": {
+      "type": "string",
+      "maxLength": 2000
+    },
+    "judged_at": {
+      "$ref": "#/definitions/time"
+    },
+    "judge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "role",
+        "version"
+      ],
+      "properties": {
+        "role": {
+          "enum": [
+            "assessor",
+            "grader",
+            "instructor"
+          ]
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "actor_id": {
+          "$ref": "#/definitions/id"
+        }
+      }
+    },
+    "supersedes": {
+      "$ref": "#/definitions/hash",
+      "description": "The judgment this record corrects. Required for an override of an automated judgment; absent when the instructor grades a requirement no automated judgment covered."
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "check"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "check",
+          "window"
+        ],
+        "not": {
+          "required": [
+            "score"
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "rubric"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "score",
+          "reason"
+        ],
+        "properties": {
+          "judge": {
+            "properties": {
+              "role": {
+                "const": "grader"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "override"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "score",
+          "reason"
+        ],
+        "properties": {
+          "judge": {
+            "required": [
+              "actor_id"
+            ],
+            "properties": {
+              "role": {
+                "const": "instructor"
+              }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "definitions": {
+    "hash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,63}$"
+    },
+    "time": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "Z$"
+    }
+  }
+}

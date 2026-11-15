@@ -18,7 +18,9 @@ def now():
 
 
 class Store:
-    def __init__(self, directory):
+    def __init__(self, directory, identity=('community', 'local')):
+        # (tenant_id, range_id) stamped on newly normalized events; see entitlements.collection_identity.
+        self.identity = tuple(identity)
         self.directory = Path(directory)
         if any(p.is_symlink() for p in (self.directory, *self.directory.parents)):
             raise XocError("unsafe_store", "Evidence directory must not traverse symlinks.")
@@ -112,7 +114,7 @@ class Store:
         check_write(self)
         error, events = None, []
         try:
-            events = normalize(source, raw, Context("community", "local", source_id, ref, observed))
+            events = normalize(source, raw, Context(*self.identity, source_id, ref, observed))
         except XocError as exc:
             error = exc.code
         except (KeyError, TypeError, ValueError, OverflowError, RecursionError):
@@ -213,7 +215,7 @@ class Store:
         recovered = 0
         for row in rows:
             try:
-                ctx = Context('community', 'local', row['source_id'], row['ref'], row['observed'])
+                ctx = Context(*self.identity, row['source_id'], row['ref'], row['observed'])
                 events = normalize(row['source'], row['raw'], ctx)
             except XocError:
                 continue
