@@ -29,7 +29,7 @@ sudo xoc siem credentials
 
 처음 로그인하면 Core 초기 비밀번호를 변경해야 한다. 이후에는 변경한 비밀번호를 사용한다. 위 명령은 UI에서 변경한 비밀번호를 조회하거나 초기화하지 않는다. 고정 공용 비밀번호는 없으며 실제 비밀번호는 README나 Git에 기록하지 않는다. 로컬 인증서를 사용하는 경우 설치된 서버의 `/etc/xocrange/ca.crt`를 접속 PC에서 신뢰 등록한다.
 
-**Community 0.1.0 (`v0.1.0`, 2026-11-15):** 빈 Ubuntu 26.04 VM의 한 번 설치·재부팅·재설치·디스크 고갈·실제 외부 PC 출처 보존과 24시간 장기 운영([기록](docs/development/LONGRUN-2026-11-14.md))을 검증했다. 기본 구성은 설치기 기본값(보안 경로·SIEM·웹 관제·콘솔 3종·관리 화면·데이터센터·NOC 2층·아카데미)이다([K12 체크리스트](docs/development/K12-RC-CHECKLIST.md), [최종 재실행](docs/development/RC-FINAL-2026-11-15.md)). `bootstrap`은 설치 기반 확인용 health 서비스다.
+**Community 0.1.0 (`v0.1.0`, 2026-11-15):** 빈 Ubuntu 26.04 VM의 한 번 설치·재부팅·재설치·디스크 고갈·실제 외부 PC 출처 보존과 24시간 장기 운영([기록](docs/development/LONGRUN-2026-11-14.md))을 검증했다. 기본 구성은 설치기 기본값(보안 경로·SIEM·대시보드·콘솔 3종·관리 화면·데이터센터·NOC 2층·아카데미)이다([K12 체크리스트](docs/development/K12-RC-CHECKLIST.md), [최종 재실행](docs/development/RC-FINAL-2026-11-15.md)). `bootstrap`은 설치 기반 확인용 health 서비스다.
 
 ## 지금 실행할 수 있는 것
 
@@ -37,7 +37,7 @@ sudo xoc siem credentials
 |---|---|
 | C1 이벤트 계약 | v0.2 JSON Schema, nftables·Suricata·ModSecurity·osquery·Sysmon·auditd·Apache access/error 정규화 |
 | SIEM 백엔드 | 8종 원본 직접 분석과 C1 독립 전송, 원본 SHA-256, 처리 확인·재전송, Wazuh Manager/API·기본/보완 규칙, 원본 경보·증거 연결 |
-| SIEM 웹 관제 | Wazuh Indexer + 전용 Dashboard, 8종 통합 검색·차트·필터, HTTPS 인증, 범위를 제한한 WAF Rule 예외 |
+| SIEM 대시보드 | Wazuh Indexer + 전용 Dashboard, 8종 통합 검색·차트·필터, HTTPS 인증, 범위를 제한한 WAF Rule 예외 |
 | 공통 보안 | `/core/` 관리 화면, 관리자·운영자·조회자 역할, 서버 세션·CSRF, 장비 쓰기 정책·변경 감사 |
 | 장비 콘솔 초안 | FORWARD 필터 정책, 객체·NAT, IPS/WAF 규칙, 실제 설정 검증·적용·복원, 별도 전체 규칙 탭 |
 | 데이터센터 시각화 | kt66 층·설비 디자인 계승, 랙 → 장비 목록 → 상태·설명·웹 콘솔·SSH 명령 복사, 티어별 비활성 공간 |
@@ -58,7 +58,7 @@ Ubuntu Server 26.04 LTS amd64 전용 VM에서 저장소 또는 별도로 받은 
 sudo bash install.sh
 ```
 
-**현재 개발 버전의 설치 범위는 공통 관리 화면 + 데이터센터·운영 개요·NOC 2층·자료실 + 장비 콘솔 3종 + platform + 방화벽 + IPS + WAF + SIEM 백엔드·웹 관제 + 호스트 관측 도구 + 통신 검증용 타깃이다.** 웹 관제를 포함하면 최소 8 GiB RAM을 요구하며 실제 검증 VM은 16 GiB다. `--without siem-ui`로 웹 관제만 제외하거나 `--without siem`으로 SIEM 전체를 제외할 수 있다. `--without portal`, `--without noc`, `--without academy-reader`로 각 화면을 제외할 수 있다. 모듈 설치·제거와 백업·업데이트·복구 명령을 제공한다. 입문 실습 타깃(Juice Shop·DVWA)은 `sudo xoc module add target-juice`·`target-dvwa`로 추가한다. 전체 출시 검증은 후속 단계다. [운영 개요·NOC·자료실](docs/development/WORKSPACES.md) [웹 관제 구성·WAF 예외·검증](docs/development/SIEM-WEB.md)
+**현재 개발 버전의 설치 범위는 공통 관리 화면 + 데이터센터·운영 개요·NOC 2층·자료실 + 장비 콘솔 3종 + platform + 방화벽 + IPS + WAF + SIEM 백엔드·대시보드 + 호스트 로그 수집 도구 + 연결 시험용 타깃이다.** SIEM 대시보드를 포함하면 최소 8 GiB RAM을 요구하며 실제 검증 VM은 16 GiB다. `--without siem-ui`로 SIEM 대시보드만 제외하거나 `--without siem`으로 SIEM 전체를 제외할 수 있다. `--without portal`, `--without noc`, `--without academy-reader`로 각 화면을 제외할 수 있다. 모듈 설치·제거와 백업·업데이트·복구 명령을 제공한다. 입문 실습 타깃(Juice Shop·DVWA)은 `sudo xoc module add target-juice`·`target-dvwa`로 추가한다. 전체 출시 검증은 후속 단계다. [운영 개요·NOC·자료실](docs/development/WORKSPACES.md) [웹 관제 구성·WAF 예외·검증](docs/development/SIEM-WEB.md)
 
 설치 후 `sudo xoc platform credentials`로 `https://VM주소/core/`의 초기 관리자 계정을 확인하고 첫 로그인에서 비밀번호를 변경한다. 이 관리 화면은 SIEM 제외 시에도 유지된다. SIEM은 자체 Wazuh 계정을 사용하며, Core 역할을 SIEM에 자동 적용하는 SSO는 포함하지 않는다. [공통 보안과 권한](docs/development/COMMON-SECURITY.md)
 
@@ -184,7 +184,7 @@ sudo xoc update --source /절대경로/새소스
 - [공통 인증·권한·감사](docs/development/COMMON-SECURITY.md) · [에이전트와 Windows 번들](docs/development/AGENTS-AND-WINDOWS.md)
 - [현재 로드맵 상태](docs/development/ROADMAP-STATUS.md) · [kt66 규칙 이식 범위](docs/development/KT66-RULE-DISPOSITION.md)
 - [SIEM 백엔드와 8종 디코더](docs/development/SIEM.md)
-- [SIEM 웹 관제와 WAF Rule 예외](docs/development/SIEM-WEB.md) · [정식 Wazuh 연동 범위](docs/development/WAZUH-NATIVE.md)
+- [SIEM 대시보드와 WAF Rule 예외](docs/development/SIEM-WEB.md) · [정식 Wazuh 연동 범위](docs/development/WAZUH-NATIVE.md)
 - [첫 구현 결과와 다음 작업](docs/development/IMPLEMENTATION-01.md)
 - [보안 경로 분리 결과와 검증 대기 항목](docs/development/IMPLEMENTATION-02.md)
 - [한 번 실행 설치기](docs/development/INSTALLER.md) · [설치기 구현·검증 상태](docs/development/IMPLEMENTATION-03.md)
@@ -197,7 +197,7 @@ sudo xoc update --source /절대경로/새소스
 - [착수 준비 기록](docs/development/READINESS.md) · [소스 기준선](docs/provenance/source-baseline-2026-11-07.json)
 - [전체 계획과 WBS 이미지](DEVELOPMENT-PLAN.md)
 
-Core는 보안 로그·운영 감사·수동 실습·선택형 장비 콘솔을 담당한다. 플랫폼 채점·대전·AI 근무자는 유료 모듈 책임이다. 기존 kt66 및 콘솔 코드는 출처·변경·배포 권리를 검토한 기능 단위로 이식한다.
+Core는 보안 로그·운영 감사·수동 실습·선택형 장비 콘솔을 담당한다. 플랫폼 채점·공방전·AI 에이전트는 유료 모듈 책임이다. 기존 kt66 및 콘솔 코드는 출처·변경·배포 권리를 검토한 기능 단위로 이식한다.
 
 ## 라이선스
 

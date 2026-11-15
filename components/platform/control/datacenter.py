@@ -32,30 +32,30 @@ RACKS = [
     # Lab switching (ADR 0010): the four lab bridges shown as switches, with the routing they carry.
     dict(id='R-2F-03', title='실습망 스위치 · 라우팅', floor='2F', aisle='A', units=42, position=[5.6, 3]),
 ]
-SEGMENT_TITLES = {'ext': '외부망(EXT)', 'pipe': '중계망(FW↔IPS)', 'dmz': 'DMZ', 'int': '내부망(INT)'}
+SEGMENT_TITLES = {'ext': '외부망', 'pipe': '중계망(Transit)', 'dmz': 'DMZ', 'int': '내부망'}
 SEGMENT_ROLES = {
     'ext': '외부에서 들어온 요청이 처음 닿는 구간입니다. 진입 게이트웨이(ingress)와 방화벽의 외부 인터페이스가 연결됩니다.',
-    'pipe': '방화벽과 IPS 두 장비만 잇는 중계 구간입니다. 방화벽을 지난 트래픽만 IPS로 전달됩니다. 업계에서는 트랜짓 네트워크(transit network)라고 부르며, 시스템 내부 이름은 pipe입니다.',
+    'pipe': '방화벽과 IPS 두 장비만 잇는 중계 구간입니다. 방화벽을 지난 트래픽만 IPS로 전달됩니다. 업계에서는 트랜짓 네트워크(transit network)라고 부릅니다.',
     'dmz': 'IPS와 웹 방화벽 사이의 구간입니다. 외부에 공개하는 웹 서비스의 앞단입니다.',
     'int': '웹 방화벽 뒤의 내부망입니다. 실습 타깃과 내부 서비스가 연결되며 외부로 직접 나가지 않습니다.',
 }
 ROUTING_ROLES = {
-    'ingress': 'ext 구간의 진입점입니다. 외부 HTTPS 요청을 받아 방화벽 쪽으로 넘깁니다.',
-    'fw': 'ext ↔ pipe 구간을 잇는 라우터 역할도 합니다.',
-    'ips': 'pipe ↔ dmz 구간을 잇는 라우터 역할도 합니다.',
-    'web': 'dmz ↔ int 구간을 잇는 리버스 프록시입니다.',
+    'ingress': '외부망의 HTTPS 진입점입니다. 외부 요청을 받아 방화벽 쪽으로 넘깁니다.',
+    'fw': '외부망과 중계망을 잇는 라우터 역할도 합니다.',
+    'ips': '중계망과 DMZ를 잇는 라우터 역할도 합니다.',
+    'web': 'DMZ와 내부망을 잇는 리버스 프록시입니다.',
 }
 DESCRIPTIONS = {
-    'ingress': '외부 HTTPS 연결을 받아 FW → IPS → WAF 보안 검사 경로로 전달하는 진입 게이트웨이입니다.',
+    'ingress': '외부 HTTPS 연결을 받아 방화벽 → IPS → 웹 방화벽 순서의 보안 검사 경로로 전달하는 HTTPS 진입점(리버스 프록시)입니다.',
     'fw': 'nftables 방화벽입니다. FORWARD 필터 정책과 NAT로 네트워크 구간 사이의 접근을 제어합니다.',
     'ips': 'Suricata 인라인 침입 방지 장비입니다. NFQUEUE 경로의 패킷을 검사하고 적용된 규칙에 따라 탐지·차단합니다.',
     'web': 'Apache와 ModSecurity 기반 웹 방화벽입니다. 웹 요청을 검사하고 허용된 서비스로 전달하며 접근·오류·차단 로그를 기록합니다.',
-    'siem': 'Wazuh Manager입니다. 수집된 보안 로그를 디코딩하고 탐지 규칙으로 분석해 경보와 원본 확인 기록을 생성합니다.',
+    'siem': 'Wazuh Manager입니다. 수집된 보안 로그를 디코딩하고 탐지 규칙으로 분석해 경보(alert)와 원본 로그 보관 기록(archives)을 만듭니다.',
     'indexer': 'Wazuh Indexer입니다. 보안 이벤트와 경보를 색인·저장하고 대시보드의 검색 요청을 처리합니다.',
     'dashboard': 'Wazuh Dashboard입니다. 보안 이벤트의 검색·분석과 Wazuh 관리 화면을 제공합니다. Core와 별도 계정을 사용합니다.',
-    'platform': 'Core 공통 관리 서비스입니다. 로그인·역할·감사·선택 설치 등록부와 보안 장비 콘솔의 접근을 관리합니다.',
-    'lab-client': '설치 검증용 클라이언트입니다. 보안 검사 경로를 통과하는 정상 요청과 차단 표식 요청을 생성합니다.',
-    'lab-target': '설치 검증용 웹 타깃입니다. 정상 통신·접근 제한·경로 복구를 검증하는 응답 서버입니다.',
+    'platform': 'Core 공통 관리 서비스입니다. 로그인·역할·감사·설치된 서비스 목록과 보안 장비 콘솔의 접근을 관리합니다.',
+    'lab-client': '연결 시험용 클라이언트입니다. 보안 검사 경로를 통과하는 정상 요청과, 차단되어야 하는 시험 요청(탐지 시그니처 포함)을 보냅니다.',
+    'lab-target': '연결 시험용 웹 타깃입니다. 정상 통신·접근 제한·경로 복구를 시험하는 응답 서버입니다.',
 }
 
 

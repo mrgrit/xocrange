@@ -40,7 +40,7 @@ window.DataCenterArchitecture=(()=>{
  }
  const drawRoomWorker=(worker,x,y,z)=>drawWorkerFigure(worker,x,y,z);
 
- const DESIGN_CREW=[{"id":"facility-engineer","name":"시설 담당(전기/기계)","floor":"B1"},{"id":"physical-security","name":"물리보안(출입/CCTV)","floor":"1F"},{"id":"network-engineer","name":"네트워크 엔지니어","floor":"2F"},{"id":"systems-engineer","name":"시스템/스토리지 엔지니어","floor":"2F"},{"id":"gpu-platform-engineer","name":"GPU/플랫폼 엔지니어","floor":"3F"},{"id":"service-desk","name":"서비스데스크","floor":"4F"},{"id":"soc-analyst","name":"SOC 분석가","floor":"XOC"},{"id":"ops-lead","name":"운영 리드","floor":"4F"},{"id":"compliance-auditor","name":"컴플라이언스 감사인","floor":"4F"},{"id":"application-developer","name":"애플리케이션 개발자","floor":"4F"},{"id":"skill-researcher","name":"스킬 연구원","floor":"5F"},{"id":"skill-evaluator","name":"스킬 평가원","floor":"5F"},{"id":"agent-supervisor","name":"AI 에이전트 관제원","floor":"XOC"}];
+ const DESIGN_CREW=[{"id":"facility-engineer","name":"시설 담당(전기/기계)","floor":"B1"},{"id":"physical-security","name":"물리보안(출입/CCTV)","floor":"1F"},{"id":"network-engineer","name":"네트워크 엔지니어","floor":"2F"},{"id":"systems-engineer","name":"시스템/스토리지 엔지니어","floor":"2F"},{"id":"gpu-platform-engineer","name":"GPU/플랫폼 엔지니어","floor":"3F"},{"id":"service-desk","name":"서비스데스크","floor":"4F"},{"id":"soc-analyst","name":"SOC 분석가","floor":"XOC"},{"id":"ops-lead","name":"운영 리드","floor":"4F"},{"id":"compliance-auditor","name":"컴플라이언스 감사인","floor":"4F"},{"id":"application-developer","name":"애플리케이션 개발자","floor":"4F"},{"id":"skill-researcher","name":"AI 연구원","floor":"5F"},{"id":"skill-evaluator","name":"AI 모델 평가자","floor":"5F"},{"id":"agent-supervisor","name":"AI 에이전트 운영 담당","floor":"XOC"}];
  const crewOf=f=>DESIGN_CREW.filter(w=>w.floor===f);
  const allFacilities=()=>Object.entries(LAYOUT.facility).flatMap(([system,rows])=>rows.map(i=>({...i,system_kind:system,subtype:i.kind,kind:['security','automation','microgrid'].includes(system)?i.kind:system})));
  const physicalFacilitiesOf=f=>allFacilities().filter(i=>(f==='SITE'?i.location==='outdoor':i.location!=='outdoor'&&i.floor===f)&&!['containment','raised_floor','cold_plate'].includes(i.kind));
@@ -416,7 +416,7 @@ function drawRoom(fid,detail) {
       assetsOf(fid).slice(0,5).forEach((a,k)=>f.appendChild(roomRect(.15,.16+k*.10,Math.max(.04,Math.min(assetState(a.id).util,1)*1.1),.035,n===1?'#a7c883':'#6a9fb9')));
       g.appendChild(f);
     }
-    const control=el('a',{href:dcURL('agentops'),'aria-label':'운영 사무실 근무자 운영 열기'});
+    const control=el('a',{href:dcURL('agentops'),'aria-label':'운영 사무실 AI 에이전트 화면 열기'});
     // The wall uses positive z-up coordinates; lettering needs a y-down face.
     // Starting at the sign's top edge keeps the plate and text upright together.
     const [signX,signY]=iso(2,.24,z+2.27);
@@ -692,7 +692,7 @@ const BASEMENT_FLOORPLAN = {
     {id:'mechanical',name:'기계실',rect:[5.8,.16,6.04,4.1],color:'#7b9290'},
     {id:'battery',name:'배터리실',rect:[.16,5.46,3.02,2.38],color:'#92978a'},
     {id:'media',name:'매체 폐기실',rect:[3.36,5.46,2.21,2.38],color:'#9a9387'},
-    {id:'core',name:'상층 이동',rect:[5.78,5.46,2.2,2.38],color:'#89969b'},
+    {id:'core',name:'계단·승강기 코어',rect:[5.78,5.46,2.2,2.38],color:'#89969b'},
     {id:'suppression',name:'소화용기실',rect:[8.16,5.46,3.68,2.38],color:'#a7978f'}
   ],
   doors: [
@@ -701,7 +701,7 @@ const BASEMENT_FLOORPLAN = {
     {id:'mechanical',name:'기계실 반입문',x:9,y:4.3,width:1.65,axis:'x',height:1.25,double:true,into:-1},
     {id:'battery',name:'배터리실 출입',x:2.15,y:5.38,width:.95,axis:'x',height:1.25,into:1},
     {id:'media',name:'매체 폐기실 출입',x:3.75,y:5.38,width:1.2,axis:'x',height:1.25,into:1},
-    {id:'core',name:'상층 이동 출입',x:6.15,y:5.38,width:1.6,axis:'x',height:1.25,glass:true,double:true,into:1},
+    {id:'core',name:'계단·승강기 출입',x:6.15,y:5.38,width:1.6,axis:'x',height:1.25,glass:true,double:true,into:1},
     {id:'exit',name:'피난계단 연결',x:.08,y:4.32,width:1.04,axis:'y',height:1.25,double:true,into:-1}
   ],
   equipment: {
@@ -1060,7 +1060,7 @@ function drawControlCenterRoom(fid,detail) {
   g.appendChild(prism(0,0,z,.15,GD,1.35,lab?'#93a8b7':'#496477'));
   g.appendChild(roomLine([.2,.22,z+1.67],[GW-.25,.22,z+1.67],accent,2));
   // 읽을 수 있는 벽면 표식. 좌표 변환의 Y축을 양수로 두어 글자를 뒤집지 않는다.
-  const sign=el('a',{href:dcURL(lab?'researchlab':'xoc'),'aria-label':lab?'AI 연구소 전문가 업무 방식 실험실':'xOC 제한구역 관제 화면',on:{click:e=>e.stopPropagation()}});
+  const sign=el('a',{href:dcURL(lab?'researchlab':'xoc'),'aria-label':lab?'AI 연구소 열기':'xOC 제한구역 관제 화면',on:{click:e=>e.stopPropagation()}});
   sign.appendChild(roomLettering(.65,.19,z+2.05,lab?'AI RESEARCH LAB  /  5F':'xOC  /  RESTRICTED',.26,accent));
   g.appendChild(sign);
   const station=(id,x,y)=>{const worker=crewOf(fid).find(w=>w.id===id);if(worker)g.appendChild(drawWorkstation(worker,x,y,z,detail))};
@@ -1262,7 +1262,7 @@ function drawControlCenterRoom(fid,detail) {
    const subjects=learning?.subjects||[],scenarios=learning?.scenarios||[],total=scenarios.reduce((n,s)=>n+s.missions,0);
    const catalog=contentDisplay(.55,.5,z+.95,5.2,3.1,'SCENARIOS / 공방전','#81e9dd',subjects.length?subjects.map(subject=>({title:subject.title,detail:scenarios.filter(s=>s.category===subject.id).length+'개 시나리오',route:'#academy/scenarios/'+subject.id})):[{title:'등록 콘텐츠 조회'}],learning?scenarios.length+'개 시나리오 · '+total+'개 미션':'');
    catalog.setAttribute('data-mission-panel','scenarios');g.append(catalog);
-   const state=contentDisplay(6.2,.5,z+.95,5.2,3.1,'TRAINING / 훈련 현황','#bda5f4',[{title:'개인 훈련',detail:'훈련 엔진 연결 전'},{title:'교수자 리그',detail:'리그 기능 연결 전'}],'현재 시나리오와 미션 열람 가능');state.setAttribute('data-mission-panel','training');g.append(state);
+   const state=contentDisplay(6.2,.5,z+.95,5.2,3.1,'TRAINING / 훈련 현황','#bda5f4',[{title:'개인 훈련',detail:'Live Fire 연결 후 제공'},{title:'반별 순위',detail:'리그 기능 연결 전'}],'현재 시나리오와 미션 열람 가능');state.setAttribute('data-mission-panel','training');g.append(state);
    const cockpit=trainingCockpit(1.35,3.1,z);put(4,5,cockpit);
    const missions=contentDisplay(6.7,4.7,z+.8,4.8,3.1,'MISSION BRIEF / 미션 보기','#81e9dd',scenarios.slice(0,2).map(s=>({title:s.title,detail:s.missions+'개 미션 · '+s.total_points+'점',route:'#academy/scenario/'+s.id})),'Red 공격 → Blue 대응 → Purple 보고');missions.setAttribute('data-mission-panel','missions');put(9.1,5.1,missions);
   }else{

@@ -12,8 +12,8 @@ SERVICE_LABELS = {
     'platform': ('Core 관리', 'platform'), 'ingress': ('HTTPS 진입점', 'gateway'),
     'fw': ('방화벽', 'firewall'), 'ips': ('침입 방지', 'ips'), 'web': ('웹 방화벽', 'waf'),
     'siem': ('Wazuh Manager', 'siem'), 'indexer': ('Wazuh Indexer', 'siem'),
-    'dashboard': ('Wazuh Dashboard', 'siem'), 'lab-target': ('통신 검증 타깃', 'target'),
-    'lab-client': ('통신 검증 클라이언트', 'client'),
+    'dashboard': ('Wazuh Dashboard', 'siem'), 'lab-target': ('연결 시험용 타깃', 'target'),
+    'lab-client': ('연결 시험용 클라이언트', 'client'),
 }
 
 
