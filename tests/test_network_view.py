@@ -41,6 +41,11 @@ def test_lab_segments_routes_and_mac_tables_only(tmp_path, monkeypatch):
         (tmp_path / name / 'operstate').write_text(state + '\n'); (tmp_path / name / 'mtu').write_text('1500\n')
         for k in ('rx_bytes', 'tx_bytes', 'rx_packets', 'tx_packets'):
             (stats / k).write_text('12\n')
+    (tmp_path / 'br-aaaaaaaaaaaa' / 'brif').mkdir(); (tmp_path / 'br-aaaaaaaaaaaa' / 'brif' / 'veth1').mkdir()
+    (tmp_path / 'veth1' / 'statistics').mkdir(parents=True)
+    (tmp_path / 'veth1' / 'ifindex').write_text('77\n'); (tmp_path / 'veth1' / 'operstate').write_text('up\n')
+    for k in ('rx_packets', 'tx_packets'):
+        (tmp_path / 'veth1' / 'statistics' / k).write_text('3\n')
     monkeypatch.setattr(nv, 'SYS', tmp_path)
     commands = []
 
@@ -51,6 +56,8 @@ def test_lab_segments_routes_and_mac_tables_only(tmp_path, monkeypatch):
                     {'mac': '33:33:00:00:00:01', 'ifname': args[-1], 'flags': ['self'], 'state': 'permanent'}]
         if args[-2:] == ['addr', 'show']:
             return [{'ifname': 'eth0', 'address': 'ca:9a:40:c3:9e:dd', 'operstate': 'UP', 'addr_info': [{'family': 'inet', 'local': '10.20.30.1', 'prefixlen': 24}]}]
+        if args[-2:] == ['link', 'show']:
+            return [{'ifname': 'lo'}, {'ifname': 'eth0', 'link_index': 77 if args[2] == '4242' else 88, 'address': 'ca:9a:40:c3:9e:dd' if args[2] == '4242' else 'aa:bb:cc:dd:ee:01'}]
         if args[-2:] == ['route', 'show']:
             return [{'dst': '10.20.30.0/24', 'dev': 'eth0', 'prefsrc': '10.20.30.1'},
                     {'dst': '192.168.16.0/24', 'dev': 'eth9'},             # host LAN: dropped
@@ -77,3 +84,6 @@ def test_lab_segments_routes_and_mac_tables_only(tmp_path, monkeypatch):
     assert all(c[-1] == 'show' or c[:4] == ['bridge', '-j', 'fdb', 'show'] for c in commands)
     assert 'web' in {r['service'] for r in value['routers']} and 'ingress' not in {r['service'] for r in value['routers']}
     assert '172.18.0.9' not in json.dumps(value['segments'])
+    assert ext['ports'] == [{'ifname': 'veth1', 'ifindex': 77, 'state': 'up', 'rx_packets': 3, 'tx_packets': 3, 'port': 1,
+                             'peer': {'service': 'fw', 'ifname': 'eth0', 'mac': 'ca:9a:40:c3:9e:dd', 'ip': '10.20.30.1'}}]
+    assert internal['ports'] == []                                                   # no brif directory observed

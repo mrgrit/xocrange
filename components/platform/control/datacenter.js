@@ -9,9 +9,25 @@ window.DataCenter=(()=>{
  const SEG={ext:'EXT',pipe:'PIPE',dmz:'DMZ',int:'INT'};
  function table(head,rows){if(!rows.length)return '<p class="dc-note">관측된 항목이 없습니다.</p>';return `<div class="dc-table-wrap"><table class="dc-table"><thead><tr>${head.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${esc(c??'-')}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;}
  function num(n){return Number.isInteger(n)?n.toLocaleString('ko-KR'):'-';}
+ function switchPanel(a){
+  const s=a.segment,ports=s.ports||[];if(!ports.length)return '<p class="dc-note">포트 관측이 아직 없습니다.</p>';
+  const W=300,top=44,pitch=40,H=top+pitch*ports.length+8;
+  let g=`<svg class="dc-switch-panel" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(a.title)} 포트 연결도">`;
+  g+=`<rect x="6" y="4" width="${W-12}" height="30" rx="5" class="dc-sw-uplink"/><text x="16" y="17" class="dc-topo-small">업링크 · 호스트 게이트웨이</text><text x="16" y="29" class="dc-topo-label">${esc(s.gateway||'-')} · ${esc(s.bridge||'')}</text>`;
+  g+=`<rect x="8" y="${top-6}" width="58" height="${pitch*ports.length+4}" rx="6" class="dc-sw-chassis"/><text x="37" y="${top-10}" text-anchor="middle" class="dc-topo-small">${esc(SEG[s.id]||s.id)}</text>`;
+  ports.forEach((p,i)=>{const y=top+i*pitch,up=p.state==='up',peer=p.peer;
+   g+=`<rect x="18" y="${y+6}" width="26" height="18" rx="2" class="${up?'dc-sw-port-up':'dc-sw-port-down'}"/><rect x="22" y="${y+9}" width="18" height="6" class="dc-sw-port-jack"/><text x="56" y="${y+19}" text-anchor="end" class="dc-topo-small">${p.port}</text>`;
+   g+=`<line x1="44" y1="${y+15}" x2="96" y2="${y+15}" class="${up?'dc-sw-cable':'dc-sw-cable-down'}"/>`;
+   g+=`<rect x="96" y="${y+1}" width="${W-102}" height="${pitch-6}" rx="4" class="dc-sw-card"/>`;
+   g+=`<text x="104" y="${y+15}" class="dc-topo-label">${esc(peer?peer.service:'연결 정보 없음')}${peer?' · '+esc(peer.ifname):''}</text>`;
+   g+=`<text x="104" y="${y+28}" class="dc-topo-small">${esc(peer&&peer.ip||'-')} · 수신 ${num(p.rx_packets)} / 송신 ${num(p.tx_packets)}</text>`;
+  });
+  return g+'</svg>';
+ }
  function networkDetail(a){
   if(a.kind==='switch'&&a.segment){const s=a.segment,c=s.counters||{};
    return `<section class="dc-net"><h4>스위치 정보</h4><dl class="dc-facts"><div><dt>대역 · 게이트웨이(호스트)</dt><dd>${esc(s.subnet||'-')} · ${esc(s.gateway||'-')}</dd></div><div><dt>브리지 · 상태 · MTU</dt><dd>${esc(s.bridge||'-')} · ${esc(s.state)} · ${esc(s.mtu??'-')}</dd></div><div><dt>수신 / 송신 패킷</dt><dd>${num(c.rx_packets)} / ${num(c.tx_packets)}</dd></div>${s.internal?'<div><dt>인터넷 직접 연결</dt><dd>없음 — 진입점과 구간 라우터를 거쳐서만 통신</dd></div>':''}</dl>
+   <h4>포트 연결도 <small>${(s.ports||[]).length}개 포트 사용</small></h4>${switchPanel(a)}<p class="dc-note">포트 번호는 브리지에 연결된 순서입니다. 수신·송신은 스위치 포트 기준 패킷 수입니다.</p>
    <h4>연결된 장비</h4>${table(['장비','IP','MAC'],(s.endpoints||[]).map(e=>[e.service,e.ip?e.ip+'/'+(e.prefix??''):'-',e.mac]))}
    <h4>MAC 주소 표 <small>최근 학습한 항목</small></h4>${table(['MAC','포트','장비'],(s.mac_table||[]).map(m=>[m.mac,m.port,m.owner||'외부·호스트']))}</section>`;}
   if(a.network){const n=a.network;

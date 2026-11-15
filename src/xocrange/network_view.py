@@ -102,13 +102,23 @@ def observe_network(engine, project: str, plan_id: str) -> dict:
             endpoints.setdefault(network['segment'], []).append(item)
             if mac:
                 mac_owner[mac] = (row['service'], network['segment'])
+    # Each container interface names its host-side veth peer (link_index); bridge ports are those veths.
+    peers, lab_services = {}, {e['service'] for items in endpoints.values() for e in items}
+    for service in sorted(lab_services)[:32]:
+        pid = pids.get(service)
+        if not pid:
+            continue
+        for link in _json(['nsenter', '-t', str(pid), '-n', 'ip', '-j', 'link', 'show']):
+            if isinstance(link.get('link_index'), int) and IFNAME.match(str(link.get('ifname') or '')):
+                peers[link['link_index']] = {'service': service, 'ifname': link['ifname'], 'mac': _mac(link.get('address'))}
+    ip_of = {e['mac']: e['ip'] for items in endpoints.values() for e in items if e['mac']}
     for network in sorted(networks.values(), key=lambda n: SEGMENTS.index(n['segment'])):
         bridge = _bridge(network)
         ipam = (network.get('ipam') or [{}])[0] or {}
         segment = {'id': network['segment'], 'internal': bool(network.get('internal')),
                    'subnet': _net(ipam.get('Subnet')), 'gateway': _ip(ipam.get('Gateway')), 'bridge': bridge,
                    'endpoints': sorted(endpoints.get(network['segment'], []), key=lambda e: e['ip'] or '')[:LIMIT],
-                   'state': 'unknown', 'mtu': None, 'counters': {}, 'mac_table': []}
+                   'state': 'unknown', 'mtu': None, 'counters': {}, 'mac_table': [], 'ports': []}
         if bridge:
             try:
                 segment['state'] = (SYS / bridge / 'operstate').read_text().strip()[:16]
@@ -125,6 +135,27 @@ def observe_network(engine, project: str, plan_id: str) -> dict:
                 table.append({'mac': mac, 'port': entry.get('ifname') if IFNAME.match(str(entry.get('ifname') or '')) else None,
                               'owner': owner[0] if owner and owner[1] == network['segment'] else None})
             segment['mac_table'] = table[:LIMIT]
+            ports = []
+            try:
+                members = sorted((SYS / bridge / 'brif').iterdir(), key=lambda m: m.name)
+            except OSError:
+                members = []
+            for member in members[:LIMIT]:
+                if not IFNAME.match(member.name):
+                    continue
+                try:
+                    index = int((SYS / member.name / 'ifindex').read_text())
+                    state = (SYS / member.name / 'operstate').read_text().strip()[:16]
+                except (OSError, ValueError):
+                    continue
+                peer = peers.get(index)
+                ports.append({'ifname': member.name, 'ifindex': index, 'state': state,
+                              'rx_packets': _counter(member.name, 'rx_packets'), 'tx_packets': _counter(member.name, 'tx_packets'),
+                              'peer': dict(peer, ip=ip_of.get(peer['mac'])) if peer else None})
+            ports.sort(key=lambda port: port['ifindex'])
+            for number, port in enumerate(ports, 1):
+                port['port'] = number
+            segment['ports'] = ports
         result['segments'].append(segment)
     lab = [ipaddress.ip_network(s['subnet']) for s in result['segments'] if s['subnet']]
     in_lab = lambda value: value == 'default' or (_net(value) is not None and any(ipaddress.ip_network(_net(value)).subnet_of(n) for n in lab))

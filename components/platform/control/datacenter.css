@@ -48,3 +48,6 @@
 .dc-table th{background:#132a3a;color:#86a9bf;font-weight:500;text-align:left;padding:6px 7px;white-space:nowrap}.dc-table td{padding:6px 7px;border-top:1px solid #23394b;overflow-wrap:anywhere}
 .dc-inspector svg.dc-topology{display:block;width:100%;height:auto;margin:14px 0 4px;stroke:none;flex-shrink:1}.dc-topo-switch{fill:#16364a;stroke:#4d8bab}.dc-topo-router{fill:#2a2a3e;stroke:#c9a46a}.dc-topo-link{stroke:#c9a46a;stroke-width:1.5}
 .dc-topo-label{fill:#d5e9f6;font:600 10px ui-monospace,monospace}.dc-topo-small{fill:#7fa6be;font:9px ui-monospace,monospace}
+.dc-inspector svg.dc-switch-panel{display:block;width:100%;height:auto;margin:6px 0;stroke:none;flex-shrink:1}
+.dc-sw-uplink{fill:#13283a;stroke:#3d6d8a;stroke-dasharray:4 3}.dc-sw-chassis{fill:#1d2733;stroke:#5d7487}.dc-sw-port-up{fill:#2f7d5f;stroke:#7fe0b6}.dc-sw-port-down{fill:#3a3a44;stroke:#7d7f8c}
+.dc-sw-port-jack{fill:#0b141c}.dc-sw-cable{stroke:#7fe0b6;stroke-width:2}.dc-sw-cable-down{stroke:#7d7f8c;stroke-width:2;stroke-dasharray:3 3}.dc-sw-card{fill:#142a3b;stroke:#33536a}
