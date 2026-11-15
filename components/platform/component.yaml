@@ -41,6 +41,7 @@ build_inputs:
 - control/datacenter-scene.js
 - control/datacenter.css
 - control/datacenter-workspaces.js
+- control/facility-catalog.json
 - control/brand.css
 - control/workspace.py
 - control/entitlements.py

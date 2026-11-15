@@ -14,6 +14,7 @@ SERVICE_LABELS = {
     'siem': ('Wazuh Manager', 'siem'), 'indexer': ('Wazuh Indexer', 'siem'),
     'dashboard': ('Wazuh Dashboard', 'siem'), 'lab-target': ('연결 시험용 타깃', 'target'),
     'lab-client': ('연결 시험용 클라이언트', 'client'),
+    'dvwa': ('DVWA', 'target'), 'juiceshop': ('OWASP Juice Shop', 'target'),
 }
 
 

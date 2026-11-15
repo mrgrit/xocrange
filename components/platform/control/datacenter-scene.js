@@ -98,7 +98,16 @@ function arrangeBuilding(outlines,mainIds,frame) {
     const position=arch.iso(8.2,7.8,.22);labels.push({x:x+position[0],y:y+position[1]+20,title:(f.id==='XOC'?'':f.id+' · ')+f.title,active});
    }
   }else{
-   const room=arch.room(['design','learning'].includes(mode)?designFloor:'2F');root.append(room);
+   const facility=mode==='facility';
+   const room=arch.room(['design','learning','facility'].includes(mode)?designFloor:'2F',facility);root.append(room);
+   if(facility){
+    const known=new Map((data.facilities||[]).map(f=>[f.id,f]));
+    for(const node of room.querySelectorAll('[data-facility]')){
+     const f=known.get(node.getAttribute('data-facility'));if(!f){node.removeAttribute('data-facility');continue;}
+     node.setAttribute('data-dc-facility',f.id);node.setAttribute('role','button');node.setAttribute('tabindex','0');node.setAttribute('aria-label',f.name+' · '+f.title);
+     node.classList.add('dc-facility');if(selection===f.id)node.classList.add('selected');
+    }
+   }
    for(const entry of room.querySelectorAll('[data-dc-learning-route]')){entry.setAttribute('role','link');entry.setAttribute('tabindex','0');}
    for(const rack of (['design','learning'].includes(mode)?[]:data.racks)){
     const node=room.querySelector('[data-rack="'+rack.id+'"]');if(!node)continue;

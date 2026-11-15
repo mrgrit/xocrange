@@ -1,0 +1,15 @@
+{
+  "artifact": "components/platform/control/facility-catalog.json",
+  "decision": "docs/adr/0010-facility-display-and-network-devices.md",
+  "source_repository": "https://github.com/mrgrit/kt66",
+  "source_commit": "9b3efed904bd0e38bc79f6bbf7fe358dc337e88d",
+  "source_files": {
+    "envsim/assets.yaml": "ba77138cbbfd033dca8d63afc3bd74d9950a8925bad70cd189a9ff0f8cde3f52",
+    "envsim/facility-guide.yaml": "8f5dd63c52be9c0860a2edd03990bb92eebec7fcc556694182499cfb6b2e12e1"
+  },
+  "imported": "2026-11-15",
+  "selection": "Facility ledger entries on B1 and outdoor (SITE): 27 items. For each, the Korean guide text of its type (role, placement, impact, checks) and the ledger's ratings that have a standard Korean label with unit; unlabelled keys are not shown.",
+  "excluded": "The physical simulator (model.py), the injector, scenarios, telemetry and any host or control endpoint. Those belong to the Live Fire facility module (M4).",
+  "owner_rights": "kt66 and its assets are the project owner's own work (NOTICE).",
+  "corrections": "kt66's guide calls the plant floor '1층'; Core shows that floor as B1, so '1층' in B1 facility texts reads '지하 설비층(B1)' (13 texts)."
+}

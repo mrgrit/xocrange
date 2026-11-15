@@ -1284,13 +1284,15 @@ function drawControlCenterRoom(fid,detail) {
   // Unlicensed AI room contains a geometric preview only, with no host identities.
   LAYOUT.it_assets.push(...Array.from({length:8},(_,i)=>({id:'preview-gpu-'+i,name:'GPU SYSTEM',rack:'R-3F-01',floor:'3F',vendor:'NVIDIA',form_factor:i<4?'dgx-spark':'jetson-thor'})));
  }
- function room(fid){
+ function room(fid,keepFacilities=false){
   let node;
   if(['6F','7F','8F'].includes(fid))node=extensionFloor(fid);else node=fid==='SITE'?drawOutdoor(false):drawRoom(fid,false);
   // Cloning removes all original event listeners, including door handlers.
   node=node.cloneNode(true);
   for(const el of node.querySelectorAll('[tabindex],[role],[href]'))for(const a of ['tabindex','role','href'])el.removeAttribute(a);
-  for(const el of node.querySelectorAll('[data-asset],[data-worker],[data-facility]'))for(const a of ['data-asset','data-worker','data-facility'])el.removeAttribute(a);
+  // Facility floors keep data-facility so Core can attach its own read-only selection (ADR 0010).
+  const strip=keepFacilities?['data-asset','data-worker']:['data-asset','data-worker','data-facility'];
+  for(const el of node.querySelectorAll('[data-asset],[data-worker],[data-facility]'))for(const a of strip)el.removeAttribute(a);
   return node;
  }
  return {prepare,room,defs:sceneDefs,iso,el};

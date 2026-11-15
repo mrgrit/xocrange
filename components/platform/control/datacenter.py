@@ -6,12 +6,14 @@ from django.views.decorators.http import require_GET
 from .security import protected
 from .workspace import registry, snapshot, panels, document
 from datetime import datetime, timezone
+from pathlib import Path
+import json
 
 
 # 6F–8F are the requested academy, live-fire and student-company extension.
 # xOC remains a separately named restricted operations area.
 FLOORS = [
-    ('B1', '전력 · 냉각 설비', 'INFRASTRUCTURE', 'live-fire'),
+    ('B1', '전력 · 냉각 설비', 'INFRASTRUCTURE', 'community'),
     ('1F', '보안 로비', 'SECURITY LOBBY', 'live-fire'),
     ('2F', '일반 전산실', 'CORE SECURITY', 'community'),
     ('3F', 'AI 전산실', 'AI COMPUTE', 'live-fire'),
@@ -21,7 +23,7 @@ FLOORS = [
     ('7F', 'Live Fire', 'CYBER RANGE', 'live-fire'),
     ('8F', 'Agent Office', 'AGENT OFFICE', 'joint-force'),
     ('XOC', 'xOC 관제센터', 'JOINT OPERATIONS', 'joint-force'),
-    ('SITE', '옥외 설비', 'OUTDOOR INFRASTRUCTURE', 'live-fire'),
+    ('SITE', '옥외 설비', 'OUTDOOR INFRASTRUCTURE', 'community'),
 ]
 
 # Inherit the kt66 rack identities and positions; install-only Core management
@@ -32,6 +34,18 @@ RACKS = [
     # Lab switching (ADR 0010): the four lab bridges shown as switches, with the routing they carry.
     dict(id='R-2F-03', title='실습망 스위치 · 라우팅', floor='2F', aisle='A', units=42, position=[5.6, 3]),
 ]
+# Facility display with baseline values (ADR 0010). The simulator and fault injection are M4.
+FACILITY_FLOORS = ('B1', 'SITE')
+FACILITY_CATALOG = Path(__file__).with_name('facility-catalog.json')
+
+
+def facility_catalog():
+    value = json.loads(FACILITY_CATALOG.read_text())
+    if value.get('schema_version') != 'xoc.facility-catalog/0.1.0':
+        raise ValueError('Unsupported facility catalog')
+    return value
+
+
 SEGMENT_TITLES = {'ext': '외부망', 'pipe': '중계망(Transit)', 'dmz': 'DMZ', 'int': '내부망'}
 SEGMENT_ROLES = {
     'ext': '외부에서 들어온 요청이 처음 닿는 구간입니다. 진입 게이트웨이(ingress)와 방화벽의 외부 인터페이스가 연결됩니다.',
@@ -119,7 +133,7 @@ def endpoint(request, floor=None):
         # No client tier/floor flags, query parameters or unverified license
         # strings can unlock a floor. Commercial providers follow C7 in K10.
         academy=any(c['id']=='academy-reader' for c in data['components'])
-        allowed=['2F']+(['6F'] if academy else [])
+        allowed=['2F','B1','SITE']+(['6F'] if academy else [])
         if floor is not None and floor not in allowed:
             return JsonResponse({'error':'floor_unavailable'},status=403)
         if floor=='6F':
@@ -150,7 +164,12 @@ def endpoint(request, floor=None):
                                                       '8F':'joint_force_virtual_company'}.get(i,'edition'),
                                   unavailable_reason=None if i in allowed else 'not_licensed') for i,t,s,m in FLOORS],
                      selected_floor=floor, allowed_floors=allowed,
-                     preview_floors=[f[0] for f in FLOORS if f[0]!='2F'] if request.user.profile.role=='admin' else [])
+                     preview_floors=[f[0] for f in FLOORS if f[0] not in ('2F',)+FACILITY_FLOORS] if request.user.profile.role=='admin' else [])
+        if floor in FACILITY_FLOORS:
+            catalog = facility_catalog()
+            value.update(facility_view=True, simulator=False, assets=[], racks=[],
+                         facilities=[f for f in catalog['facilities'] if f.get('floor') == floor],
+                         facility_systems=catalog['systems'], facility_note=catalog.get('note', ''))
         return JsonResponse(value)
     except (OSError, ValueError, KeyError, TypeError):
         return JsonResponse({'error':'registry_unavailable'},status=503)

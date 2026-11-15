@@ -6,7 +6,7 @@ import pytest
 from test_registry import registry_files
 from test_platform_security import application, app, login, send
 
-LOCKED=('B1','1F','3F','4F','5F','7F','8F','XOC','SITE')
+LOCKED=('1F','3F','4F','5F','7F','8F','XOC')
 
 @pytest.mark.parametrize('path',['datacenter','datacenter/floors/2F','datacenter/floors/6F','datacenter/floors/7F','datacenter/design/6F'])
 def test_anonymous_cannot_read_floor_inventory(app,registry_files,path):
@@ -17,9 +17,9 @@ def test_core_floor_and_purchased_spaces_are_server_gated(app,registry_files,rol
     login(app,role)
     response=app.get('/core/api/datacenter');assert response.status_code==200
     data=response.json()
-    assert data['tier']=='community' and data['allowed_floors']==['2F','6F']
+    assert data['tier']=='community' and data['allowed_floors']==['2F','B1','SITE','6F']
     assert set(data['preview_floors'])==(set(LOCKED)|{'6F'} if role=='admin' else set())
-    assert {f['id'] for f in data['floors'] if f['enabled']}=={'2F','6F'}
+    assert {f['id'] for f in data['floors'] if f['enabled']}=={'2F','B1','SITE','6F'}
     floors={f['id']:f for f in data['floors']}
     assert floors['6F']['access_requirement']=='community_bundle_and_purchased_catalog'
     academy=app.get('/core/api/datacenter/floors/6F').json()
@@ -177,3 +177,20 @@ def test_lab_switches_and_routing_come_from_a_fresh_host_observation(app,registr
     assert not [a for a in app.get('/core/api/datacenter').json()['assets'] if a['kind']=='switch']
     files['NETWORK_FILE'].write_text(json.dumps(network_document(registry['plan_id'],'2026-01-01T00:00:00+00:00')))
     assert not [a for a in app.get('/core/api/datacenter').json()['assets'] if a['kind']=='switch']
+
+
+@pytest.mark.parametrize('floor,count',[('B1',15),('SITE',12)])
+def test_facility_floors_show_descriptions_and_baseline_only(app,registry_files,floor,count):
+    """ADR 0010: Community shows facilities with their guide text and ledger baseline; no simulator."""
+    login(app,'viewer')
+    data=app.get('/core/api/datacenter/floors/'+floor).json()
+    assert data['facility_view'] is True and data['simulator'] is False and data['assets']==[] and data['racks']==[]
+    facilities=data['facilities']
+    assert len(facilities)==count and all(f['floor']==floor for f in facilities)
+    for f in facilities:
+        assert f['name'] and f['title'] and f['role'] and f['checks'] and f['system_title'] in ('전력','냉각','물리 보안','소방')
+        assert all(set(b)=={'label','value'} and '_' not in b['label'] for b in f['baseline'])   # labelled, no raw keys
+    assert set(data['facility_systems'])=={'power','cooling','security','fire'}
+    ups=next((f for f in facilities if f['type']=='ups'),None)
+    if ups:
+        assert {'label':'방식','value':'이중 변환(온라인)'} in ups['baseline']
