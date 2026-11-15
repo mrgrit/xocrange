@@ -10,7 +10,7 @@ K05/K06의 C1 경로에 독립적인 원본 분석을 추가한다. 원본은 �
 | osquery | row별 표준 `osquery` wrapper → stock 24010 | batch/snapshot 분할, 쿼리 이름·전체 columns 유지 |
 | Linux Sysmon | XML → `sysmon_linux` JSON → 111201/111203/111211 | Linux provider·EventID·EventData 유지. 프로세스/네트워크/파일 관측 규칙이며 Windows 공격 탐지와 동일하다고 표현하지 않음 |
 | auditd | 묶음 record를 한 줄로 결합 → stock auditd decoder | 정상 80700/level 0, DAEMON_ABORT 80704. 원본 줄 구분·ENRICHED 구분 문자는 증거 DB에 보존 |
-| Apache access | common access + request ID → stock web rules | URI를 이용하는 SQLi 등 stock 규칙 복원. C1은 URI를 제외하고 ModSecurity request ID 연결 유지. 이전 JSON 입력도 수용 |
+| Apache access | 실습 요청: combined 호환(referer `"-"`, User-Agent) + request ID → stock web rules + `111303`. 관리 화면 `/core`: 질의 문자열·헤더 없는 형식 | URI를 이용하는 SQLi 등 stock 규칙 복원, 알려진 스캐너 User-Agent는 `111303`(level 6, T1595; User-Agent 칸에서만 일치, SQLi 31103이 우선). C1은 URI·헤더를 제외하고 ModSecurity request ID 연결 유지. 이전 common·JSON 입력도 수용 |
 | Apache error | 원문 → stock apache-errorlog | AH code·ModSecurity 오류 등 기본 규칙 사용 |
 
 ModSecurity에서 HTTP 403만 있거나 응답 본문/경고의 인용 문자열에 `Access denied`가 들어 있는 경우는 WAF 차단으로 처리하지 않는다. 입력에 실린 `xoc_modsecurity` 주장은 덮어쓰고 로컬에서 계산한다. 출처 location은 수집기가 생성하므로 다른 로그 파일이 WAF 규칙을 주장할 수 없다. AHZ에 응답 status가 없어도 실제 intervention은 식별하며, 이를 위해 쿠키·인증 헤더·본문 수집 범위를 넓히지 않는다.
@@ -58,4 +58,4 @@ bash install.sh
 
 근거: [Wazuh JSON decoder](https://documentation.wazuh.com/current/user-manual/ruleset/decoders/json-decoder.html), [실제 규칙 엔진 검사](https://documentation.wazuh.com/current/user-manual/ruleset/testing.html), [alerts와 archives](https://documentation.wazuh.com/current/user-manual/manager/event-logging.html). Wazuh/상용 소스의 출처와 검토 범위는 provenance에 기록한다.
 
-Apache의 요청 전 연결 종료 로그(`"-" 400/408`, xoc_id 포함)는 별도 `xoc-apache-empty-request` 디코더가 IP·상태·크기를 추출하고, Wazuh 기본 web-log 규칙 31100(level 0)과 archive receipt로 처리 완료를 확인한다. HTTP 요청 줄을 합성하지 않는다.
+Apache의 요청 전 연결 종료 로그(`"-" 400/408`, 새 형식의 `"-" "-"` 포함 여부와 무관, xoc_id 포함)는 별도 `xoc-apache-empty-request` 디코더가 IP·상태·크기를 추출하고, Wazuh 기본 web-log 규칙 31100(level 0)과 archive receipt로 처리 완료를 확인한다. HTTP 요청 줄을 합성하지 않는다.
