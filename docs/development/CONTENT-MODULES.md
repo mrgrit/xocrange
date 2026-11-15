@@ -7,14 +7,14 @@
 | 경로 | 내용 | 설치 |
 |---|---|---|
 | `contents/module.json` | 모듈 ID `community-academy`, 배포 파일마다 경로와 SHA-256 | 검증 기준 |
-| `contents/academy/`, `battle-scenarios/`, `catalog/`, `guides/` | 배포 파일 | 예 |
-| `contents/scripts/`, `provenance/`, `README.md`, `NOTICE`, `requirements.txt` | 작성 도구·출처 | 아니오 |
+| `contents/academy/`, `battle-scenarios/`, `catalog/`, `guides/` | 배포 파일(매니페스트 검증 대상) | 릴리스·플랫폼 볼륨 |
+| `contents/scripts/`, `provenance/`, `README.md`, `NOTICE`, `requirements.txt` | 작성 도구·출처(매니페스트 대상 아님) | 릴리스 소스 사본에만 포함, 실행·학습자 노출 없음 |
 
 ## 설치와 검증
 
 `sudo bash install.sh`는 아카데미를 선택하면 `scripts/verify-contents.py`로 `contents/`가 `module.json`과 정확히 일치하는지 확인한다. 다운로드는 없다. `--without academy-reader`이면 생략한다. 매니페스트에 없는 파일, 누락·변경된 파일, 심볼릭 링크, 경로 이탈, 크기 초과를 거부한다.
 
-검증한 파일만 불변 릴리스에 포함하고 설치 계획에 `module.json` 해시를 기록한다. `academy-reader`를 선택했을 때만 학습자용 교재·미리보기·카탈로그를 플랫폼의 읽기 전용 설정 볼륨에 복사한다. 교관용 YAML의 정답과 채점 기준은 학습자 API나 정적 웹 경로에 내보내지 않는다. 학습 노트·첨부·제출은 별도의 기존 DB에 보존한다.
+불변 릴리스는 소스 사본이므로 `contents/` 전체(작성 도구 포함)가 들어가고 모든 파일의 해시가 릴리스 매니페스트에 남는다. 설치 계획에는 `module.json` 해시를 기록한다. 작성 도구는 설치본에서 실행되지 않는다. `academy-reader`를 선택했을 때만 학습자용 교재·미리보기·카탈로그를 플랫폼의 읽기 전용 설정 볼륨에 복사한다. 교관용 YAML의 정답과 채점 기준은 학습자 API나 정적 웹 경로에 내보내지 않는다. 학습 노트·첨부·제출은 별도의 기존 DB에 보존한다.
 
 ```bash
 python3 scripts/verify-contents.py

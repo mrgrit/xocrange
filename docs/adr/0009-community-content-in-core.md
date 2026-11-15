@@ -11,7 +11,7 @@
 ## 결정
 
 1. **Community 번들**(공개 승인된 교재 1–339쪽 36개 차시·96개 기록 미션, 연계 공방전 15개 시나리오·105개 미션, 카탈로그 제목 23개, 시작 가이드)은 Core 저장소 `contents/`에 함께 관리한다. 원래 콘텐츠 모듈 형식(`module.json` 매니페스트, 파일별 SHA-256, 작성 도구 `contents/scripts/`)은 그대로 둔다.
-2. 설치·설치 계획은 `contents/`가 `module.json`과 정확히 일치할 때만 진행한다(`scripts/verify-contents.py`, `xocrange.content_module.verify`). 다운로드·콘텐츠 잠금 파일은 없앤다. 매니페스트에 없는 파일, 누락·변경된 파일, 링크, 크기 초과는 거부한다. 작성 자료(`README.md`·`NOTICE`·`requirements.txt`·`provenance/`·`scripts/`)는 검사 대상 밖이며 설치되지 않는다.
+2. 설치·설치 계획은 `contents/`가 `module.json`과 정확히 일치할 때만 진행한다(`scripts/verify-contents.py`, `xocrange.content_module.verify`). 다운로드·콘텐츠 잠금 파일은 없앤다. 매니페스트에 없는 파일, 누락·변경된 파일, 링크, 크기 초과는 거부한다. 작성 자료(`README.md`·`NOTICE`·`requirements.txt`·`provenance/`·`scripts/`)는 매니페스트 검사 대상 밖이다. 릴리스 소스 사본에는 들어가지만(해시는 릴리스 매니페스트에 기록) 실행되거나 플랫폼 볼륨·학습자 경로에 복사되지 않는다(2026-11-15 RC 설치본에서 확인해 정정).
 3. **유료 콘텐츠 팩**은 비공개 `mrgrit/xocrange_contents`에 둔다. Core는 그 저장소를 읽지 않는다. 유료 팩의 전달·권한 확인은 C7 엔타이틀먼트와 함께 별도로 구현한다.
 4. Live Fire Range Control은 Community 시나리오를 Core 저장소의 고정 커밋 `contents/`에서, 유료 시나리오를 `xocrange_contents`에서 같은 해시 검증으로 가져온다.
 
