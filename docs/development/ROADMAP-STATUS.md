@@ -57,4 +57,4 @@ K08의 [콘솔](DEVICE-CONSOLES.md)은 현재 UI와 커스텀 관리 방식을 �
 
 2026-11-15 콘텐츠 위치 변경([ADR 0009](../adr/0009-community-content-in-core.md)): Community 번들(36차시·96미션, 15개 시나리오·105미션)을 비공개 콘텐츠 저장소 다운로드 대신 Core `contents/`에 포함했다. 설치·계획은 `module.json` 파일별 해시와 정확히 일치할 때만 진행하며(`scripts/verify-contents.py`), 유료 콘텐츠 팩은 `xocrange_contents`(비공개)에 둔다. 단위 시험 실행 검증, 새 VM 설치 검증은 RC 재실행에서 한다.
 
-2026-11-15 실습 웹 요청의 Apache 접근 로그에 User-Agent 추가(소유자 결정): 관리 화면 형식은 그대로(질의·헤더 없음), ModSecurity 헤더 기록(B)은 Cookie·Authorization 때문에 켜지 않음. 스캐너 User-Agent 규칙 `111303`. Core Wazuh 이미지로 원천 규칙 33개 사례 실행 검증, 설치본 반영·실제 요청 검증은 아래 기록.
+2026-11-15 실습 웹 요청의 Apache 접근 로그에 User-Agent 추가(소유자 결정): 관리 화면 형식은 그대로(질의·헤더 없음), ModSecurity 헤더 기록(B)은 Cookie·Authorization 때문에 켜지 않음. 스캐너 User-Agent 규칙 `111303`. Core Wazuh 이미지로 원천 규칙 33개 사례 실행 검증, 설치본 반영·실제 요청 검증: [WAZUH-RAW-SOURCES](WAZUH-RAW-SOURCES.md) 마지막 절.

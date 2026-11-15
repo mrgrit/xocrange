@@ -59,3 +59,7 @@ bash install.sh
 근거: [Wazuh JSON decoder](https://documentation.wazuh.com/current/user-manual/ruleset/decoders/json-decoder.html), [실제 규칙 엔진 검사](https://documentation.wazuh.com/current/user-manual/ruleset/testing.html), [alerts와 archives](https://documentation.wazuh.com/current/user-manual/manager/event-logging.html). Wazuh/상용 소스의 출처와 검토 범위는 provenance에 기록한다.
 
 Apache의 요청 전 연결 종료 로그(`"-" 400/408`, 새 형식의 `"-" "-"` 포함 여부와 무관, xoc_id 포함)는 별도 `xoc-apache-empty-request` 디코더가 IP·상태·크기를 추출하고, Wazuh 기본 web-log 규칙 31100(level 0)과 archive receipt로 처리 완료를 확인한다. HTTP 요청 줄을 합성하지 않는다.
+
+### 실습 요청 User-Agent 검증 (2026-11-15, 개발 VM 설치본 `livefire-integration` `67f4663`)
+
+att VM(192.168.16.99)에서 `Host: dvwa.xoc.range`로 User-Agent 5종 요청: curl·따옴표 포함 브라우저 200, sqlmap·gobuster·Nuclei는 CRS가 403 차단. SIEM 원본 5건 모두 User-Agent 포함(따옴표는 `\"`로 이스케이프), 저장된 SHA-256과 재계산 일치. 스캐너 3건은 `111303`(level 6) 경보로 C1 이벤트에 연결. 관리 화면 `/core/` 줄은 이전 형식(질의·User-Agent 없음) 유지, 처리 격리 0건. 개별 판정 사례 33개는 설치된 Wazuh 이미지에서 `tests/integration/native_rules.py --inside candidate`로 통과.
