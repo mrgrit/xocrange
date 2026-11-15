@@ -70,6 +70,7 @@ optional_selection=()
 public_host=
 data_directory=/var/lib/xocrange/data
 source_ref=
+downloaded=
 restore_path=
 expected_install=
 dry_run=false
@@ -152,6 +153,7 @@ current_stage=preflight
 checkpoint=
 on_exit() {
     code=$?
+    if [[ -n ${downloaded:-} && -d $downloaded ]]; then rm -rf -- "$downloaded"; fi
     if ((code)); then
         printf '{"status":"failed","stage":"%s","exit_code":%s,"log":"%s"}\n' \
             "$current_stage" "$code" "$log" > "$state/last-attempt.json"
@@ -268,6 +270,8 @@ if $content_selected; then
 fi
 stage source-snapshot
 release=$(python3 "$source_directory/scripts/install-support.py" snapshot "$source_directory" "$prefix/releases")
+# The immutable release now holds the source; a downloaded checkout is no longer needed.
+if [[ -n $downloaded ]]; then rm -rf -- "$downloaded"; downloaded=; fi
 runtime=$prefix/venvs/$(basename "$release")
 [[ -x $runtime/bin/python ]] || python3 -m venv "$runtime"
 "$runtime/bin/python" -m pip install --require-hashes -r "$release/requirements.lock"

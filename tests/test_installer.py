@@ -138,3 +138,15 @@ esac
     calls = log.read_text().splitlines()
     assert calls[0] == "enable --now sysmon.service"
     assert calls.count("restart sysmon.service") == (1 if expected == 0 else 4)
+
+
+def test_standalone_download_is_removed_once_the_release_holds_the_source():
+    # A standalone run (install.sh alone, or --ref) fetches the source into
+    # /var/lib/xocrange/download-*; the snapshot copies it, so it must not
+    # accumulate across runs (62 MB each on the 0.1.0 RC VM).
+    text = (ROOT / "install.sh").read_text()
+    snapshot = text.index('install-support.py" snapshot')
+    removal = text.index('rm -rf -- "$downloaded"', snapshot)
+    assert removal - snapshot < 400
+    on_exit = text[text.index("on_exit() {"):text.index("trap on_exit EXIT")]
+    assert 'rm -rf -- "$downloaded"' in on_exit
