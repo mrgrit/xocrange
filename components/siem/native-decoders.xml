@@ -26,7 +26,7 @@
      Keep status/bytes and source IP without inventing a request method/URI. -->
 <decoder name="xoc-apache-empty-request">
   <type>web-log</type>
-  <prematch type="pcre2">^\S+ \S+ \S+ \[[^\]]+\] "-" (?:400|408) (?:\d+|-) xoc_id=\S+$</prematch>
-  <regex type="pcre2">^(\S+) \S+ \S+ \[[^\]]+\] "-" (400|408) (\d+|-) xoc_id=\S+$</regex>
+  <prematch type="pcre2">^\S+ \S+ \S+ \[[^\]]+\] "-" (?:400|408) (?:\d+|-)(?: "(?:[^"\\]|\\.)*" "(?:[^"\\]|\\.)*")? xoc_id=\S+$</prematch>
+  <regex type="pcre2">^(\S+) \S+ \S+ \[[^\]]+\] "-" (400|408) (\d+|-)(?: "(?:[^"\\]|\\.)*" "(?:[^"\\]|\\.)*")? xoc_id=\S+$</regex>
   <order>srcip,http_status,response_bytes</order>
 </decoder>

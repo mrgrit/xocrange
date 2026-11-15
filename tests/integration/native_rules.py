@@ -56,6 +56,13 @@ def cases(root, legacy=False):
         add('apache-'+str(status),'apache-access',f'192.0.2.10 - - [07/Nov/2026:13:00:00 +0000] "GET / HTTP/1.1" {status} 42 xoc_id=fixture',''+rule,'web-accesslog')
     add('apache-sqli','apache-access','192.0.2.10 - - [07/Nov/2026:13:00:00 +0000] "GET /?q=select%20password%20from%20users HTTP/1.1" 403 42','31103','web-accesslog')
     add('apache-empty-timeout','apache-access','192.0.2.10 - - [07/Nov/2026:13:00:00 +0000] "-" 408 0 xoc_id=-','31100','xoc-apache-empty-request',{'http_status':'408','response_bytes':'0'},old_rule='',old_decoder='')
+    ua='192.0.2.10 - - [15/Nov/2026:13:00:00 +0000] "GET {} HTTP/1.1" {} 42 "-" "{}" xoc_id=fixture'
+    for name,url,status,agent,rule in [('ua-browser','/',200,'curl/8.5.0','31108'),('ua-browser-404','/x',404,'Mozilla/5.0 \\"q\\"','31101'),
+            ('ua-sqlmap','/index.php?id=1',200,'sqlmap/1.8.4#stable (https://sqlmap.org)','111303'),
+            ('ua-nikto-500','/',500,'Mozilla/5.00 (Nikto/2.5.0)','111303'),('ua-gobuster-404','/admin',404,'gobuster/3.6','111303'),
+            ('ua-sqli-keeps-31103','/?q=select%20password%20from%20users',403,'sqlmap/1.8.4','31103')]:
+        add(name,'apache-access',ua.format(url,status,agent),rule,'web-accesslog',old_rule='',old_decoder='')
+    add('apache-empty-ua','apache-access','192.0.2.10 - - [15/Nov/2026:13:00:00 +0000] "-" 408 0 "-" "-" xoc_id=-','31100','xoc-apache-empty-request',{'http_status':'408','response_bytes':'0'},old_rule='',old_decoder='')
     add('apache-error','apache-error',(fixtures/'apache-error.log').read_bytes(),'30315','apache-errorlog')
     base=json.loads((fixtures/'modsecurity-audit.json').read_bytes())
     variants=[('normal',[],200,'ENABLED','119670',None),
@@ -121,7 +128,7 @@ def inside(mode):
                 for part in key.split('.'):data=data.get(part,{}) if isinstance(data,dict) else None
                 return str(data)
             fields=all(get_field(result.get('data',{}),k)==str(v) for k,v in case['fields'].items())
-            levels={'4100':0,'4101':5,'86601':3,'24010':3,'111201':3,'111203':3,'111211':3,'31100':0,'80700':0,'80704':10,'31108':0,'31101':5,'31122':5,'31103':7,'30315':5,'119670':3,'119671':5,'119672':7,'':None}
+            levels={'4100':0,'4101':5,'86601':3,'24010':3,'111201':3,'111203':3,'111211':3,'31100':0,'80700':0,'80704':10,'31108':0,'31101':5,'31122':5,'31103':7,'111303':6,'30315':5,'119670':3,'119671':5,'119672':7,'':None}
             level_matches=case['rule'].startswith('!') or rule.get('level')==levels[case['rule']]
             results.append(dict(name=case['name'],passed=matched and decoder==case['decoder'] and fields and level_matches,
                 expected_rule=case['rule'],rule=identifier,level=rule.get('level'),decoder=decoder,

@@ -11,6 +11,8 @@ from xocrange.events import Context, normalize
 from xocrange.native_input import confirm, delivery, frames, pending
 from xocrange.native_alerts import accept, document
 
+ROOT = Path(__file__).resolve().parents[1]
+
 FIXTURES=Path(__file__).parent/'fixtures/events'
 FILES={'nftables':'nftables-drop.log','suricata':'suricata-alert.json','modsecurity':'modsecurity-audit.json',
        'osquery':'osquery-results.json','sysmon':'sysmon-process.xml','auditd':'auditd-exec.log',
@@ -204,6 +206,25 @@ def test_apache_native_request_retains_correlation_without_exporting_url_or_head
     assert event['http']['status_code']==403 and event['event']['outcome']=='failure'
     assert 'secret' not in json.dumps(event) and 'private' not in json.dumps(event)
     assert frames('apache-access',raw)==[raw.decode()]
+
+
+def test_apache_learner_request_keeps_user_agent_in_raw_only():
+    raw=b'192.0.2.10 - - [15/Nov/2026:13:00:00 +0000] "GET /index.php?id=1 HTTP/1.1" 200 42 "-" "sqlmap/1.8.4 \\"x\\"" xoc_id=fixture-124'
+    context=Context('community','local','web','fixture://one','2026-11-15T13:00:00Z')
+    event,=normalize('apache-access',raw,context)
+    assert event['correlation']['transaction_id']=='fixture-124' and event['http']=={'status_code':200,'method':'GET','bytes':42}
+    assert 'sqlmap' not in json.dumps(event)  # C1 carries no header; the evidence is the hashed raw line
+    assert frames('apache-access',raw)==[raw.decode()]
+    empty=b'192.0.2.10 - - [15/Nov/2026:13:00:00 +0000] "-" 408 0 "-" "-" xoc_id=-'
+    assert normalize('apache-access',empty,context)[0]['http']=={'status_code':408,'bytes':0}
+
+
+def test_apache_log_formats_record_user_agent_for_lab_traffic_only():
+    conf=(ROOT/'components/security-path/web/apache.conf').read_text()
+    native,=[l for l in conf.splitlines() if l.endswith(' xoc_native')]
+    management,=[l for l in conf.splitlines() if l.endswith(' xoc_management')]
+    assert '%{User-Agent}i' in native and '%{Referer}i' not in native and 'Cookie' not in native
+    assert '%{' not in management.replace('%{UNIQUE_ID}e','') and '%r' not in management
 
 
 def test_archive_receipt_split_across_reads_survives_collector_restart(store):

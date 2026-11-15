@@ -65,3 +65,15 @@
     <description>Legacy xOC web server server error</description>
   </rule>
 </group>
+<!-- The Apache access line ends with "<referer>" "<User-Agent>" xoc_id=...; match the scanner name
+     only inside the User-Agent field, never in the URL. SQL injection (31103) and other
+     higher-signal web rules keep precedence because they are not listed parents. -->
+<group name="xoc_native,web,accesslog,scanner,">
+  <rule id="111303" level="6">
+    <if_sid>31100,31101,31108,31122</if_sid>
+    <location type="pcre2">^xoc-native/[a-f0-9]{64}/apache-access$</location>
+    <regex type="pcre2">" "(?:[^"\\]|\\.)*(?i:sqlmap|nikto|nmap|masscan|zgrab|nuclei|wpscan|dirbuster|gobuster|feroxbuster|ffuf|wfuzz|hydra|acunetix|nessus|openvas|w3af|arachni|whatweb)(?:[^"\\]|\\.)*" xoc_id=\S+$</regex>
+    <description>Web request with a known security scanner User-Agent</description>
+    <mitre><id>T1595</id></mitre>
+  </rule>
+</group>
