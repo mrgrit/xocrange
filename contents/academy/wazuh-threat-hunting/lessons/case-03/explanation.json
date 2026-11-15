@@ -1,0 +1,130 @@
+{
+  "title": "5.8  경로 조작",
+  "kind": "body",
+  "blocks": [
+    {
+      "type": "p",
+      "text": "DVWA의 File Inclusion 실습은 page 값으로 서버가 읽어 포함할 파일을 고른다. LFI(Local File Inclusion)는 입력값에 따라 서버 내부 파일을 포함하는 취약점이고, 디렉터리 트래버설은 ../ 같은 경로 표현으로 허용된 디렉터리 밖의 파일에 접근하려는 공격이다. [9]"
+    },
+    {
+      "type": "code",
+      "text": "../../../../../etc/passwd"
+    },
+    {
+      "type": "p",
+      "text": "../는 상위 디렉터리로 이동한다. 다섯 번이면 DVWA의 실습 디렉터리에서 루트(/)까지 올라간다. /etc/passwd는 Linux의 계정 이름·UID·홈 디렉터리·로그인 셸이 적힌 파일이다."
+    },
+    {
+      "type": "image",
+      "path": "assets/figures/chapter05/path-context.png",
+      "caption": "도식 5-7. 입력 경로를 그대로 사용한 파일 접근.",
+      "width_mm": 127,
+      "asset": "92fe51d9a121cca313073fd4c5112f1a16a4e74066218a4efcee8a5b22435639.png"
+    },
+    {
+      "type": "list",
+      "style": "number",
+      "items": [
+        "**File Inclusion**을 누르고 **file1.php** 링크를 누른다. 주소창의 ?page=file1.php와 본문의 파일 내용을 확인한다.",
+        "주소창에서 물음표 뒤를 page=../../../../../etc/passwd&bookcase=book05-browser-path-raw로 바꾸고 Enter를 누른다. 앞부분 주소는 그대로 둔다. 전체 주소는 B05-06-path-raw-url.txt에 있다. bookcase는 로그에서 이 요청을 찾기 위해 붙인 표식이다."
+      ]
+    },
+    {
+      "type": "image",
+      "path": "assets/screens/chapter05/browser/file-normal.png",
+      "caption": "화면 5-18. file1.php를 선택한 결과.",
+      "width_mm": 100,
+      "asset": "fc6cbfbc35076a0c0b40e6086a149cb5b41593cd3bcfc8f57c64105706eab9aa.png"
+    },
+    {
+      "type": "image",
+      "path": "assets/screens/chapter05/browser/path-blocked.png",
+      "caption": "화면 5-19. 파일 경로 요청의 거부 응답.",
+      "width_mm": 100,
+      "asset": "10d6f065810b6f52415370b124718d504bc7bdf4c26fd22eece14260db89ade1.png"
+    },
+    {
+      "type": "box",
+      "kind": "predict",
+      "text": [
+        "다음에는 슬래시(/)를 %2F로 인코딩해 같은 경로를 보낸다. 서버가 해석하는 경로는 같다. Wazuh의 규칙 번호도 같을까?"
+      ]
+    },
+    {
+      "type": "list",
+      "style": "number",
+      "items": [
+        "같은 주소에서 물음표 뒤를 page=..%2F..%2F..%2F..%2F..%2Fetc%2Fpasswd&bookcase=book05-browser-path로 바꾸고 Enter를 누른다(B05-08-path-encoded-url.txt). 두 요청을 공격 일지에 적는다."
+      ]
+    },
+    {
+      "type": "query",
+      "id": "Q05-05",
+      "where": "Windows · Discover · wazuh-alerts-*",
+      "purpose": "두 경로 요청의 경보를 함께 찾는다.",
+      "text": "agent.name: \"web\"\nAND data.url: *book05-browser-path*",
+      "syntax": "두 요청의 표식에 모두 book05-browser-path가 들어 있으므로 한 번에 나온다.",
+      "result": "두 행의 data.url·data.id·rule.id를 비교한다."
+    },
+    {
+      "type": "image",
+      "path": "assets/screens/chapter05/browser/path-data.png",
+      "caption": "화면 5-20. 경로 조작 요청의 수집 기록.",
+      "width_mm": 127,
+      "asset": "6d8d0449c600bf76cc9c591296d4abaf31f187b6455fe920bc8d07823161f2da.png"
+    },
+    {
+      "type": "table",
+      "head": [
+        "보낸 형태",
+        "응답",
+        "Wazuh 규칙"
+      ],
+      "rows": [
+        [
+          "슬래시 그대로(../)",
+          "403",
+          "31104 · Common web attack."
+        ],
+        [
+          "슬래시를 %2F로",
+          "403",
+          "31101 · Web server 400 error code."
+        ]
+      ],
+      "widths": [
+        42,
+        18,
+        67
+      ],
+      "keep": true
+    },
+    {
+      "type": "p",
+      "text": "규칙 31104의 조건에는 ../..와 %2E%2E 같은 문자열이 있지만 ..%2F는 없다. 그래서 인코딩한 요청은 31104에 일치하지 않았다. 대신 응답 코드가 4로 시작하면 일치하는 31101(400번대 응답)이 붙었다. [6]"
+    },
+    {
+      "type": "box",
+      "kind": "blind",
+      "text": [
+        "31101은 공격 문자열이 아니라 403 응답 때문에 붙었다. 규칙 조건으로 보면, 같은 인코딩 요청이 200으로 처리되었다면 일치하는 공격 규칙이 없어 경보가 생기지 않는다. 그 요청은 wazuh-archives-*에만 남는다. 경보만으로 경로 조작 시도를 찾으면 이런 요청을 놓친다."
+      ]
+    },
+    {
+      "type": "p",
+      "text": "두 요청은 WAF에서 차단되었고 파일 내용이 돌아온 기록은 없다. 파일이 노출되었는지는 4·5 지점, 즉 응답 본문에 /etc/passwd의 내용이 있는지로 판정한다."
+    },
+    {
+      "type": "p",
+      "text": "애플리케이션에서는 page에 파일 경로를 직접 받지 않고, home·help 같은 허용된 이름을 받아 서버가 고정된 파일에 대응시키는 방식으로 바꾼다. 경로를 받아야 한다면 정규화한 최종 경로가 허용 디렉터리 안에 있는지 검사한다."
+    }
+  ],
+  "break": false,
+  "level": "section",
+  "source": {
+    "file": "volume01-chapter05.json",
+    "section_index": 8,
+    "revision": "REV01",
+    "mapping_status": "pending-review"
+  }
+}

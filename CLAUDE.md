@@ -26,7 +26,7 @@ xOC Range(본문 호칭 `xoc`)의 Core/Community 구현 저장소. kt66을 상�
 
 ```bash
 python3 -m venv .venv && . .venv/bin/activate && pip install -e '.[test]'
-python3 scripts/fetch-contents.py      # 고정된 콘텐츠 모듈(contents/) 내려받기 — 아카데미 테스트에 필요
+python3 scripts/verify-contents.py     # contents/(Community 번들)가 module.json과 일치하는지 확인 — 콘텐츠 수정 뒤 manifest 재생성
 python -m pytest -q --ignore=tests/browser   # 단위·계약 테스트 (약 2~3분)
 ./bin/xoc catalog | doctor | plan
 ```

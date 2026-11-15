@@ -12,7 +12,7 @@ import tempfile
 
 
 FILES = ("install.sh", "pyproject.toml", "README.md", "requirements.lock", "NOTICE", "LICENSE",
-         "LICENSE-EDUCATION.md", "content-lock.json")
+         "LICENSE-EDUCATION.md")
 DIRECTORIES = ("src/xocrange", "components", "presets", "contracts", "modules.d",
                "scripts", "tests/fixtures/modules/security-probe", "assets/branding", "contents")
 

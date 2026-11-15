@@ -1,0 +1,100 @@
+{
+  "title": "3.4  DQL로 조건 적기",
+  "kind": "body",
+  "blocks": [
+    {
+      "type": "p",
+      "text": "검색창 오른쪽의 언어 표시가 DQL인지 확인한다. DQL(Dashboards Query Language)은 필드와 값으로 기록을 거르는 검색식이다. 데이터베이스의 SQL과 달리 결과에 보일 열이나 집계를 정하지 않고, 조건에 맞는 기록만 고른다. [2]"
+    },
+    {
+      "type": "query",
+      "id": "Q03-01",
+      "where": "Windows · Discover 검색창",
+      "purpose": "xOC Range VM 자신의 에이전트가 보낸 경보만 고른다.",
+      "text": "agent.name: \"xocrange-host\"",
+      "syntax": "기본 구문은 필드명: 값이다. 콜론(:) 앞이 필드, 뒤가 찾을 값이다. 큰따옴표로 감싼 값은 하나의 구문으로 찾는다. xocrange-host는 1.7에서 확인한 xOC Range VM의 수집기 이름이다. 입력 후 Enter를 누른다.",
+      "result": "결과에 xocrange-host의 경보만 나온다. 결과 위의 hits는 세 조건을 만족한 기록의 건수이다."
+    },
+    {
+      "type": "image",
+      "path": "assets/screens/chapter03/query.png",
+      "caption": "화면 3-5. 에이전트 이름 검색.",
+      "width_mm": 127,
+      "asset": "3440e5d2aa5f2c62249262374f63c8ee8f46932d41a8ab76842cd7475224cddb.png"
+    },
+    {
+      "type": "p",
+      "text": "조건을 더할 때는 다음 연산자를 쓴다. DQL은 연산자의 대소문자를 구분하지 않는다. 이 책에서는 눈에 띄도록 대문자로 쓴다."
+    },
+    {
+      "type": "table",
+      "head": [
+        "형식",
+        "예",
+        "뜻"
+      ],
+      "rows": [
+        [
+          "필드: 값",
+          "rule.id: \"5710\"",
+          "필드의 값이 일치하는 기록"
+        ],
+        [
+          "AND",
+          "A AND B",
+          "두 조건을 모두 만족"
+        ],
+        [
+          "OR",
+          "rule.id: \"5710\" OR rule.id: \"5760\"",
+          "하나 이상 만족"
+        ],
+        [
+          "NOT",
+          "NOT rule.id: \"5710\"",
+          "조건을 만족하지 않는 기록"
+        ],
+        [
+          "( )",
+          "A AND (B OR C)",
+          "괄호 안을 먼저 계산"
+        ],
+        [
+          "필드: *",
+          "data.srcip: *",
+          "그 필드가 있는 기록"
+        ],
+        [
+          ">=, <=, >, <",
+          "rule.level >= 10",
+          "숫자 필드의 범위"
+        ]
+      ],
+      "widths": [
+        24,
+        56,
+        47
+      ],
+      "keep": true
+    },
+    {
+      "type": "p",
+      "text": "연산자는 NOT, AND, OR 순서로 계산된다. A AND B OR C는 (A AND B) OR C로 계산되므로, AND와 OR를 함께 쓸 때는 의도한 묶음을 괄호로 적는다. [2]"
+    },
+    {
+      "type": "box",
+      "kind": "blind",
+      "text": [
+        "필드 조건은 그 필드가 있는 기록만 고른다. 같은 사건의 기록이라도 디코더가 값을 꺼내지 못한 줄에는 그 필드가 없다. 예를 들어 rsyslog가 같은 줄의 반복을 message repeated 5 times처럼 묶어 쓴 기록에는 data.srcip가 없어서, data.srcip 조건을 붙이면 결과에서 빠진다. 조건을 더해 건수가 줄었을 때는 빠진 기록이 무엇인지 조건을 빼고 확인한다."
+      ]
+    }
+  ],
+  "break": false,
+  "level": "section",
+  "source": {
+    "file": "volume01-chapter03.json",
+    "section_index": 4,
+    "revision": "REV01",
+    "mapping_status": "pending-review"
+  }
+}

@@ -1,0 +1,325 @@
+{
+  "id": "case-21",
+  "title": "21 · 계정·그룹 생성과 삭제",
+  "source_pages": [
+    249,
+    257
+  ],
+  "slides": [
+    {
+      "page": 249,
+      "title": "리눅스 · 21 / 61 · MITRE T1136.001",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "리눅스 · 21 / 61 · MITRE T1136.001"
+        },
+        {
+          "type": "text",
+          "text": "21 계정·그룹 생성과 삭제"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  리눅스 · 21"
+        },
+        {
+          "type": "text",
+          "text": "공격"
+        },
+        {
+          "type": "text",
+          "text": "침입 후 백도어 계정을 만들거나 sudo 그룹에 추가"
+        },
+        {
+          "type": "text",
+          "text": "탐지 포인트"
+        },
+        {
+          "type": "text",
+          "text": "룰 5901(그룹 추가), 5902(사용자 추가), 5904(사용자 삭제), 5555(암호 변경)"
+        },
+        {
+          "type": "text",
+          "text": "검색 원리"
+        },
+        {
+          "type": "text",
+          "text": "useradd/groupadd/userdel/passwd 로그를 묶은 adduser 그룹을 씀"
+        },
+        {
+          "type": "text",
+          "text": "주요 필드"
+        },
+        {
+          "type": "text",
+          "text": "full_log · rule.description"
+        },
+        {
+          "type": "text",
+          "text": "결과 해석"
+        },
+        {
+          "type": "text",
+          "text": "full_log에 새 계정명과 UID. UID 0이거나 sudo·wheel 그룹 추가면 즉시 대응"
+        },
+        {
+          "type": "text",
+          "text": "원본 교재 검증 기록 · 원본 DQL 그대로 동작"
+        }
+      ]
+    },
+    {
+      "page": 250,
+      "title": "21 실습 ① 공격 실행 — 계정·그룹 생성과 삭제",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "21 실습 ① 공격 실행 — 계정·그룹 생성과 삭제"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  리눅스 · 21"
+        },
+        {
+          "type": "image",
+          "asset": "ad96bba93779c770134b4674e68402eb78d4622dca2214bf5f6f8053e5d27b7f.png",
+          "alt": "교재 250페이지 예시 화면"
+        },
+        {
+          "type": "text",
+          "text": "공격자 VM 에서 학생이 직접 입력하는 명령과 실제 결과. # 줄은 설명, 노란색은 확인할 결과"
+        }
+      ]
+    },
+    {
+      "page": 251,
+      "title": "21 구문 풀이 — 계정·그룹 생성과 삭제",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "21 구문 풀이 — 계정·그룹 생성과 삭제"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  리눅스 · 21"
+        },
+        {
+          "type": "text",
+          "text": "sudo useradd -m -s /bin/bash backdoor"
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "홈 폴더(-m)와 셸(-s)을 가진 새 계정 생성"
+        },
+        {
+          "type": "text",
+          "text": "sudo usermod -aG sudo backdoor"
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "sudo 그룹에 추가(-aG) → 관리자 권한 백도어"
+        },
+        {
+          "type": "text",
+          "text": "sudo userdel -r backdoor"
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "흔적 지우기 — 계정 삭제(5904)도 기록된다"
+        }
+      ]
+    },
+    {
+      "page": 252,
+      "title": "21 실습 ② 검색 준비 — 계정·그룹 생성과 삭제",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "21 실습 ② 검색 준비 — 계정·그룹 생성과 삭제"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  리눅스 · 21"
+        },
+        {
+          "type": "text",
+          "text": "인덱스 패턴"
+        },
+        {
+          "type": "text",
+          "text": "wazuh-alerts-*"
+        },
+        {
+          "type": "text",
+          "text": "시간 범위"
+        },
+        {
+          "type": "text",
+          "text": "Last 15 minutes (실습 직후)"
+        },
+        {
+          "type": "text",
+          "text": "DQL — 검색창에 직접 입력 → Enter"
+        },
+        {
+          "type": "text",
+          "text": "rule.groups:adduser OR rule.id:(5901 or 5902 or 5904 or 5555)"
+        },
+        {
+          "type": "text",
+          "text": "추가할 컬럼"
+        },
+        {
+          "type": "text",
+          "text": "agent.name  ·  rule.id  ·  rule.description  ·  data.dstuser  ·  full_log"
+        },
+        {
+          "type": "text",
+          "text": "xOC Range 결과"
+        },
+        {
+          "type": "text",
+          "text": "3 hits"
+        }
+      ]
+    },
+    {
+      "page": 253,
+      "title": "21 결과 화면 ① — 결과 수와 시간 분포",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "21 결과 화면 ① — 결과 수와 시간 분포"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  리눅스 · 21"
+        },
+        {
+          "type": "image",
+          "asset": "3feadaab7b3ceda710f0d7bafca869f1f95a90ba4415322ee371128d9512afdb.png",
+          "alt": "교재 253페이지 예시 화면"
+        },
+        {
+          "type": "text",
+          "text": "3 hits"
+        },
+        {
+          "type": "text",
+          "text": "검색창 아래 hits = 찾은 건수, 막대 = 시간대별 건수. 실습 직후라 막대가 한곳에 몰려 있다"
+        }
+      ]
+    },
+    {
+      "page": 254,
+      "title": "21 결과 화면 ② — 결과 표 (왼쪽 열)",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "21 결과 화면 ② — 결과 표 (왼쪽 열)"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  리눅스 · 21"
+        },
+        {
+          "type": "image",
+          "asset": "a52a3001668d5a7254080f7bbafcd03fb93f0de8c79b4b92533a33a9bcbe7eb4.png",
+          "alt": "교재 254페이지 예시 화면"
+        },
+        {
+          "type": "text",
+          "text": "결과 표 왼쪽 — 시간 · 에이전트 · 룰 (한 행 = 로그 한 건)"
+        }
+      ]
+    },
+    {
+      "page": 255,
+      "title": "21 결과 화면 ② — 결과 표 (오른쪽 열)",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "21 결과 화면 ② — 결과 표 (오른쪽 열)"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  리눅스 · 21"
+        },
+        {
+          "type": "image",
+          "asset": "934bbce0edc1169193f15898b86b83ed75c277b5de9ca64f2ed7f828f861d75a.png",
+          "alt": "교재 255페이지 예시 화면"
+        },
+        {
+          "type": "text",
+          "text": "결과 표 오른쪽 — 같은 행의 나머지 열"
+        }
+      ]
+    },
+    {
+      "page": 256,
+      "title": "21 결과 화면 ③ — 문서 펼치기 (Table)",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "21 결과 화면 ③ — 문서 펼치기 (Table)"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  리눅스 · 21"
+        },
+        {
+          "type": "image",
+          "asset": "30ed4021afcf7b438c967ebc0ccb6d3c6ec53e03abc401bff2e743b9587f0259.png",
+          "alt": "교재 256페이지 예시 화면"
+        },
+        {
+          "type": "text",
+          "text": "행 왼쪽 > 를 눌러 펼친 화면. 노란색 = 검색 조건과 맞은 부분"
+        }
+      ]
+    },
+    {
+      "page": 257,
+      "title": "21 결과 읽는 법 — 계정·그룹 생성과 삭제",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "21 결과 읽는 법 — 계정·그룹 생성과 삭제"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  리눅스 · 21"
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "5902 사용자 추가 → 그룹 변경 → 5904 삭제가 시간순으로 보인다"
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "full_log 에 새 계정 이름·UID. UID 0 이거나 sudo·wheel 그룹이면 즉시 대응"
+        }
+      ]
+    }
+  ]
+}

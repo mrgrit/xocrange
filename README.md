@@ -89,9 +89,9 @@ Core 로그인 후 데이터센터 **6층** 또는 왼쪽 **아카데미**를 �
 Live Fire는 모든 미션을 **학습자 시도 → 시스템 반응 → 학습자의 해석**으로 작성한다. 작성 내용은 자동 임시 저장되며, **미션 등록**으로 세 항목과 캡처의 수정 이력을 남긴다. 미션 이동·재접속 후 이어 쓸 수 있고 **나의 기록**에서 등록 당시 내용을 조회한다. 시스템 반응에는 긴 로그와 여러 캡처를 기록할 수 있다. 등록은 기록 보관이며 AI 점수·리더보드는 훈련 엔진 연결 후 제공한다.
 
 
-강좌는 **웹 침해 대응 8개 + 리눅스·네트워크 침해 대응 7개**, 총 15개 Live Fire 시나리오와 연결된다. 각 시나리오는 Red 2·Blue 3·Purple 2, 총 7개 미션/100점이다. `#academy/scenarios` 및 관리자 7층 화면에서 105개 미션을 미리 볼 수 있다. [시나리오 목록·정답·채점 규격](https://github.com/mrgrit/xocrange_contents/tree/main/battle-scenarios)
+강좌는 **웹 침해 대응 8개 + 리눅스·네트워크 침해 대응 7개**, 총 15개 Live Fire 시나리오와 연결된다. 각 시나리오는 Red 2·Blue 3·Purple 2, 총 7개 미션/100점이다. `#academy/scenarios` 및 관리자 7층 화면에서 105개 미션을 미리 볼 수 있다. [시나리오 목록·정답·채점 규격](contents/battle-scenarios)
 
-콘텐츠는 별도 모듈 저장소 [xocrange_contents](https://github.com/mrgrit/xocrange_contents)에서 관리한다. Core에는 본문을 중복 저장하지 않으며, `content-lock.json`으로 지정한 커밋·파일 해시를 검증해 설치 프로그램이 자동으로 내려받는다. `--without academy-reader`이면 다운로드와 설치를 생략한다. tw2 형식의 YAML에 상세 기준 답안·부분점수·동등 답안·오답 사례를 작성했고, Core 화면에는 정답을 제외한 콘텐츠만 제공한다. 실제 공방전 실행과 AI 채점은 Live Fire의 tw2 엔진 통합 단계이며, 현재 Core에서 실행하지 않는다. 교재와 실습 환경 정합성 검토는 후속 작업이다. [화면과 저장 구조](docs/development/ACADEMY.md)
+Community 번들 콘텐츠는 이 저장소의 [`contents/`](contents)에 콘텐츠 모듈 형식으로 들어 있다. 설치 프로그램은 `contents/module.json`의 파일별 해시와 정확히 일치할 때만 설치하며, 내려받기는 없다. `--without academy-reader`이면 설치를 생략한다. 유료 콘텐츠 팩은 별도 비공개 저장소에서 따로 제공한다([ADR 0009](docs/adr/0009-community-content-in-core.md)). tw2 형식의 YAML에 상세 기준 답안·부분점수·동등 답안·오답 사례를 작성했고, Core 화면에는 정답을 제외한 콘텐츠만 제공한다. 실제 공방전 실행과 AI 채점은 Live Fire의 tw2 엔진 통합 단계이며, 현재 Core에서 실행하지 않는다. 교재와 실습 환경 정합성 검토는 후속 작업이다. [화면과 저장 구조](docs/development/ACADEMY.md)
 
 공방전은 **미션별 초안 → 등록 → 채점** 흐름으로 설계한다. 혼자 훈련하거나 교수자가 리그를 개설해 학생이 참가할 수 있도록 [개인 훈련·리그 설계](docs/development/LIVE-FIRE-LEAGUES.md)를 작성했다. 이번에는 설계만 반영했으며 리그 생성·실행 기능은 아직 제공하지 않는다.
 
@@ -205,4 +205,4 @@ xOC Range Core 자체 코드와 프로젝트 자산은 [PolyForm Noncommercial L
 
 로고는 계획 저장소 README에 등록된 원본을 그대로 사용했다. [출처와 SHA-256](assets/branding/provenance.json)을 함께 보관한다.
 
-콘텐츠 개발·오프라인 설치·버전 갱신: [독립 콘텐츠 모듈](docs/development/CONTENT-MODULES.md). 소스에서 테스트하거나 아카데미 설치 계획을 만들 때는 먼저 `python3 scripts/fetch-contents.py`를 실행한다.
+콘텐츠 수정·검증: [콘텐츠 모듈](docs/development/CONTENT-MODULES.md). 콘텐츠를 고친 뒤에는 `python3 scripts/verify-contents.py`로 매니페스트 일치를 확인한다.

@@ -1,0 +1,11 @@
+{
+  "source_repository": "https://github.com/mrgrit/xocrange",
+  "source_commit": "f6fbeaa762c2d0bc446eabdda0b39f57fdd49352",
+  "unchanged_teaching_files": 356,
+  "stable_ids": true,
+  "approved_pages": [
+    1,
+    339
+  ],
+  "scope": "Existing teaching material and grading content moved without rewriting lesson or mission identifiers."
+}

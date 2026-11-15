@@ -1,0 +1,50 @@
+[
+  {
+    "id": "case-10-execute",
+    "title": "입력과 실행",
+    "instruction": "실습에서 사용한 명령과 검색식, 실행 순서와 시행착오를 노트에 기록하세요. 관련 결과와 캡처도 함께 배치할 수 있습니다.",
+    "source_pages": [
+      152
+    ],
+    "required_fields": [
+      "input",
+      "output_or_screenshot",
+      "interpretation"
+    ],
+    "evaluation": "self-record",
+    "response_field": "input",
+    "response_label": "실습 과정과 실행 기록"
+  },
+  {
+    "id": "case-10-investigate",
+    "title": "검색과 증거",
+    "instruction": "실습하며 나온 전체 출력과 로그, 여러 화면의 캡처를 노트에 이어 붙이세요. 각 결과에서 무엇을 확인했는지 설명을 덧붙이세요.",
+    "source_pages": [
+      154
+    ],
+    "required_fields": [
+      "input",
+      "output_or_screenshot",
+      "interpretation"
+    ],
+    "evaluation": "self-record",
+    "response_field": "output",
+    "response_label": "전체 결과와 캡처 기록"
+  },
+  {
+    "id": "case-10-interpret",
+    "title": "분석과 판단",
+    "instruction": "관측한 사실과 판단 근거, 원인과 대응 방향을 충분히 기록하세요. 관련 명령, 결과와 캡처를 연결해 분석 과정을 완성하세요.",
+    "source_pages": [
+      158
+    ],
+    "required_fields": [
+      "input",
+      "output_or_screenshot",
+      "interpretation"
+    ],
+    "evaluation": "self-record",
+    "response_field": "interpretation",
+    "response_label": "분석과 해석 기록"
+  }
+]

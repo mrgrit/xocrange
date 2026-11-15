@@ -1,0 +1,151 @@
+{
+  "title": "7.2  웹셸 파일",
+  "kind": "body",
+  "blocks": [
+    {
+      "type": "p",
+      "text": "웹셸은 웹 요청으로 서버의 운영체제 명령을 실행하게 만든 스크립트이다. 업로드 취약점 등으로 실행 가능한 웹 경로에 저장되면 공격자가 URL만으로 서버를 조작할 수 있다. 실습에서는 관리자가 xocrange-web 안에 PHP 파일을 직접 만들어 웹셸이 놓인 상태를 재현한다. HTTP 업로드 과정은 다루지 않는다."
+    },
+    {
+      "type": "image",
+      "path": "assets/figures/chapter07/webshell.png",
+      "caption": "도식 7-4. 파일 생성과 요청·실행 증거의 연결.",
+      "width_mm": 127,
+      "asset": "e55c9abb7995f63158375071dfa9fac8db29d38ef3f0a3648012832e5f3e2fde.png"
+    },
+    {
+      "type": "command",
+      "id": "C07-01",
+      "where": "xOC Range VM · 터미널",
+      "purpose": "xocrange-web 컨테이너의 셸로 들어간다.",
+      "text": "docker exec -it xocrange-web /bin/bash",
+      "syntax": "5.4와 같은 명령이다.",
+      "result": "프롬프트가 xocrange-web 안으로 바뀐다."
+    },
+    {
+      "type": "command",
+      "id": "C07-02",
+      "where": "xocrange-web 컨테이너 · 셸",
+      "purpose": "(사전 확인) FIM 감시 경로, 업로드 폴더, 실습 파일의 현재 상태를 확인한다.",
+      "text": "grep -n -F '/var/www' /var/ossec/etc/ossec.conf\nls -ld /var/www/html/uploads\nls -l /var/www/html/uploads/book07-shell.php",
+      "syntax": "grep -n -F는 /var/www를 글자 그대로 찾고 줄 번호를 붙인다. ls -ld는 폴더 안의 목록 대신 폴더 자체의 정보를 보인다.",
+      "result": "첫 명령에서 realtime=\"yes\"가 붙은 /var/www 감시 줄이 나온다. 폴더가 없으면 mkdir -p /var/www/html/uploads로 만들고 원상복구 때 지울 수 있도록 적어 둔다. 실습 파일은 No such file or directory여야 한다. 이미 있으면 다른 파일 이름을 정한다."
+    },
+    {
+      "type": "command",
+      "id": "C07-03",
+      "where": "xocrange-web 컨테이너 · 셸",
+      "purpose": "웹셸 코드를 파일로 저장한다.",
+      "text": "vim /var/www/html/uploads/book07-shell.php",
+      "syntax": "vim은 xocrange-web에 설치된 터미널 편집기이다. i를 눌러 입력 모드로 바꾸고 아래 코드를 입력한 뒤 Esc, :wq, Enter로 저장하고 닫는다. 저장하지 않고 나갈 때는 Esc, :q!, Enter이다.",
+      "result": "편집기가 닫히고 프롬프트로 돌아온다. 복사용 코드는 examples/rev01/chapter07/P07-webshell.php이다."
+    },
+    {
+      "type": "code",
+      "text": "<?php\nif (isset($_GET['cmd'])) {\n    system($_GET['cmd']);\n}"
+    },
+    {
+      "type": "p",
+      "text": "$_GET은 URL 쿼리의 값을 읽는 PHP 변수이고, isset은 cmd 값이 있는지 확인한다. system은 받은 문자열을 운영체제 명령으로 실행하고 출력을 그대로 응답에 넣는다."
+    },
+    {
+      "type": "command",
+      "id": "C07-04",
+      "where": "xocrange-web 컨테이너 · 셸",
+      "purpose": "(사후 확인) 저장된 내용을 확인하고 컨테이너에서 나온다.",
+      "text": "cat /var/www/html/uploads/book07-shell.php\nexit",
+      "syntax": "cat은 파일 내용을 출력한다.",
+      "result": "위 코드와 같고, $_GET과 작은따옴표가 그대로 있다."
+    },
+    {
+      "type": "p",
+      "text": "브라우저에서 http://192.168.0.189/uploads/book07-shell.php?cmd=id를 한 번 요청하고(B07-02) Status Code와 Response를 공격 일지에 적는다. id는 실행 계정의 식별자를 출력하는 명령이다."
+    },
+    {
+      "type": "image",
+      "path": "assets/screens/chapter07/file-response.png",
+      "caption": "화면 7-1. shell.php 요청의 404 응답 본문.",
+      "width_mm": 100,
+      "asset": "44185455fd76ac010d08be0dd6dea9f28c1284f2646f7915d8456669c6d7f2f3.png"
+    },
+    {
+      "type": "p",
+      "text": "강의 자료의 같은 요청은 404였다. IP 주소로 요청하면 Apache는 기본 사이트(landing)를 고르고, 그 문서 루트는 /var/www/landing이다. 파일을 만든 /var/www/html과 다르므로 URL이 파일에 닿지 않았다. 이 요청으로는 웹셸이 실행되지 않았다. 판정은 1단계(요청)와 3단계(파일 추가)까지이다. 다른 URL로 같은 파일이 요청되었는지는 Q07-02로 확인한다. [1]"
+    },
+    {
+      "type": "query",
+      "id": "Q07-01",
+      "where": "Windows · Discover · wazuh-alerts-*",
+      "purpose": "웹 경로에 PHP 파일이 추가된 FIM 경보를 찾는다.",
+      "text": "agent.name: \"web\" AND rule.id: \"554\"\nAND syscheck.path: *shell.php",
+      "syntax": "554는 File added to the system 규칙이다. syscheck.path는 FIM이 관찰한 파일의 전체 경로이다.",
+      "result": "강의 자료에서는 /var/www/html/uploads/shell.php의 추가가 19:14:05.794에 기록되었다. 자신의 실습 파일 경로와 시각을 적는다."
+    },
+    {
+      "type": "image",
+      "path": "assets/screens/chapter07/fim-path.png",
+      "caption": "화면 7-2. FIM에 기록된 PHP 파일 경로.",
+      "width_mm": 100,
+      "asset": "190110cb620bcd7e885219d823edb434511e0ad6e86b9abacb59f65012ec4c5e.png"
+    },
+    {
+      "type": "query",
+      "id": "Q07-02",
+      "where": "Windows · Discover · wazuh-alerts-*",
+      "purpose": "같은 파일 이름을 요청한 접속 기록을 찾는다.",
+      "text": "agent.name: \"web\" AND data.url: *shell.php*",
+      "syntax": "FIM 경로의 파일 이름을 접속 로그의 URL 조건으로 옮겨 피벗한다.",
+      "result": "FIM 시각 뒤의 요청과 응답 코드를 읽는다. 경보 인덱스에 없으면 wazuh-archives-*에서 같은 조건으로 찾는다."
+    },
+    {
+      "type": "box",
+      "kind": "blind",
+      "text": [
+        "FIM 경보에는 누가 파일을 만들었는지가 없다. xOC Range의 cmdlog(규칙 100260)는 web에 로그인한 대화형 셸의 명령을 기록하지만, docker exec로 연 셸은 로그인 셸이 아니어서 기록되지 않을 수 있다. 같은 시각에 rule.groups: \"cmdlog\" 기록이 있는지 확인하고, 없으면 작성 주체는 컨테이너 관리 기록과 배포·업로드 기록에서 찾는다. ClamAV는 /var/www를 20초마다 검사한다. 그보다 오래 지나도 52502가 없으면 파일이 ClamAV 시그니처에 일치하지 않은 것이므로, 파일 내용(system($_GET…))을 직접 읽어 판단한다."
+      ]
+    },
+    {
+      "type": "h",
+      "text": "원상복구"
+    },
+    {
+      "type": "command",
+      "id": "C07-05",
+      "where": "xOC Range VM · 터미널",
+      "purpose": "xocrange-web 컨테이너의 셸로 들어간다.",
+      "text": "docker exec -it xocrange-web /bin/bash",
+      "syntax": "C07-01과 같다.",
+      "result": "프롬프트가 xocrange-web 안으로 바뀐다."
+    },
+    {
+      "type": "command",
+      "id": "C07-06",
+      "where": "xocrange-web 컨테이너 · 셸",
+      "purpose": "실습 파일인지 확인하고 지운 뒤 지워졌는지 확인한다.",
+      "text": "cat /var/www/html/uploads/book07-shell.php\nrm -i /var/www/html/uploads/book07-shell.php\nls -l /var/www/html/uploads/book07-shell.php",
+      "syntax": "rm -i는 지우기 전에 확인을 묻는다. 경로가 맞으면 y를 입력한다.",
+      "result": "마지막 ls -l이 No such file or directory를 출력한다. uploads 폴더를 새로 만들었다면 ls -la로 비어 있는지 보고 rmdir /var/www/html/uploads로 지운다."
+    },
+    {
+      "type": "command",
+      "id": "C07-07",
+      "where": "xocrange-web 컨테이너 · 셸",
+      "purpose": "xocrange-web 셸에서 나온다.",
+      "text": "exit",
+      "syntax": "exit는 현재 셸을 끝낸다.",
+      "result": "xOC Range VM의 프롬프트로 돌아온다."
+    },
+    {
+      "type": "p",
+      "text": "Discover에서 rule.id: \"553\"(File deleted.)과 실습 파일 경로로 삭제 기록을 확인한다. 추가(554)와 삭제(553)가 짝으로 남는다."
+    }
+  ],
+  "break": false,
+  "level": "section",
+  "source": {
+    "file": "volume01-chapter07.json",
+    "section_index": 2,
+    "revision": "REV01",
+    "mapping_status": "pending-review"
+  }
+}

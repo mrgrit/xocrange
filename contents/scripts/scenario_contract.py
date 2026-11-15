@@ -1,0 +1,79 @@
+"""tw2-compatible authored scenarios and an answer-free Core preview."""
+import hashlib
+import json
+from pathlib import Path
+import re
+import yaml
+class XocError(ValueError):
+    pass
+
+SUBJECTS = json.loads((Path(__file__).resolve().parents[1]/'catalog/subjects.json').read_text())
+
+REFERENCE = '324d91fb22fee2c76051d5e73b58aa7f82de3e4c'
+
+
+def scenarios(root):
+    root=Path(root)
+    course=json.loads((root/'academy/wazuh-threat-hunting/course.json').read_text())
+    lessons={l['id']:l for l in course['lessons']}
+    result=[]; covered=[]; ids=set()
+    for path in sorted((root/'battle-scenarios').glob('xoc-*.yaml')):
+        if path.is_symlink() or path.stat().st_size>256*1024:
+            raise XocError('scenario_path','Scenario file is not a bounded regular file.')
+        s=yaml.safe_load(path.read_text())
+        def require(value, message):
+            if not value:raise XocError('scenario_contract',path.name+': '+message)
+        require(s['id']==path.stem and s['id'] not in ids,'unique slug required');ids.add(s['id'])
+        require(s['category'] in {x['id'] for x in SUBJECTS},'unknown subject')
+        linked=s['academy']['lessons'];require(linked and set(linked)<=set(lessons),'unknown lesson')
+        covered.extend(linked)
+        pages=sorted({p for lid in linked for p in range(lessons[lid]['source_pages'][0],lessons[lid]['source_pages'][1]+1)})
+        require(s['academy']['source_pages']==pages and max(pages)<=339,'page boundary differs')
+        totals={'red':0,'blue':0,'purple':0}; mission_ids=set()
+        for side in ('red','blue'):
+            missions=s[side+'_missions']
+            expected_roles=['red','red'] if side=='red' else ['blue','blue','blue','purple','purple']
+            require([m['learning_role'] for m in missions]==expected_roles,'mission sequence differs')
+            require([m['order'] for m in missions]==list(range(1,len(missions)+1)),'nonconsecutive order')
+            for m in missions:
+                role=m['learning_role'];require(role in totals and (role=='red')==(side=='red'),'role mapping')
+                require(m['assess_target']==('opponent' if side=='red' else 'self'),'evidence target differs')
+                require(m['id'] not in mission_ids,'duplicate mission');mission_ids.add(m['id'])
+                require(m['submission']['fields']==3 and m['submission']['type']=='report','three-part report required')
+                require([x['id'] for x in m['submission']['sections']]==['input','output','interpretation'],'report section order differs')
+                require(all(x['required'] is True and x['max_bytes']==180000 for x in m['submission']['sections']),'required bounded sections missing')
+                require(set(m['reference_answer']['sections'])=={'input','output','interpretation'},'reference sections missing')
+                require([x['id'] for x in m['rubric']]==['input','output','interpretation'],'per-section rubric missing')
+                require(all(set(x['submission'])=={'input','output','interpretation'} for x in m['evaluation_cases']),'structured evaluation cases required')
+                require(m['points']>0 and sum(c['points'] for c in m['rubric'])==m['points'],'rubric points differ')
+                require(len(m['reference_answer']['answer'])>=8 and len(m['reference_answer']['explanation'])>=20,'reference answer too short')
+                sem=m['verify']['semantic']
+                require(all(sem.get(k) for k in ('intent','success_criteria','acceptable_methods','negative_signs')),'semantic contract missing')
+                require(m['reference_answer']['answer'] in '\n'.join(sem['acceptable_methods']),'reference answer does not reach tw2 grader')
+                checks=m['verify']['checks'];require(bool(checks),'missing assessor context')
+                require(all(c['type']=='wazuh_alert' and c['target']=='siem' and c['params'].get('pattern') for c in checks),'invalid context check')
+                require('### 따라 하기' in m['instruction'] and '### 세 항목으로 기록하기' in m['instruction'],'learner guidance missing')
+                require({x['kind'] for x in m['evaluation_cases']} >= {'full','wrong','empty'},'evaluation cases missing')
+                totals[role]+=m['points']
+        require(totals=={'red':35,'blue':45,'purple':20},'role score differs')
+        require(s['runtime_contract']['purple_runtime_side']=='blue','Purple would be dropped by tw2')
+        require(s['runtime_contract']['reference_commit']==REFERENCE,'reference drift')
+        tokens=set(re.findall(r'\{\{\s*([A-Z_]+)\s*\}\}',path.read_text()))
+        require(tokens<={'TARGET_IP','WEB_ENTRY','ATTACKER_IP'},'unsupported tw2 placeholder')
+        result.append((s,path))
+    if len(result)!=15 or sorted(covered)!=sorted(lessons):
+        raise XocError('scenario_coverage','Expected 15 scenarios covering all 36 lessons exactly once.')
+    return result
+
+
+def public_catalog(root):
+    """Explicit projection: grading answers/rubrics are never served by Core."""
+    items=[]
+    for s,path in scenarios(root):
+        missions=[]
+        for m in s['red_missions']+s['blue_missions']:
+            missions.append({k:m[k] for k in ('id','order','title','learning_role','points','instruction','hint','submission')})
+        items.append({k:s[k] for k in ('id','category','title','description','difficulty','time_limit','briefing','academy','content_version')}|{
+            'missions':missions,'total_points':100,'source_sha256':hashlib.sha256(path.read_bytes()).hexdigest(),
+            'execution_available':False,'minimum_tier':'live-fire'})
+    return {'schema_version':'xoc.livefire-preview/0.1.0','subjects':SUBJECTS,'scenarios':items}

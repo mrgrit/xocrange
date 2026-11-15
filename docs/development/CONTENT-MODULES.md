@@ -1,42 +1,42 @@
-# 독립 콘텐츠 모듈
+# 콘텐츠 모듈
 
-콘텐츠 정본은 [mrgrit/xocrange_contents](https://github.com/mrgrit/xocrange_contents)에 있다. Core 저장소는 리더·API·권한·학습 기록·설치 연결을 관리한다. 교재·그림·미션·정답·배점·과목·카탈로그 제목·시작 가이드는 콘텐츠 저장소에서 관리한다.
+[ADR 0009](../adr/0009-community-content-in-core.md): **Community 번들은 이 저장소의 `contents/`**, **유료 콘텐츠 팩은 비공개 [mrgrit/xocrange_contents](https://github.com/mrgrit/xocrange_contents)**에 둔다. Core는 리더·API·권한·학습 기록·설치 연결을 관리하고, 교재·그림·미션·정답·배점·과목·카탈로그 제목·시작 가이드는 콘텐츠 모듈 형식으로 관리한다.
 
-## 설치와 버전
+## 구성
 
-`content-lock.json`은 콘텐츠 저장소 주소, 정확한 Git 커밋, `module.json`의 SHA-256을 지정한다. 해당 매니페스트가 모든 배포 파일의 경로와 SHA-256을 선언한다. 최신 브랜치를 자동 추적하지 않는다.
+| 경로 | 내용 | 설치 |
+|---|---|---|
+| `contents/module.json` | 모듈 ID `community-academy`, 배포 파일마다 경로와 SHA-256 | 검증 기준 |
+| `contents/academy/`, `battle-scenarios/`, `catalog/`, `guides/` | 배포 파일 | 예 |
+| `contents/scripts/`, `provenance/`, `README.md`, `NOTICE`, `requirements.txt` | 작성 도구·출처 | 아니오 |
 
-`sudo bash install.sh`는 아카데미를 선택한 경우 콘텐츠를 자동으로 내려받고 검증한다. `--without academy-reader`이면 이 단계를 생략한다. 원본 콘텐츠는 시스템 저장소에 커밋하지 않으며 `contents/`는 검증된 로컬 캐시다.
+## 설치와 검증
 
-검증한 파일만 불변 릴리스에 포함하고 설치 계획에 콘텐츠 버전을 기록한다. `academy-reader`를 선택했을 때만 학습자용 교재·미리보기·카탈로그를 플랫폼의 읽기 전용 설정 볼륨에 복사한다. 교관용 YAML의 정답과 채점 기준은 학습자 API나 정적 웹 경로에 내보내지 않는다. 학습 노트·첨부·제출은 별도의 기존 DB에 보존한다.
+`sudo bash install.sh`는 아카데미를 선택하면 `scripts/verify-contents.py`로 `contents/`가 `module.json`과 정확히 일치하는지 확인한다. 다운로드는 없다. `--without academy-reader`이면 생략한다. 매니페스트에 없는 파일, 누락·변경된 파일, 심볼릭 링크, 경로 이탈, 크기 초과를 거부한다.
 
-## 개발과 오프라인 사용
+검증한 파일만 불변 릴리스에 포함하고 설치 계획에 `module.json` 해시를 기록한다. `academy-reader`를 선택했을 때만 학습자용 교재·미리보기·카탈로그를 플랫폼의 읽기 전용 설정 볼륨에 복사한다. 교관용 YAML의 정답과 채점 기준은 학습자 API나 정적 웹 경로에 내보내지 않는다. 학습 노트·첨부·제출은 별도의 기존 DB에 보존한다.
 
 ```bash
-python3 scripts/fetch-contents.py
-python3 scripts/fetch-contents.py --verify-only
+python3 scripts/verify-contents.py
 python3 -m pytest -q
 ```
 
-이미 검증한 캐시는 네트워크 없이 재사용한다. 오프라인 환경에서는 지정된 커밋의 GitHub 소스 아카이브를 준비하여 다음 명령으로 먼저 채울 수 있다. 로컬 아카이브도 같은 매니페스트와 파일 해시를 통과해야 한다.
+## 콘텐츠 수정 순서
 
-```bash
-python3 scripts/fetch-contents.py --archive /path/to/content-commit.tar.gz
-sudo bash install.sh
-```
+1. `contents/` 아래 교재·시나리오를 수정한다. 기존 강좌·차시·미션 ID를 다른 주제에 재사용하지 않는다.
+2. `pip install -r contents/requirements.txt`(PyYAML) 후:
+   ```bash
+   python3 -B contents/scripts/content-module.py validate
+   python3 -B contents/scripts/content-module.py sync-preview   # 시나리오를 고쳤을 때
+   python3 -B contents/scripts/content-module.py manifest
+   ```
+3. `python3 scripts/verify-contents.py`와 시험을 통과한 뒤 Core 변경과 함께 커밋한다.
+4. Live Fire Range Control이 같은 시나리오를 쓰면 그쪽 `range-control/deploy/content-lock.json`의 커밋과 매니페스트 해시를 갱신한다.
 
-콘텐츠를 편집할 때는 콘텐츠 저장소에서 작업한다. 캐시에 수정 파일이 있으면 자동 설치가 덮어쓰지 않고 중단한다. 수정 내용을 별도 저장소에 보존한 다음 캐시를 다시 준비한다. 다운로드·검증 실패 시 기존 캐시는 유지된다. 경로 이탈, 심볼릭 링크, 중복 파일, 미선언 파일, 압축 해제 크기 초과를 거부한다.
+## 유료 콘텐츠 팩
 
-## 콘텐츠 배포 순서
+`xocrange_contents`는 같은 모듈 형식(매니페스트·파일별 해시)을 쓰는 유료 팩 저장소다. Core는 이 저장소를 읽지 않는다. 기관 구매 권한(C7)과 팩 전달·설치는 후속 구현 범위다.
 
-1. 콘텐츠 저장소에서 교재·시나리오를 수정한다. 기존 강좌·차시·미션 ID를 유지한다.
-2. `scripts/content-module.py`로 검증하고 학습자 미리보기와 매니페스트를 생성한다.
-3. 콘텐츠를 커밋하고 해당 저장소에 push한다.
-4. Core의 `content-lock.json`에 새 커밋과 매니페스트 해시를 지정한다.
-5. 캐시·설치 계획·리더를 검증한 다음 Core 변경을 배포한다.
+## 이력
 
-내용 변경은 콘텐츠 저장소의 이력에 남고, 시스템 배포는 검증한 콘텐츠 버전만 사용한다. 현재 모듈은 Core 무료 번들 한 개와 추가 트랙 제목 23개다. 기관 구매·콘텐츠 권한 발급과 Live Fire 실행은 기존 로드맵의 별도 구현 범위다.
-
-## 분리 배포 검증
-
-Ubuntu 26.04.1 VM에 콘텐츠가 없는 시스템 소스를 전송하고, 설치 프로그램이 별도 저장소의 지정 커밋에서 360개 배포 파일을 내려받는 경로를 확인했다. 파일 해시·플랫폼 표시·기존 학습 기록 보존을 검증했다. Python 427개, VM 카탈로그 브라우저 43개, 데이터센터 브라우저 82개와 설치기의 보안 경로·관리 입구·8종 정규화/원본 디코딩·SIEM 관제 검사를 통과했다. tw2 참조 엔진의 15개 시나리오·105개 미션 정적 호환 검사도 통과했다. [검증 기록](../provenance/content-module-acceptance.json)
+2026-11-10~11-14에는 콘텐츠를 별도 저장소의 고정 커밋에서 내려받았다(`content-lock.json`, `scripts/fetch-contents.py`). 그 경로의 실제 VM 검증은 [검증 기록](../provenance/content-module-acceptance.json)에 남아 있다. 2026-11-15 ADR 0009로 번들을 Core에 옮겼다(콘텐츠 커밋 `7cae1e1`, 매니페스트 `d439026d…`, 배포 파일 360개).

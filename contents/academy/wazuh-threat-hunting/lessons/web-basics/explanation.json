@@ -1,0 +1,51 @@
+{
+  "title": "5.1  웹 요청이 지나가는 길",
+  "kind": "body",
+  "blocks": [
+    {
+      "type": "p",
+      "text": "DVWA(Damn Vulnerable Web Application)는 웹 취약점을 학습하도록 일부러 취약하게 만든 웹 애플리케이션이다. xOC Range은 DVWA를 xocrange-dvwa 컨테이너로 실행하고, 그 앞에 웹 서버 컨테이너 xocrange-web을 둔다. [1]"
+    },
+    {
+      "type": "p",
+      "text": "xocrange-web의 Apache는 HTTP 요청을 받아 DVWA로 전달하는 웹 서버이다. Apache에는 WAF(Web Application Firewall)인 ModSecurity가 설치되어 있다. WAF는 웹 요청을 검사해 공격으로 판단한 요청을 차단하는 방화벽이며, xOC Range은 공개 규칙 모음 OWASP CRS를 차단 모드로 적용한다. [2]"
+    },
+    {
+      "type": "image",
+      "path": "assets/figures/chapter05/request-log-path.png",
+      "caption": "도식 5-2. 웹 요청과 로그 수집 경로.",
+      "width_mm": 127,
+      "asset": "fb306599429fb04e1495df7c8d26f133df13a66ec6e7966c73b1b5b0e5531219.png"
+    },
+    {
+      "type": "p",
+      "text": "xocrange-web은 세 종류의 로그를 남긴다. dvwa_access.log는 요청과 응답 코드, error.log는 처리 오류와 ModSecurity 메시지, modsec_audit.log는 WAF가 검사한 요청의 상세 기록이다. xocrange-web의 Wazuh 에이전트(이름 web)가 access 로그와 감사 로그를 Manager로 보낸다."
+    },
+    {
+      "type": "p",
+      "text": "요청이 지나가는 지점마다 남는 기록이 다르다. 입력의 도달 범위는 다음 다섯 지점으로 나누어 판정한다."
+    },
+    {
+      "type": "image",
+      "path": "assets/figures/chapter05/rev01-reach.png",
+      "caption": "도식 5-3. 입력의 도달 지점과 확인할 기록.",
+      "width_mm": 127,
+      "asset": "33c36eb91c6b5e277c73c95cac390a95a35e5501c424a7c4a4087f0bfd9c98d8.png"
+    },
+    {
+      "type": "box",
+      "kind": "blind",
+      "text": [
+        "Apache 접속 로그는 요청 줄과 응답 코드, 응답 크기를 기록하고 응답 본문은 기록하지 않는다. 데이터베이스가 어떤 SQL을 실행했는지, 브라우저가 스크립트를 실행했는지도 접속 로그에는 없다. 4·5 지점은 응답 본문과 애플리케이션·브라우저의 동작으로 확인한다."
+      ]
+    }
+  ],
+  "break": false,
+  "level": "section",
+  "source": {
+    "file": "volume01-chapter05.json",
+    "section_index": 1,
+    "revision": "REV01",
+    "mapping_status": "pending-review"
+  }
+}

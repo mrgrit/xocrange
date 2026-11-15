@@ -1,0 +1,252 @@
+{
+  "id": "web-basics",
+  "title": "웹 요청·로그·WAF 기초",
+  "source_pages": [
+    47,
+    51
+  ],
+  "slides": [
+    {
+      "page": 47,
+      "title": "예시 01 ~ 15",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "예시 01 ~ 15"
+        },
+        {
+          "type": "text",
+          "text": "웹 위협"
+        },
+        {
+          "type": "text",
+          "text": "Apache 액세스 로그 한 줄을 Wazuh 의 web-accesslog 디코더가 data.srcip · data.protocol(메서드) · data.url · data.id(응답 코드)로 나눈다."
+        },
+        {
+          "type": "text",
+          "text": "User-Agent 는 따로 된 필드가 없어 full_log 로 검색한다."
+        },
+        {
+          "type": "text",
+          "text": "SQLi · XSS · LFI · 스캐너 · 브루트포스 · 웹셸 · Log4Shell · Shellshock · 명령 삽입 · 200 성공 · 5xx · HTTP 메서드 · 관리 페이지 · 긴 URL"
+        }
+      ]
+    },
+    {
+      "page": 48,
+      "title": "웹 위협 기초",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "웹 위협 기초"
+        },
+        {
+          "type": "text",
+          "text": "웹 요청과 액세스 로그 한 줄 읽기 (1/2)"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  웹 위협 기초"
+        },
+        {
+          "type": "text",
+          "text": "HTTP 요청·응답"
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "브라우저(또는 curl)가 '메서드 + 주소'로 요청 → 서버가 '상태 코드 + 내용'으로 응답"
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "메서드: GET 읽기, POST 보내기(로그인·업로드), PUT 올리기, DELETE 지우기"
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "상태 코드: 200 성공, 302 다른 곳으로 이동(로그인 성공 뒤 흔함), 403 금지(WAF 차단), 404 없음, 500 서버 오류"
+        },
+        {
+          "type": "text",
+          "text": "URL 인코딩 — 공격 문자열이 % 로 바뀌는 이유"
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "주소에 쓸 수 없는 글자는 %16진수로 바꿔 보낸다"
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "%20 공백 · %27 ' · %3C < · %3E > · %3B ; · %7C | · %24 $ · %7B { · %2F /"
+        }
+      ]
+    },
+    {
+      "page": 49,
+      "title": "웹 위협 기초",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "웹 위협 기초"
+        },
+        {
+          "type": "text",
+          "text": "웹 요청과 액세스 로그 한 줄 읽기 (2/2)"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  웹 위협 기초"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 가 나누는 필드"
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "web-accesslog 디코더가 한 줄을 data.srcip(출발지) · data.protocol(메서드) · data.url(경로) · data.id(응답 코드)로 분해"
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "정상 200 요청은 레벨 0(31108)이라 wazuh-alerts 에 저장되지 않는다 — 400·500·공격 패턴만 남는다"
+        },
+        {
+          "type": "text",
+          "text": "Apache combined 형식 — 한 줄 = 한 요청"
+        },
+        {
+          "type": "text",
+          "text": "192.168.0.202 - - [31/Oct/2026:16:57:17 +0900] \"GET /vulnerabilities/xss_r/?name=%3Cscript%3E HTTP/1.1\" 403 457 \"-\" \"curl/7.81.0\"\n①출발지 IP       ②시각                        ③메서드 ④경로(data.url)                   ⑤응답코드 ⑥크기 ⑦Referer ⑧User-Agent"
+        }
+      ]
+    },
+    {
+      "page": 50,
+      "title": "웹 위협 기초",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "웹 위협 기초"
+        },
+        {
+          "type": "text",
+          "text": "WAF(웹 방화벽) — ModSecurity 와 CRS (1/2)"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  웹 위협 기초"
+        },
+        {
+          "type": "text",
+          "text": "WAF 란"
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "웹 서버 앞에서 요청 내용을 검사해 공격으로 보이면 막는 장치. xOC Range 은 Apache + ModSecurity + OWASP CRS(공개 룰 모음)"
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "CRS 는 SQLi(942xxx)·XSS(941xxx)·LFI(930xxx)·명령 실행(932xxx)·스캐너(913xxx) 룰을 점수로 더해 기준(5점)을 넘으면 차단(949110)"
+        },
+        {
+          "type": "text",
+          "text": "차단 모드 vs 탐지 전용"
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "SecRuleEngine On = 차단(403). xOC Range 의 dvwa·neobank 등"
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "SecRuleEngine DetectionOnly = 경고만 남기고 통과(200). xOC Range 의 juice — 공격이 '성공'하는 모습을 보려고 일부러 열어 둠"
+        }
+      ]
+    },
+    {
+      "page": 51,
+      "title": "웹 위협 기초",
+      "blocks": [
+        {
+          "type": "text",
+          "text": "웹 위협 기초"
+        },
+        {
+          "type": "text",
+          "text": "WAF(웹 방화벽) — ModSecurity 와 CRS (2/2)"
+        },
+        {
+          "type": "text",
+          "text": "Wazuh 위협 탐지 DQL 예시집  ·  웹 위협 기초"
+        },
+        {
+          "type": "text",
+          "text": "로그는 두 군데"
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "액세스 로그(사이트별 *_access.log): 경로·응답 코드 — Wazuh 웹 룰(311xx)이 본다"
+        },
+        {
+          "type": "text",
+          "text": "•"
+        },
+        {
+          "type": "text",
+          "text": "감사 로그(modsec_audit.log, JSON): POST 본문·매칭된 CRS 룰 ID까지 — 기본 룰셋엔 이 형식용 룰이 없어 wazuh-archives 에서 본다"
+        },
+        {
+          "type": "text",
+          "text": "xOC Range 에서 확인"
+        },
+        {
+          "type": "text",
+          "text": "dvwa.ccc.com  → 공격 시 HTTP 403 (차단)\njuice.ccc.com → 같은 공격이 HTTP 200 (탐지만) → 11번 실습 31106"
+        }
+      ]
+    }
+  ]
+}

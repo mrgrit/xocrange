@@ -1,0 +1,81 @@
+{
+  "title": "3.2  Discover 열고 대상 고르기",
+  "kind": "body",
+  "blocks": [
+    {
+      "type": "list",
+      "style": "number",
+      "items": [
+        "Wazuh 화면 왼쪽 위의 가로줄 세 개 버튼을 누른다.",
+        "**Explore**를 펼치고 **Discover**를 누른다."
+      ]
+    },
+    {
+      "type": "image",
+      "path": "assets/screens/chapter03/menu.png",
+      "caption": "화면 3-1. Discover 메뉴.",
+      "width_mm": 90,
+      "asset": "c2838c2fccb2240a4139f959d1b26736fc77ea7af930512f452fad667b02f83d.png"
+    },
+    {
+      "type": "p",
+      "text": "Discover가 열리면 왼쪽에 필드 목록, 위쪽에 기간과 검색창, 가운데에 검색 결과가 보인다. 결과 한 행은 저장된 기록 한 건이다."
+    },
+    {
+      "type": "p",
+      "text": "인덱스는 Indexer가 기록을 저장하는 단위이다. Wazuh는 경보를 날짜별 인덱스에 나누어 저장한다. 인덱스 패턴은 이름이 일치하는 여러 인덱스를 묶어 한 번에 검색하게 한다. wazuh-alerts-*의 *는 뒤에 붙는 어떤 문자열과도 일치한다. 예를 들어 wazuh-alerts-4.x-2026.11.01은 이 패턴에 포함된다."
+    },
+    {
+      "type": "list",
+      "style": "number",
+      "items": [
+        "왼쪽 위의 인덱스 패턴 목록을 연다.",
+        "**wazuh-alerts-***를 선택한다."
+      ]
+    },
+    {
+      "type": "image",
+      "path": "assets/screens/chapter03/index-pattern.png",
+      "caption": "화면 3-2. 인덱스 패턴 목록.",
+      "width_mm": 110,
+      "asset": "3259dad19bff5a7fb7d768c146dbbabf0ae97e4b01b6dfa44733addc065f1387.png"
+    },
+    {
+      "type": "table",
+      "head": [
+        "인덱스 패턴",
+        "저장하는 기록"
+      ],
+      "rows": [
+        [
+          "wazuh-alerts-*",
+          "탐지 규칙에 일치해 경보가 된 기록. 기본 설정에서 수준 3 이상(2.3)"
+        ],
+        [
+          "wazuh-archives-*",
+          "에이전트가 보낸 모든 기록. 규칙 일치와 관계없다. xOC Range이 켜 둔다(2.3)."
+        ],
+        [
+          "wazuh-monitoring-* 등",
+          "에이전트 연결 상태, 매니저 통계, 취약점 상태"
+        ]
+      ],
+      "widths": [
+        40,
+        87
+      ]
+    },
+    {
+      "type": "p",
+      "text": "경보를 검색할 때는 wazuh-alerts-*를, 경보가 되지 않은 원본 기록까지 찾을 때는 wazuh-archives-*를 고른다. 목록에 두 패턴이 없으면 Wazuh 로그인 계정과 1.7의 수집기·서비스 상태를 확인한다."
+    }
+  ],
+  "break": false,
+  "level": "section",
+  "source": {
+    "file": "volume01-chapter03.json",
+    "section_index": 2,
+    "revision": "REV01",
+    "mapping_status": "pending-review"
+  }
+}

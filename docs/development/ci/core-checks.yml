@@ -23,8 +23,8 @@ jobs:
           python-version: ${{ matrix.python }}
       - name: Install development dependencies
         run: python -m pip install '.[test]'
-      - name: Fetch pinned external content
-        run: python scripts/fetch-contents.py
+      - name: Verify bundled content
+        run: python scripts/verify-contents.py
       - name: Contract and planner tests
         run: |
           bash -n install.sh
