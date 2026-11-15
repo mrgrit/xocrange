@@ -71,6 +71,12 @@ Ubuntu Server 26.04 LTS amd64 전용 VM 또는 서버. 기본 구성(SIEM 웹 �
 
 Core 자체 코드와 프로젝트 자산은 [PolyForm Noncommercial 1.0.0](LICENSE)과 [교육용 추가 허락](LICENSE-EDUCATION.md)을 따른다. 서드파티 구성요소(Suricata·Wazuh·Apache·ModSecurity·DVWA·Juice Shop 등)는 각자의 라이선스를 유지한다([NOTICE](NOTICE), [DEPENDENCIES](docs/development/DEPENDENCIES.md)).
 
+## 0.1.0 이후 main (미출시)
+
+- `install.sh`만 내려받아 설치하면 내려받은 소스(약 62 MB)가 `/var/lib/xocrange/download-*`에 남던 문제 수정. 0.1.0을 이 방식으로 설치했다면 `sudo rm -rf /var/lib/xocrange/download-*`로 지워도 된다.
+- 설치·업데이트 중 1분 주기 로그 정리가 실패로 표시되던 문제 수정(이제 그 회차를 건너뜀).
+- Live Fire 연동용 증거 표면(ADR 0008) 포함. 상용 승인이 없는 Community 설치에서는 꺼져 있다.
+
 ## 출시 전 정리 기록
 
 - 24시간 이상 장기 운영 측정과 SIEM 포함 권장 사양 확정(2026-11-14).

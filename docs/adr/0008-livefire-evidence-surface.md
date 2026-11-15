@@ -1,6 +1,6 @@
 # ADR-0008: Live Fire 판정기가 쓰는 증거 조회 표면
 
-상태: 2026-11-14 제안. 브랜치 `livefire-integration`(Community RC 태그 뒤 main에 합침). 관련: [ADR-0001](0001-core-boundaries.md)(Core는 채점하지 않음), [ADR-0002](0002-contracts-and-planner.md), [ADR-0005](0005-core-telemetry.md).
+상태: 2026-11-14 제안, 2026-11-15 Community 0.1.0 뒤 main에 병합(`14f8200`). 상용 승인(C7)이 없는 Community 설치에서는 증거 소켓이 열리지 않는다. 관련: [ADR-0001](0001-core-boundaries.md)(Core는 채점하지 않음), [ADR-0002](0002-contracts-and-planner.md), [ADR-0005](0005-core-telemetry.md).
 
 ## 배경
 
