@@ -6,7 +6,7 @@ window.DataCenter=(()=>{
  const preview=id=>(data?.preview_floors||[]).includes(id);
  function hostCommand(){const h=data?.host_access?.host;if(!/^[a-z_][a-z0-9_-]{0,31}$/.test(sshUser||'')||!Number.isInteger(sshPort)||sshPort<1||sshPort>65535||!/^[a-zA-Z0-9][a-zA-Z0-9.-]*$/.test(h||''))return '';return 'ssh '+(sshPort===22?'':'-p '+sshPort+' ')+sshUser+'@'+h;}
  function sshFields(){const cmd=hostCommand();if($('dc-ssh-command'))$('dc-ssh-command').value=cmd||'Linux 계정을 입력하면 SSH 명령이 표시됩니다.';const b=document.querySelector('[data-dc-copy=ssh]');if(b)b.disabled=!cmd;}
- const SEG={ext:'EXT',pipe:'PIPE',dmz:'DMZ',int:'INT'};
+ const SEG={ext:'EXT',pipe:'중계(PIPE)',dmz:'DMZ',int:'INT'};
  function table(head,rows){if(!rows.length)return '<p class="dc-note">관측된 항목이 없습니다.</p>';return `<div class="dc-table-wrap"><table class="dc-table"><thead><tr>${head.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${esc(c??'-')}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;}
  function num(n){return Number.isInteger(n)?n.toLocaleString('ko-KR'):'-';}
  function switchPanel(a){

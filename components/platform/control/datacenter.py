@@ -32,10 +32,10 @@ RACKS = [
     # Lab switching (ADR 0010): the four lab bridges shown as switches, with the routing they carry.
     dict(id='R-2F-03', title='실습망 스위치 · 라우팅', floor='2F', aisle='A', units=42, position=[5.6, 3]),
 ]
-SEGMENT_TITLES = {'ext': '외부망(EXT)', 'pipe': '파이프망(PIPE)', 'dmz': 'DMZ', 'int': '내부망(INT)'}
+SEGMENT_TITLES = {'ext': '외부망(EXT)', 'pipe': '중계망(FW↔IPS)', 'dmz': 'DMZ', 'int': '내부망(INT)'}
 SEGMENT_ROLES = {
     'ext': '외부에서 들어온 요청이 처음 닿는 구간입니다. 진입 게이트웨이(ingress)와 방화벽의 외부 인터페이스가 연결됩니다.',
-    'pipe': '방화벽과 IPS 사이의 통과 구간입니다. 방화벽을 지난 트래픽만 IPS로 전달됩니다.',
+    'pipe': '방화벽과 IPS 두 장비만 잇는 중계 구간입니다. 방화벽을 지난 트래픽만 IPS로 전달됩니다. 업계에서는 트랜짓 네트워크(transit network)라고 부르며, 시스템 내부 이름은 pipe입니다.',
     'dmz': 'IPS와 웹 방화벽 사이의 구간입니다. 외부에 공개하는 웹 서비스의 앞단입니다.',
     'int': '웹 방화벽 뒤의 내부망입니다. 실습 타깃과 내부 서비스가 연결되며 외부로 직접 나가지 않습니다.',
 }
