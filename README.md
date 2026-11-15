@@ -6,7 +6,7 @@
 
 선택한 기능으로 구성하는 보안 운영 실습 환경. Core의 공통 계약 위에 Live Fire·Joint Force 모듈을 연결한다.
 
-**처음 쓰는 경우:** [사용자 안내](docs/USER-GUIDE.md) · [RC 릴리스 노트(초안)](RELEASE-NOTES.md)
+**처음 쓰는 경우:** [사용자 안내](docs/USER-GUIDE.md) · [0.1.0 릴리스 노트](RELEASE-NOTES.md)
 
 ## 설치 후 접속 · 계정 확인
 
@@ -29,7 +29,7 @@ sudo xoc siem credentials
 
 처음 로그인하면 Core 초기 비밀번호를 변경해야 한다. 이후에는 변경한 비밀번호를 사용한다. 위 명령은 UI에서 변경한 비밀번호를 조회하거나 초기화하지 않는다. 고정 공용 비밀번호는 없으며 실제 비밀번호는 README나 Git에 기록하지 않는다. 로컬 인증서를 사용하는 경우 설치된 서버의 `/etc/xocrange/ca.crt`를 접속 PC에서 신뢰 등록한다.
 
-**Community RC 준비 단계:** 빈 Ubuntu 26.04 VM의 한 번 설치·재부팅·디스크 고갈·실제 외부 PC 출처 보존을 검증했다. RC의 기본 구성은 설치기 기본값(보안 경로·SIEM·웹 관제·콘솔 3종·관리 화면·데이터센터·NOC 2층·아카데미)이며, 24시간 장기 운영을 측정했고([기록](docs/development/LONGRUN-2026-11-14.md)) 최종 재검증을 거쳐 확정한다([K12 체크리스트](docs/development/K12-RC-CHECKLIST.md)). `bootstrap`은 설치 기반 확인용 health 서비스다.
+**Community 0.1.0 (`v0.1.0`, 2026-11-15):** 빈 Ubuntu 26.04 VM의 한 번 설치·재부팅·재설치·디스크 고갈·실제 외부 PC 출처 보존과 24시간 장기 운영([기록](docs/development/LONGRUN-2026-11-14.md))을 검증했다. 기본 구성은 설치기 기본값(보안 경로·SIEM·웹 관제·콘솔 3종·관리 화면·데이터센터·NOC 2층·아카데미)이다([K12 체크리스트](docs/development/K12-RC-CHECKLIST.md), [최종 재실행](docs/development/RC-FINAL-2026-11-15.md)). `bootstrap`은 설치 기반 확인용 health 서비스다.
 
 ## 지금 실행할 수 있는 것
 
