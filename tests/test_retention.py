@@ -324,3 +324,30 @@ def test_stale_auditd_state_report_is_ignored(tmp_path):
     assert audit_state(tmp_path) == 'logging suspended = yes\n'
     os.utime(tmp_path/'auditd.state', (time.time()-600, time.time()-600))
     assert audit_state(tmp_path) is None
+
+
+def test_log_maintenance_skips_while_another_operation_holds_the_lock(monkeypatch, capsys):
+    # The per-minute timer runs during installs and updates; a busy lock is a
+    # skipped run, not a failed unit. Any other error still fails.
+    import contextlib, json, runpy
+    from pathlib import Path
+    import pytest
+    from xocrange import operations
+    from xocrange.errors import XocError
+    script = str(Path(__file__).resolve().parents[1] / 'scripts/maintain-logs.py')
+
+    @contextlib.contextmanager
+    def busy(wait=0):
+        raise XocError('operation_busy', 'Another installation, backup or restore is running.')
+        yield
+    monkeypatch.setattr(operations, 'operation_lock', busy)
+    runpy.run_path(script, run_name='__main__')
+    assert json.loads(capsys.readouterr().out) == {'status': 'skipped', 'reason': 'operation_busy'}
+
+    @contextlib.contextmanager
+    def broken(wait=0):
+        raise XocError('operation_state', 'unreadable')
+        yield
+    monkeypatch.setattr(operations, 'operation_lock', broken)
+    with pytest.raises(XocError):
+        runpy.run_path(script, run_name='__main__')
