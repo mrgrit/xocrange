@@ -225,3 +225,11 @@ def test_upgraded_core_pattern_gains_only_missing_template_fields():
     assert _json.loads(body['attributes']['fields'])==[edited,fields[1]]   # the user's edit is kept
     again=Fake(); again.request=lambda m,p,b=None,service='indexer':(200,{'attributes':{'fields':_json.dumps(fields)}}) if m=='GET' else (_ for _ in ()).throw(AssertionError('no write'))
     assert add_pattern_fields(again,'xoc-events',fields)==[]
+
+
+def test_acceptance_source_counts_are_not_cut_by_extra_producers():
+    """Agent activity (C1 v0.3) is a ninth producer. A top-8 terms aggregation dropped Suricata
+    (2 events in the window, versus about 10 agent records) and failed the demo Core update."""
+    script=(ROOT/'scripts/verify-siem-ui.py').read_text()
+    assert "'size':8" not in script
+    assert script.count("{'terms':{'producer':list(SOURCES)}}")==1 and script.count("{'terms':{'data.producer':list(SOURCES)}}")==1

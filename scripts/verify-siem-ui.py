@@ -163,11 +163,14 @@ r.on('error',e=>process.exit(['ERR_TLS_CERT_ALTNAME_INVALID','UNABLE_TO_VERIFY_L
     since=json.loads(Path('/var/lib/xocrange/siem-acceptance.json').read_text())['since']
     deadline=time.monotonic()+180
     while True:
-        code,data=client.request('POST','/xoc-events-*/_search',{'size':0,'query':{'range':{'observed_at':{'gte':since}}},'aggs':{'sources':{'terms':{'field':'producer','size':8}}}})
+        # Filter to the eight sources: agent activity (C1 v0.3) is a ninth producer, and a top-8
+        # bucket list dropped a low-volume source such as Suricata when agents were busy.
+        code,data=client.request('POST','/xoc-events-*/_search',{'size':0,'query':{'bool':{'filter':[{'range':{'observed_at':{'gte':since}}},{'terms':{'producer':list(SOURCES)}}]}},'aggs':{'sources':{'terms':{'field':'producer','size':len(SOURCES)}}}})
         found={b['key'] for b in data.get('aggregations',{}).get('sources',{}).get('buckets',[])}
         if set(SOURCES)<=found or time.monotonic()>=deadline: break
         time.sleep(3)
     checks['all_eight_fresh_sources_indexed']=code==200 and set(SOURCES)<=found
+    missing={'indexed':sorted(set(SOURCES)-found)}
     # Discover lists the saved pattern's fields: every template field, including ones
     # added after the pattern was first created (C1 v0.3 agent.*), must be there.
     def leaves(properties,prefix=''):
@@ -179,11 +182,12 @@ r.on('error',e=>process.exit(['ERR_TLS_CERT_ALTNAME_INVALID','UNABLE_TO_VERIFY_L
     checks['core_pattern_lists_template_fields']=set(leaves(template['template']['mappings']['properties']))<=names
     deadline=time.monotonic()+180
     while True:
-        code,data=client.request('POST','/wazuh-alerts-4.x-*/_search',{'size':0,'query':{'range':{'timestamp':{'gte':since}}},'aggs':{'sources':{'terms':{'field':'data.producer','size':8}}}})
+        code,data=client.request('POST','/wazuh-alerts-4.x-*/_search',{'size':0,'query':{'bool':{'filter':[{'range':{'timestamp':{'gte':since}}},{'terms':{'data.producer':list(SOURCES)}}]}},'aggs':{'sources':{'terms':{'field':'data.producer','size':len(SOURCES)}}}})
         found={b['key'] for b in data.get('aggregations',{}).get('sources',{}).get('buckets',[])}
         if set(SOURCES)<=found or time.monotonic()>=deadline:break
         time.sleep(3)
     checks['native_alerts_contain_all_eight_c1_links']=code==200 and set(SOURCES)<=found
+    missing['native_alerts']=sorted(set(SOURCES)-found)
     # Normal audit/firewall/access records can legitimately produce no alert.
     # Native processing for all eight sources is proven by archive receipts;
     # the following actual detections must also reach the searchable index.
@@ -221,7 +225,8 @@ r.on('error',e=>process.exit(['ERR_TLS_CERT_ALTNAME_INVALID','UNABLE_TO_VERIFY_L
         if native_hits:break
         time.sleep(2)
     checks['stock_sshd_rule_indexes_original_alert']=code==200 and len(native_hits)==1 and native_hits[0]['_source']['rule']['id']=='5710' and 'event_id' not in native_hits[0]['_source']['xoc']
-    diagnostics={'stock_sshd_hits':len(native_hits),'stock_sshd_seconds':round(time.monotonic()-started,1)}
+    diagnostics={'stock_sshd_hits':len(native_hits),'stock_sshd_seconds':round(time.monotonic()-started,1),
+                 **{'missing_'+k:v for k,v in missing.items() if v}}
     # The ingestion service credential cannot read or delete search data.
     writer=Client(engine,plan['compose']['name'])
     checks['writer_cannot_read_events']=writer.request('POST','/xoc-events-*/_search',{'size':0})[0]==403
