@@ -197,3 +197,38 @@ def test_evidence_carries_bounded_excerpts_for_instructors(sources):
     assert alert['excerpt'] == 'rule 100201 L10 : xoc-web-01 marker'
     assert ATTACKER in event['excerpt'] and 'xoc-evidence' not in event['excerpt']
     assert all(len(e['excerpt']) <= 1000 for r in out['results'] for e in r['evidence'])
+
+
+def test_c1_aggregate_gives_per_source_facts_over_days(tmp_path):
+    """Evidence query v0.2: per-source aggregation for Joint Force skills (facts, never scores)."""
+    from xocrange.evidence import QUERY_V2
+    store = Store(tmp_path / 'siem')
+    rows = [  # (source, sid, observed UTC); KST = UTC+9, business hours Mon-Fri 09-18 KST
+        ('203.0.113.7', 1, '2026-11-10T15:00:00.000000Z'),   # 11-11 Wed 00:00 KST  off hours
+        ('203.0.113.7', 2, '2026-11-11T16:30:00.000000Z'),   # 11-12 Thu 01:30 KST  off hours
+        ('203.0.113.7', 2, '2026-11-12T01:00:00.000000Z'),   # 11-12 Thu 10:00 KST  business
+        ('203.0.113.7', 2, '2026-11-13T17:00:00.000000Z'),   # 11-14 Sat 02:00 KST  off hours
+        ('198.51.100.9', 3, '2026-11-12T02:00:00.000000Z'),  # Thu 11:00 KST  business
+    ]
+    for n, (src, sid, observed) in enumerate(rows):
+        store.ingest('suricata', 'ips-eve', n + 1, suricata(src, sid, observed.replace('Z', '+0000')), observed=observed)
+    store.db.commit()
+    sources = Sources(tmp_path / 'siem' / 'events.sqlite3', now=lambda: __import__('datetime').datetime(2026, 11, 14, 12, tzinfo=__import__('datetime').timezone.utc))
+    check = {'id': 'agg', 'type': 'c1_aggregate', 'target': 'siem',
+             'params': {'group_by': 'network.source.ip', 'since_days': 30, 'producers': ['suricata'],
+                        'business_hours': {'start': 9, 'end': 18, 'weekdays': [1, 2, 3, 4, 5], 'utc_offset_minutes': 540}}}
+    result = evaluate(sources, {'schema_version': QUERY_V2, 'request_id': 'r2', 'checks': [check]})
+    assert result['schema_version'] == 'xoc.evidence-result/0.2.0'
+    item, = result['results']
+    assert item['result'] == 'passed' and item['count'] == 2
+    top, other = item['groups']
+    assert top['key'] == '203.0.113.7' and top['events'] == 4 and top['distinct_days'] == 3 and top['off_hours'] == 3   # local days
+    assert top['producers'] == {'suricata': 4} and top['top_rules'][0] == {'id': '2', 'count': 3} and top['destination_ports'] == 1
+    assert top['first_seen'] == '2026-11-10T15:00:00.000000Z' and top['last_seen'] == '2026-11-13T17:00:00.000000Z'
+    assert other['key'] == '198.51.100.9' and other['off_hours'] == 0
+    few = dict(check, params={**check['params'], 'min_events': 2, 'top': 5})
+    assert [g['key'] for g in evaluate(sources, {'schema_version': QUERY_V2, 'request_id': 'r3', 'checks': [few]})['results'][0]['groups']] == ['203.0.113.7']
+    with pytest.raises(XocError):                                   # aggregation is not part of v0.1
+        evaluate(sources, {'schema_version': QUERY, 'request_id': 'r4', 'checks': [check]})
+    with pytest.raises(XocError):                                   # at most 180 days
+        evaluate(sources, {'schema_version': QUERY_V2, 'request_id': 'r5', 'checks': [dict(check, params={**check['params'], 'since_days': 365})]})

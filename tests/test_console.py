@@ -57,6 +57,19 @@ def test_ips_management_exclusion_and_waf_only_generated_rule():
     assert 'id:9000001' in text and 'status:403' in text and 'ctl:' not in text
 
 
+def test_waf_blocks_client_addresses_only_with_ip_match():
+    """Joint Force executor path: block a source address at the WAF (client IP from the ingress)."""
+    s=candidate('waf',empty(),change(variable='REMOTE_ADDR',operator='@ipMatch',pattern='192.168.16.99, 203.0.113.0/24',phase='1',action='deny'))
+    text=compile_policy('waf',s)
+    assert 'SecRule REMOTE_ADDR "@ipMatch 192.168.16.99,203.0.113.0/24"' in text and 'phase:1' in text and 'deny' in text
+    for bad in [dict(variable='REMOTE_ADDR',operator='@contains',pattern='192.168.16.99'),   # address needs @ipMatch
+                dict(variable='REQUEST_URI',operator='@ipMatch',pattern='192.168.16.99'),   # @ipMatch only for addresses
+                dict(variable='REMOTE_ADDR',operator='@ipMatch',pattern='not-an-ip'),
+                dict(variable='REMOTE_ADDR',operator='@ipMatch',pattern=','.join(['10.0.0.%d' % i for i in range(9)]))]:
+        with pytest.raises(ValueError):
+            compile_policy('waf',candidate('waf',empty(),change(action='deny',**bad)))
+
+
 class FakeDevice(Device):
     def validate(self,text):
         if 'INVALID' in text: raise ValueError('syntax failure')

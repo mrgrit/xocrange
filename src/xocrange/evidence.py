@@ -19,6 +19,9 @@ from .errors import XocError
 
 QUERY = 'xoc.evidence-query/0.1.0'
 RESULT = 'xoc.evidence-result/0.1.0'
+QUERY_V2 = 'xoc.evidence-query/0.2.0'   # adds c1_aggregate (Joint Force skills)
+RESULT_V2 = 'xoc.evidence-result/0.2.0'
+MAX_GROUPS = 200
 MAX_EVIDENCE = 16
 MAX_FILE = 256 * 1024
 MAX_SCAN = 20000
@@ -114,16 +117,24 @@ class Evaluator:
             self.db = db
             for check in self.request['checks']:
                 try:
-                    passed, count, evidence, reason = getattr(self, 'check_' + check['type'])(check)
+                    groups = None
+                    if check['type'] == 'c1_aggregate':
+                        passed, count, groups = self.check_c1_aggregate(check)
+                        evidence, reason = [], None
+                    else:
+                        passed, count, evidence, reason = getattr(self, 'check_' + check['type'])(check)
                     result = 'passed' if passed else 'failed'
                 except XocError as exc:
-                    passed, count, evidence, reason, result = False, 0, [], exc.code, 'inconclusive'
+                    passed, count, evidence, reason, result, groups = False, 0, [], exc.code, 'inconclusive', None
                 item = {'check_id': check['id'], 'params_sha256': params_sha256(check['params']),
                         'result': result, 'count': count, 'evidence': evidence[:MAX_EVIDENCE]}
+                if groups is not None:
+                    item['groups'] = groups
                 if reason:
                     item['reason'] = reason[:500]
                 results.append(item)
-        return {'schema_version': RESULT, 'request_id': self.request['request_id'],
+        version = RESULT_V2 if self.request.get('schema_version') == QUERY_V2 else RESULT
+        return {'schema_version': version, 'request_id': self.request['request_id'],
                 'evaluated_at': stamp(self.sources.now()), 'results': results}
 
     # ── SIEM store ──────────────────────────────────────────────
@@ -147,6 +158,59 @@ class Evaluator:
         evidence = [{'kind': 'c1_event', 'ref': 'c1:' + r[0], 'sha256': hashlib.sha256(r[2].encode()).hexdigest(),
                      'observed_at': r[1], 'excerpt': event_excerpt(r[2])} for r in rows[:MAX_EVIDENCE]]
         return len(rows) >= p.get('min_count', 1), len(rows), evidence, None
+
+    def check_c1_aggregate(self, check):
+        """Per-source facts over up to 180 days (query v0.2): how much, on how many days and hours,
+        how much outside business hours, first and last seen, which producers, top rules, how many
+        destination ports. Facts only, no scores; the skill's own program decides what is unusual."""
+        p = check['params']
+        until = self.sources.now()
+        since = stamp(until - timedelta(days=p['since_days']))
+        hours = p.get('business_hours')
+        shift = f"{hours['utc_offset_minutes']:+d} minutes" if hours else '+0 minutes'
+        local = f"datetime(substr(observed, 1, 19), '{shift}')"
+        source = "json_extract(event, '$.network.source.ip')"
+        clauses, args = [f'{source} IS NOT NULL', 'observed>=?', 'observed<=?'], [since, stamp(until)]
+        if p.get('producers'):
+            clauses.append('producer IN (%s)' % ','.join('?' * len(p['producers'])))
+            args.extend(p['producers'])
+        where = ' AND '.join(clauses)
+        off = ''
+        if hours:
+            days = ','.join(str(int(d)) for d in hours['weekdays'])
+            off = (f", sum(CASE WHEN CAST(strftime('%w', {local}) AS INTEGER) IN ({days}) "
+                   f"AND CAST(strftime('%H', {local}) AS INTEGER) >= {int(hours['start'])} "
+                   f"AND CAST(strftime('%H', {local}) AS INTEGER) < {int(hours['end'])} THEN 0 ELSE 1 END)")
+        rows = self.db.execute(
+            f"SELECT {source} AS k, count(*), count(DISTINCT substr({local}, 1, 10)), count(DISTINCT substr({local}, 1, 13)), "
+            f"min(observed), max(observed), count(DISTINCT json_extract(event, '$.network.destination.port')){off} "
+            f"FROM events WHERE {where} GROUP BY k HAVING count(*) >= ? ORDER BY count(*) DESC, k LIMIT ?",
+            (*args, p.get('min_events', 1), min(p.get('top', 50), MAX_GROUPS))).fetchall()
+        groups, keys = {}, [r[0] for r in rows]
+        for r in rows:
+            groups[r[0]] = {'key': str(r[0])[:64], 'events': r[1], 'distinct_days': r[2], 'active_hours': r[3],
+                            'first_seen': self.iso(r[4]), 'last_seen': self.iso(r[5]), 'destination_ports': r[6],
+                            'producers': {}, 'top_rules': []}
+            if hours:
+                groups[r[0]]['off_hours'] = r[7]
+        if keys:
+            marks = ','.join('?' * len(keys))
+            for k, producer, n in self.db.execute(
+                    f"SELECT {source}, producer, count(*) FROM events WHERE {where} AND {source} IN ({marks}) GROUP BY 1, 2",
+                    (*args, *keys)):
+                groups[k]['producers'][producer] = n
+            ranked = {}
+            for k, rule, n in self.db.execute(
+                    f"SELECT {source}, json_extract(event, '$.rule.id'), count(*) FROM events WHERE {where} AND {source} IN ({marks}) "
+                    f"AND json_extract(event, '$.rule.id') IS NOT NULL GROUP BY 1, 2", (*args, *keys)):
+                ranked.setdefault(k, []).append((n, str(rule)[:128]))
+            for k, items in ranked.items():
+                groups[k]['top_rules'] = [{'id': rule, 'count': n} for n, rule in sorted(items, key=lambda x: (-x[0], x[1]))[:5]]
+        return bool(rows), len(rows), [groups[k] for k in keys]
+
+    @staticmethod
+    def iso(value):
+        return value if value.endswith('Z') else stamp(parse(value))
 
     def check_wazuh_alert(self, check):
         p = check['params']
@@ -294,8 +358,10 @@ def read_bounded(base: Path, relative: str) -> bytes:
 
 def evaluate(sources: Sources, request: dict) -> dict:
     validate(request, 'evidence-query')
-    if 'checks' not in request or request.get('schema_version') != QUERY:
+    if 'checks' not in request or request.get('schema_version') not in (QUERY, QUERY_V2):
         raise XocError('schema_violation', 'Expected an evidence query.')
+    if request['schema_version'] == QUERY and any(c.get('type') == 'c1_aggregate' for c in request['checks']):
+        raise XocError('schema_violation', 'c1_aggregate needs evidence query v0.2.')
     return validate(Evaluator(sources, request).run(), 'evidence-query')
 
 

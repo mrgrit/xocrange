@@ -1,11 +1,12 @@
 """Selected pure builders from modsec_edu_gui; source hashes in console-source.json.
 No legacy HTTP server, training/scoring or agent configuration is shipped.
 """
+import ipaddress
 import re
 
-VARIABLES = ['REQUEST_URI', 'ARGS', 'ARGS_NAMES', 'QUERY_STRING', 'REQUEST_BODY', 'REQUEST_HEADERS', 'REQUEST_HEADERS:User-Agent', 'REQUEST_COOKIES', 'REQUEST_FILENAME', 'REQUEST_LINE', 'REQUEST_HEADERS:Referer']
+VARIABLES = ['REMOTE_ADDR', 'REQUEST_URI', 'ARGS', 'ARGS_NAMES', 'QUERY_STRING', 'REQUEST_BODY', 'REQUEST_HEADERS', 'REQUEST_HEADERS:User-Agent', 'REQUEST_COOKIES', 'REQUEST_FILENAME', 'REQUEST_LINE', 'REQUEST_HEADERS:Referer']
 
-OPERATORS = ['@rx', '@contains', '@pm', '@streq', '@beginsWith', '@endsWith']
+OPERATORS = ['@rx', '@contains', '@pm', '@streq', '@beginsWith', '@endsWith', '@ipMatch']
 
 TRANSFORMS = ['lowercase', 'urlDecodeUni', 'removeNulls', 'compressWhitespace', 'none']
 
@@ -26,6 +27,18 @@ def build_secrule(p):
     pattern = _pat(p.get('pattern', ''))
     if not pattern:
         raise ValueError('탐지 패턴이 비어 있습니다')
+    # Client address blocking (xOC addition): REMOTE_ADDR only with @ipMatch and a list of up to
+    # 8 IP addresses or networks. The web entry sets REMOTE_ADDR from the ingress's client header.
+    if (var == 'REMOTE_ADDR') != (op == '@ipMatch'):
+        raise ValueError('클라이언트 주소는 IP 일치(@ipMatch)로만 검사합니다')
+    if op == '@ipMatch':
+        items = [x.strip() for x in pattern.split(',')]
+        if not 1 <= len(items) <= 8:
+            raise ValueError('IP 주소는 1~8개까지')
+        try:
+            pattern = ','.join(str(ipaddress.ip_network(x, strict=False)) if '/' in x else str(ipaddress.ip_address(x)) for x in items)
+        except ValueError:
+            raise ValueError('IP 주소 또는 네트워크(CIDR)만 쓸 수 있습니다')
     phase = str(p.get('phase', '2'))
     if phase not in ('1', '2'):
         raise ValueError('phase 는 1 또는 2')

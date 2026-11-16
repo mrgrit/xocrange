@@ -40,6 +40,9 @@
       "build_secrule",
       "parse_secrule"
     ],
-    "kt66_vendor_sha256": "e3d935b89393a21667ca3eecb0c0bee9d8c27f10b5037b452344acace4316b0a"
+    "kt66_vendor_sha256": "e3d935b89393a21667ca3eecb0c0bee9d8c27f10b5037b452344acace4316b0a",
+    "xoc_changes": [
+      "2026-11-16: REMOTE_ADDR with @ipMatch only, pattern limited to 1-8 IP addresses or CIDR networks (Joint Force executor blocks a source address at the WAF)"
+    ]
   }
 }
