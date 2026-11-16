@@ -10,7 +10,7 @@ for line in sys.stdin.buffer:
     if len(line) > 60000 or not line.strip():
         raise SystemExit('Invalid C1 frame size')
     data = json.loads(line)
-    if data.get('schema_version') != 'xoc.event/0.2.0':
+    if data.get('schema_version') not in ('xoc.event/0.2.0', 'xoc.event/0.3.0'):
         raise SystemExit('Unsupported C1 frame')
     # A distinct message prefix prevents the stock JSON decoder from claiming
     # C1 before its own decoder; the queue location remains xoc-c1.
