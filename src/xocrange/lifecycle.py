@@ -132,7 +132,13 @@ def change(root, action, identifier=None, package=None, source=None, *, preview=
     stage_base = ops.STATE/'staging'; stage_base.mkdir(exist_ok=True, mode=0o700)
     staged = Path(tempfile.mkdtemp(prefix='selection-', dir=stage_base))
     try:
+        if source and action not in ('update', 'upgrade'):
+            raise XocError('usage', '--source is for xoc update and xoc module upgrade.')
         copy_source(source or Path(current['release']), staged)
+        if source and action == 'upgrade':
+            # New Core source and the module's new package in one transaction: carry the
+            # other installed packages first, then the package replaces its own.
+            carry_modules(Path(current['release']), staged, chosen)
         if action in ('add', 'upgrade') and package:
             identifier = stage_package(package, staged, replace=action == 'upgrade')
         if action == 'upgrade':
@@ -157,6 +163,7 @@ def change(root, action, identifier=None, package=None, source=None, *, preview=
                 shutil.rmtree(entry['path'].parent)
         if action == 'update':
             carry_modules(Path(current['release']), staged, chosen)
+        if source:
             selected = release_plan(staged, chosen)
         else:
             selected = plan(staged, preset='security-path', include=chosen, allow_fixtures=True, allow_experimental=True)

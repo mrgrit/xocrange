@@ -38,10 +38,17 @@ cutoff = now()
 for options in ([], ['--port', '8081'], ['--marker', 'waf-block'], ['--marker', 'ips-block']):
     engine.run(['exec', '-T', 'lab-client', 'python', '-B', '/app/probe.py', *options], compose=True)
 subprocess.run(['/usr/bin/true'], check=True)  # xoc_probe audit rule and Sysmon process event
-deadline = time.monotonic() + 180
+started = last_backlog = time.monotonic()
 expected = set(SOURCES)
 while True:
     report = store.status()
+    # 180 s for fresh records; services restarted by the installation can queue a
+    # burst of retained input right after the drain check, so allow up to 600 s
+    # while that backlog is still being worked off. Nothing is skipped either way.
+    backlog = (report['oldest_pending_seconds'] >= 30 or (report.get('sysmon_source_lag_seconds') or 0) >= 30
+               or report.get('oldest_native_input_pending_seconds', 0) >= 30)
+    if backlog: last_backlog = time.monotonic()
+    deadline = max(started + 180, min(started + 600, last_backlog + 60))
     # Seek the recent interval for each producer. DISTINCT over the whole
     # multi-GiB evidence table makes acceptance itself starve live collection.
     available = {source for source in SOURCES if store.db.execute("SELECT 1 FROM events WHERE producer=? AND observed>=? AND confirmed IS NOT NULL AND julianday(json_extract(event, '$.timestamp'))>=julianday(?) AND (producer!='sysmon' OR json_extract(event, '$.event.type')='observation') AND (producer!='auditd' OR json_extract(event, '$.audit.key')='xoc_probe') ORDER BY observed DESC LIMIT 1", (source,cutoff,cutoff)).fetchone()}

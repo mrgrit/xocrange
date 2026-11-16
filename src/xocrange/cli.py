@@ -72,6 +72,7 @@ def parser():
     modules.add_argument('action', choices=['list','add','upgrade','remove','credentials','login'])
     modules.add_argument('identifier', nargs='?')
     modules.add_argument('--package', type=Path)
+    modules.add_argument('--source', type=Path, help='upgrade: also update Core from this source tree in the same transaction')
     modules.add_argument('--preview', action='store_true')
     modules.add_argument('--from', dest='source_dir', type=Path, help='credentials: directory with range-control.url, client.crt, client.key, ca.crt')
     modules.add_argument('--registry', help='login: paid module registry host[:port]; the active license is the credential')
@@ -139,7 +140,8 @@ def run(args):
         if args.action == 'list':
             state = ops.installed()
             return {'selected':state['selected'], 'release':state['release']}
-        value = lifecycle.change(args.root, args.action, args.identifier, args.package, preview=args.preview)
+        value = lifecycle.change(args.root, args.action, args.identifier, args.package,
+                                 args.source.absolute() if args.source else None, preview=args.preview)
         if not args.preview:
             from .evidence import reload_service
             reload_service()
