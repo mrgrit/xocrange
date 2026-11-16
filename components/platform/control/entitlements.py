@@ -93,22 +93,35 @@ def timestamp(value):
         raise Denied('entitlement_time') from exc
 
 
-def verify(envelope, keys, identity, core_version, now=None):
-    fields(envelope, 'schema_version key_id payload signature')
-    if envelope['schema_version'] != 'xoc.entitlement/0.1.0':
-        raise Denied('entitlement_schema')
-    key_id = identifier(envelope['key_id'])
-    pem = keys.get(key_id)
+SCHEMAS = ('xoc.entitlement/0.1.0', 'xoc.entitlement/0.2.0')
+ISSUER_SCHEMA = 'xoc.issuer/0.1.0'
+LICENSE_FIELDS = 'license_id institution_id range_id tier issued_at not_before expires_at core modules content scenarios'
+ISSUER_FIELDS = 'issuer_id public_key institution_id tier seats modules content scenarios issued_at not_before expires_at'
+# ADR 0011: a Live Fire learner domain is an internal lab name, never a public site.
+DOMAIN_SUFFIXES = ('lab', 'test', 'internal', 'home.arpa')
+LABEL = re.compile(r'[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\Z')
+
+
+def public_key(pem):
+    """DER of an exact Ed25519 SubjectPublicKeyInfo; RSA/ECDSA/private keys are refused."""
     if not isinstance(pem, str) or len(pem) > 1024:
         raise Denied('entitlement_untrusted_key')
+    match = re.fullmatch(r'-----BEGIN PUBLIC KEY-----\s+([A-Za-z0-9+/=\s]+)-----END PUBLIC KEY-----\s*', pem)
     try:
-        # Exact Ed25519 SubjectPublicKeyInfo: reject RSA/ECDSA/private keys.
-        match = re.fullmatch(r'-----BEGIN PUBLIC KEY-----\s+([A-Za-z0-9+/=\s]+)-----END PUBLIC KEY-----\s*', pem)
         der = base64.b64decode(''.join(match[1].split()), validate=True) if match else b''
+    except ValueError as exc:
+        raise Denied('entitlement_signature') from exc
+    if len(der) != 44 or der[:12] != bytes.fromhex('302a300506032b6570032100'):
+        raise Denied('entitlement_signature')
+    return der
+
+
+def signed_by(der, envelope):
+    try:
         signature = base64.b64decode(envelope['signature'], validate=True)
-        if len(der) != 44 or der[:12] != bytes.fromhex('302a300506032b6570032100') or len(signature) != 64:
+        if len(signature) != 64:
             raise ValueError()
-        signed = canonical({'schema_version': envelope['schema_version'], 'key_id': key_id, 'payload': envelope['payload']})
+        signed = canonical({'schema_version': envelope['schema_version'], 'key_id': envelope['key_id'], 'payload': envelope['payload']})
         with tempfile.TemporaryDirectory(prefix='xoc-c7-') as directory:
             base = Path(directory)
             (base/'key.der').write_bytes(der); (base/'sig').write_bytes(signature); (base/'message').write_bytes(signed)
@@ -119,8 +132,69 @@ def verify(envelope, keys, identity, core_version, now=None):
             raise ValueError()
     except (OSError, TypeError, ValueError, subprocess.TimeoutExpired) as exc:
         raise Denied('entitlement_signature') from exc
+
+
+def domain(value):
+    """None, or an internal lab domain such as alice.lab (ADR 0011)."""
+    if value is None:
+        return None
+    if not isinstance(value, str) or len(value) > 253 or value != value.lower():
+        raise Denied('entitlement_domain')
+    labels = value.split('.')
+    if len(labels) < 2 or not all(LABEL.match(x) for x in labels) or value == 'xoc.range':
+        raise Denied('entitlement_domain')
+    if not any(value.endswith('.' + suffix) and value != suffix for suffix in DOMAIN_SUFFIXES):
+        raise Denied('entitlement_domain')
+    return value
+
+
+def grants(payload):
+    for name in ('modules', 'content', 'scenarios'):
+        items = payload[name]
+        if not isinstance(items, dict) or len(items) > 256:
+            raise Denied('entitlement_format')
+        for item, requirement in items.items():
+            identifier(item); version_range(requirement, '0.0.0')
+
+
+def trust_key_id(envelope):
+    """The vendor key that roots this license: the issuer certificate's key, else the license's."""
+    issuer = envelope.get('issuer') if isinstance(envelope, dict) else None
+    return identifier((issuer if isinstance(issuer, dict) else envelope).get('key_id'))
+
+
+def verify_issuer(issuer, keys):
+    """A vendor-signed issuer certificate (ADR 0011 §7): Range Control may sign range licenses
+    for one institution within a tier, grants, seats and validity."""
+    fields(issuer, 'schema_version key_id payload signature')
+    if issuer['schema_version'] != ISSUER_SCHEMA:
+        raise Denied('entitlement_schema')
+    signed_by(public_key(keys.get(identifier(issuer['key_id']))), issuer)
+    value = issuer['payload']
+    fields(value, ISSUER_FIELDS)
+    identifier(value['issuer_id']); identifier(value['institution_id'])
+    if value['tier'] not in TIERS or value['tier'] == 'community':
+        raise Denied('entitlement_tier')
+    if not isinstance(value['seats'], int) or isinstance(value['seats'], bool) or not 1 <= value['seats'] <= 100000:
+        raise Denied('entitlement_format')
+    grants(value)
+    if not timestamp(value['issued_at']) <= timestamp(value['not_before']) < timestamp(value['expires_at']):
+        raise Denied('entitlement_not_yet_valid')
+    return value
+
+
+def verify(envelope, keys, identity, core_version, now=None):
+    if not isinstance(envelope, dict) or envelope.get('schema_version') not in SCHEMAS:
+        raise Denied('entitlement_schema')
+    delegated = envelope['schema_version'] == 'xoc.entitlement/0.2.0' and 'issuer' in envelope
+    fields(envelope, 'schema_version key_id payload signature' + (' issuer' if delegated else ''))
+    key_id = identifier(envelope['key_id'])
+    issuer = verify_issuer(envelope['issuer'], keys) if delegated else None
+    if issuer is not None and key_id != issuer['issuer_id']:
+        raise Denied('entitlement_issuer')
+    signed_by(public_key(issuer['public_key'] if issuer else keys.get(key_id)), envelope)
     payload = envelope['payload']
-    fields(payload, 'license_id institution_id range_id tier issued_at not_before expires_at core modules content scenarios')
+    fields(payload, LICENSE_FIELDS + (' domain' if envelope['schema_version'] == 'xoc.entitlement/0.2.0' else ''))
     fields(identity, 'institution_id range_id')
     for name in ('license_id', 'institution_id', 'range_id'):
         identifier(payload[name])
@@ -134,13 +208,21 @@ def verify(envelope, keys, identity, core_version, now=None):
         raise Denied('entitlement_not_yet_valid')
     if not version_range(payload['core'], core_version):
         raise Denied('entitlement_core_version')
-    for name in ('modules', 'content', 'scenarios'):
-        grants = payload[name]
-        if not isinstance(grants, dict) or len(grants) > 256:
-            raise Denied('entitlement_format')
-        for item, requirement in grants.items():
-            identifier(item); version_range(requirement, '0.0.0')
-    return dict(payload, expired=clock >= expires, fingerprint=hashlib.sha256(canonical(envelope)).hexdigest())
+    grants(payload)
+    domain(payload.get('domain'))
+    if issuer is not None:
+        # The issuer may only hand out what the vendor granted it, inside its own validity.
+        if payload['institution_id'] != issuer['institution_id'] or TIERS[payload['tier']] > TIERS[issuer['tier']]:
+            raise Denied('entitlement_issuer')
+        for name in ('modules', 'content', 'scenarios'):
+            if any(issuer[name].get(item) != requirement for item, requirement in payload[name].items()):
+                raise Denied('entitlement_issuer')
+        if begins < timestamp(issuer['not_before']) or expires > timestamp(issuer['expires_at']):
+            raise Denied('entitlement_issuer')
+    result = dict(payload, expired=clock >= expires, fingerprint=hashlib.sha256(canonical(envelope)).hexdigest())
+    if issuer is not None:
+        result['issuer_id'] = issuer['issuer_id']
+    return result
 
 
 def paid(manifest):
@@ -171,7 +253,7 @@ def load(directory, core_version, now=None):
     if not (base/'license.json').exists():
         return None
     envelope = read(base/'license.json')
-    key_id = identifier(envelope.get('key_id'))
+    key_id = trust_key_id(envelope)
     path = base/'trust'/(key_id+'.pem')
     if any(p.is_symlink() for p in (path, *path.parents)):
         raise Denied('entitlement_path')

@@ -106,7 +106,10 @@ def manage(root, action, *, file=None, key_id=None, institution=None, range_id=N
     api = verifier(root)
     if action == 'status':
         value = grant(root, directory)
-        return {'mode': 'community'} if value is None else {k: value[k] for k in ('license_id', 'institution_id', 'range_id', 'tier', 'expires_at', 'expired', 'fingerprint')}
+        if value is None:
+            return {'mode': 'community'}
+        return {**{k: value[k] for k in ('license_id', 'institution_id', 'range_id', 'tier', 'expires_at', 'expired', 'fingerprint')},
+                **{k: value[k] for k in ('domain', 'issuer_id') if value.get(k)}}
     if os.geteuid() != 0:
         raise XocError('root_required', 'Entitlement configuration requires sudo.')
     if any(p.is_symlink() for p in (directory, *directory.parents)):
@@ -128,7 +131,7 @@ def manage(root, action, *, file=None, key_id=None, institution=None, range_id=N
             return {'trusted_key': key_id, 'algorithm': 'Ed25519'}
         envelope = api.read(file)
         identity = {'institution_id': institution, 'range_id': range_id}
-        key = api.identifier(envelope.get('key_id'))
+        key = api.trust_key_id(envelope)
         verified = api.verify(envelope, {key: (directory/'trust'/(key+'.pem')).read_text()}, identity, __version__)
         if verified['expired']:
             raise api.Denied('entitlement_expired')
