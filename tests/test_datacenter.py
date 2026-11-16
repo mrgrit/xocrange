@@ -1,7 +1,7 @@
 """Data-center floor boundaries; purchase flags never grant Core access."""
 from copy import deepcopy
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import pytest
 from test_registry import registry_files
 from test_platform_security import application, app, login, send
@@ -177,6 +177,10 @@ def test_lab_switches_and_routing_come_from_a_fresh_host_observation(app,registr
     assert not [a for a in app.get('/core/api/datacenter').json()['assets'] if a['kind']=='switch']
     files['NETWORK_FILE'].write_text(json.dumps(network_document(registry['plan_id'],'2026-01-01T00:00:00+00:00')))
     assert not [a for a in app.get('/core/api/datacenter').json()['assets'] if a['kind']=='switch']
+    # The observer refreshes the network every 60 s; a view a little older than that is still current.
+    recent=(datetime.now(timezone.utc)-timedelta(seconds=100)).isoformat()
+    files['NETWORK_FILE'].write_text(json.dumps(network_document(registry['plan_id'],recent)))
+    assert app.get('/core/api/datacenter').json()['network_observation']['fresh']
 
 
 @pytest.mark.parametrize('floor,count',[('B1',15),('SITE',12)])

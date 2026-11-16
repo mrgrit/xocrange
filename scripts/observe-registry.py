@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Publish bounded, sanitized host observations to the read-only platform volume."""
+from datetime import datetime, timezone
 import json
 import os
 from pathlib import Path
@@ -30,6 +31,16 @@ def publish(name, value):
 
 publish('health', observe(engine, planned['compose']['name'], registry))
 # Lab switches and routing for the datacenter view (ADR 0010); never blocks the service health.
+# Refreshed every NETWORK_SECONDS, not on every 15 s run: one refresh starts dozens of `ip`/`nsenter`
+# processes, which were about 40 % of the Sysmon records on a demo Core and slowed SIEM recovery.
+NETWORK_SECONDS = 60
+try:
+    previous = json.loads((output/'network.json').read_text())
+    age = (datetime.now(timezone.utc) - datetime.fromisoformat(previous['observed_at'])).total_seconds()
+    if previous.get('plan_id') == registry['plan_id'] and 0 <= age < NETWORK_SECONDS - 5:
+        raise SystemExit(0)
+except (OSError, ValueError, KeyError, TypeError):
+    pass
 try:
     network = observe_network(engine, planned['compose']['name'], registry['plan_id'])
 except Exception as exc:  # noqa: BLE001 - publish an explicit unavailable state instead

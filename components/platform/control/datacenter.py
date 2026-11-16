@@ -91,12 +91,17 @@ def device_metadata(asset, available_panels):
 
 
 
+# The host observer refreshes the lab network view every 60 s (service health every 15 s): each
+# refresh starts dozens of short `ip`/`nsenter` processes that Sysmon records in the lab SIEM.
+NETWORK_FRESH_SECONDS = 150
+
+
 def network_observation(plan_id):
     """The host observer's lab network view, if fresh and for this installation."""
     try:
         value = document('NETWORK_FILE', '/run/xoc-observation/network.json')
         age = (datetime.now(timezone.utc) - datetime.fromisoformat(value['observed_at'])).total_seconds()
-        if value.get('schema_version') == 'xoc.network/0.1.0' and value.get('plan_id') == plan_id and 0 <= age <= 45 \
+        if value.get('schema_version') == 'xoc.network/0.1.0' and value.get('plan_id') == plan_id and 0 <= age <= NETWORK_FRESH_SECONDS \
                 and isinstance(value.get('segments'), list):
             return value
     except (OSError, ValueError, KeyError, TypeError):
