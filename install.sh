@@ -308,11 +308,15 @@ xoc=("$runtime/bin/xoc" --root "$release")
 
 # Live Fire enrollment (ADR 0011) before the plan, so the platform starts with the learner's
 # domain. Already enrolled Cores, updates without a terminal and --no-livefire skip it.
+# Enrollment results are kept in $livefire_dir as soon as they arrive: if a later step fails,
+# the next run activates them instead of enrolling again (no second code use or seat).
 livefire_dir=/etc/xocrange/livefire
 livefire_enrolled=
 if [[ -f $livefire_dir/enrollment.json ]]; then
     livefire_mode=off
     livefire_enrolled=$("$runtime/bin/python" -c 'import json,sys; print(json.load(open(sys.argv[1]))["domain"])' "$livefire_dir/enrollment.json")
+elif [[ -f $livefire_dir/pending/enrollment.json ]]; then
+    livefire_mode=stored
 elif [[ $livefire_mode == auto && -z $enroll_code && ! -t 0 ]]; then
     livefire_mode=off
 fi
@@ -333,19 +337,37 @@ if [[ $livefire_mode == auto ]]; then
     "$runtime/bin/python" -I "$release/scripts/livefire-enroll.py" "${enroll_args[@]}" > "$livefire_staging/result.json" || enroll_status=$?
     case $enroll_status in
         0)
-            mapfile -t enrolled < <("$runtime/bin/python" -c 'import json,sys; d=json.load(open(sys.argv[1])); print(d["vendor_key_id"]); print(d["institution_id"]); print(d["range_id"]); print(d["domain"])' "$livefire_staging/enrollment.json")
-            install -d -m 0755 /etc/xocrange/entitlements
-            "${xoc[@]}" license trust --key-id "${enrolled[0]}" --file "$livefire_staging/vendor.pem" >/dev/null
-            "${xoc[@]}" license activate --file "$livefire_staging/license.json" --institution "${enrolled[1]}" --range "${enrolled[2]}" >/dev/null
-            install -d -m 0700 "$livefire_dir" "$livefire_dir/credentials"
-            install -m 0600 "$livefire_staging"/credentials/* "$livefire_dir/credentials/"
-            install -m 0644 "$livefire_staging/enrollment.json" "$livefire_dir/enrollment.json"
-            livefire_enrolled=${enrolled[3]}
+            install -d -m 0700 "$livefire_dir" "$livefire_dir/pending" "$livefire_dir/pending/credentials"
+            install -m 0600 "$livefire_staging"/credentials/* "$livefire_dir/pending/credentials/"
+            install -m 0600 "$livefire_staging/license.json" "$livefire_staging/identity.json" "$livefire_dir/pending/"
+            install -m 0644 "$livefire_staging/vendor.pem" "$livefire_staging/enrollment.json" "$livefire_dir/pending/"
+            livefire_mode=stored
             ;;
         3) ;;   # no server or no code: Core only (the message was printed)
         *) fail 'Live Fire enrollment did not complete (see the message above). To install Core only, add --no-livefire.' ;;
     esac
     rm -rf -- "$livefire_staging"; livefire_staging=
+fi
+if [[ $livefire_mode == stored ]]; then
+    stage livefire-activation
+    # The installer already holds the operation lock: call the license functions directly.
+    install -d -m 0755 /etc/xocrange/entitlements
+    "$runtime/bin/python" - "$release" "$livefire_dir/pending" <<'PY'
+import json
+import sys
+from pathlib import Path
+from xocrange.entitlements import manage
+root, pending = Path(sys.argv[1]), Path(sys.argv[2])
+summary = json.loads((pending / 'enrollment.json').read_text())
+manage(root, 'trust', file=pending / 'vendor.pem', key_id=summary['vendor_key_id'])
+manage(root, 'activate', file=pending / 'license.json', institution=summary['institution_id'], range_id=summary['range_id'])
+PY
+    rm -rf -- "$livefire_dir/credentials"
+    mv "$livefire_dir/pending/credentials" "$livefire_dir/credentials"
+    mv "$livefire_dir/pending/enrollment.json" "$livefire_dir/enrollment.json"
+    rm -rf -- "$livefire_dir/pending"
+    livefire_enrolled=$("$runtime/bin/python" -c 'import json,sys; print(json.load(open(sys.argv[1]))["domain"])' "$livefire_dir/enrollment.json")
+    printf '[Live Fire] License activated for %s.\n' "$livefire_enrolled"
 fi
 
 stage module-plan
