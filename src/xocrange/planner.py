@@ -90,6 +90,7 @@ def reject_interpolation(value):
 
 
 EVIDENCE = "evidence-query"
+ACTIVITY_VOLUME, ACTIVITY_TARGET = "activity-{}", "/run/xoc-activity"
 
 
 def evidence_volumes(identifier):
@@ -274,6 +275,11 @@ def plan(root: Path, *, preset="bootstrap", include=(), without=(), allow_fixtur
             for name, owner in owners.items():
                 if owner == identifier:
                     compose['services'][name].setdefault('volumes', []).append(f'{volume}:{target}:ro')
+        # C1 v0.3: the module's own writable activity log (tool receipts), read by the host collector.
+        compose['volumes'][ACTIVITY_VOLUME.format(identifier)] = {}
+        for name, owner in owners.items():
+            if owner == identifier:
+                compose['services'][name]['volumes'].append(f'{ACTIVITY_VOLUME.format(identifier)}:{ACTIVITY_TARGET}')
     if 'int' in compose['networks']:
         compose['networks']['int'] = backend_network(compose['networks']['int'])
     check_addresses(compose)

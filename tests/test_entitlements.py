@@ -185,9 +185,10 @@ def test_evidence_volumes_only_for_the_entitled_module(checkout, issuer, tmp_pat
     module(checkout, 'M7', commercial=True, minimum_tier='live-fire', version='1.2.0',
            requires={'components': ['siem'], 'capabilities': ['evidence-query']})
     compose = plan(checkout, include=['M7'], entitlement_dir=directory, allow_experimental=True)['compose']
-    assert compose['services']['m7']['volumes'] == ['evidence-M7:/run/xoc-evidence:ro', 'module-M7-credentials:/run/xoc-module:ro']
-    assert {'evidence-M7', 'module-M7-credentials'} <= set(compose['volumes'])
-    others = [n for n, s in compose['services'].items() if n != 'm7' and any('evidence-M7' in v or 'module-M7' in v for v in s.get('volumes', []))]
+    assert compose['services']['m7']['volumes'] == ['evidence-M7:/run/xoc-evidence:ro', 'module-M7-credentials:/run/xoc-module:ro',
+                                                    'activity-M7:/run/xoc-activity']        # C1 v0.3 activity log, writable
+    assert {'evidence-M7', 'module-M7-credentials', 'activity-M7'} <= set(compose['volumes'])
+    others = [n for n, s in compose['services'].items() if n != 'm7' and any('evidence-M7' in v or 'module-M7' in v or 'activity-M7' in v for v in s.get('volumes', []))]
     assert others == []
 
 

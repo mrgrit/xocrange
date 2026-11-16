@@ -69,12 +69,12 @@ def endpoint(address, port=None):
 
 
 def make_event(raw, ctx, producer, *, discriminator, timestamp=None, category="network",
-               kind="alert", action="alert", outcome="observed", severity=0):
+               kind="alert", action="alert", outcome="observed", severity=0, version=VERSION):
     digest = hashlib.sha256(raw).hexdigest()
-    identity = [VERSION, ctx.tenant_id, ctx.range_id, ctx.source_id, producer,
+    identity = [version, ctx.tenant_id, ctx.range_id, ctx.source_id, producer,
                 ctx.evidence_ref, digest, discriminator]
     return {
-        "schema_version": VERSION,
+        "schema_version": version,
         "event_id": hashlib.sha256(canonical(identity)).hexdigest(),
         "tenant_id": ctx.tenant_id, "range_id": ctx.range_id, "source_id": ctx.source_id,
         "producer": producer, "timestamp": utc(timestamp) if timestamp is not None else ctx.observed_at,
@@ -218,9 +218,10 @@ def normalize(source: str, raw: bytes, context: Context):
     if not raw or len(raw) > MAX_BYTES:
         raise XocError("input_size", "Expected a nonempty input of at most 1 MiB.")
     from .endpoint_events import osquery, sysmon, auditd, apache_access, apache_error
+    from .agent_events import xoc_agent
     adapters = {"suricata": suricata, "modsecurity": modsecurity, "nftables": nftables,
                 "osquery": osquery, "sysmon": sysmon, "auditd": auditd,
-                "apache-access": apache_access, "apache-error": apache_error}
+                "apache-access": apache_access, "apache-error": apache_error, "xoc-agent": xoc_agent}
     if source not in adapters:
         raise XocError("unknown_source", "Unknown source adapter.")
     try:

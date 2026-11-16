@@ -149,3 +149,31 @@ def test_missing_source_time_is_explicit(context):
     event, = normalize("suricata", encode(data), context)
     assert event["timestamp"] == event["observed_at"]
     assert event["time_basis"] == "observed"
+
+
+AGENT = {"schema_version": "xoc.agent-activity/0.1.0", "at": "2026-11-16T12:18:20Z", "role": "operator",
+         "tool": "siem_search", "decision": "allow", "mode": "live", "code": "ok", "skill": "ip-risk-triage@0.1.0",
+         "receipt": "rcpt-0123456789abcdef", "arguments_sha256": "a" * 64, "result_sha256": "b" * 64, "module": "m7-operator"}
+
+
+def test_agent_activity_is_c1_v03_and_keeps_only_hashes(context):
+    import json
+    event, = normalize("xoc-agent", json.dumps(AGENT).encode(), context)
+    assert event["schema_version"] == "xoc.event/0.3.0" and event["producer"] == "xoc-agent"
+    assert event["event"] == {"category": "agent", "type": "audit", "action": "siem_search", "outcome": "allowed", "severity": 0}
+    assert event["agent"]["receipt"] == "rcpt-0123456789abcdef" and event["tenant_id"] == "community"
+    denied, = normalize("xoc-agent", json.dumps(AGENT | {"tool": "shell", "decision": "deny", "code": "floor"}).encode(), context)
+    assert denied["event"]["outcome"] == "blocked" and denied["agent"]["code"] == "floor"
+    forged, = normalize("xoc-agent", json.dumps(AGENT | {"tenant_id": "other", "range_id": "other"}).encode(), context)
+    assert forged["tenant_id"] == "community" and forged["range_id"] == "range-01"     # identity is server-side
+    v2, = normalize("suricata", (FIXTURES / "suricata-alert.json").read_bytes(), context) if (FIXTURES / "suricata-alert.json").exists() else (None,)
+    if v2:
+        assert v2["schema_version"] == "xoc.event/0.2.0"                               # existing producers stay v0.2
+
+
+@pytest.mark.parametrize("change", [{"schema_version": "x"}, {"role": "admin"}, {"tool": "Shell; rm"}, {"decision": "maybe"},
+                                    {"receipt": "nope"}, {"skill": "x"}, {"mode": "auto"}, {"arguments_sha256": "zz"}])
+def test_agent_activity_fails_closed(context, change):
+    import json
+    with pytest.raises(XocError):
+        normalize("xoc-agent", json.dumps(AGENT | change).encode(), context)

@@ -230,6 +230,18 @@ class Collector:
             if not mount.is_absolute() or any(p.is_symlink() for p in (mount, *mount.parents)):
                 raise XocError('untrusted_log_volume', 'Log volume path is not a local, direct directory.')
             self.volumes[service] = (name, mount, base)
+        # C1 v0.3: activity logs of entitled agent modules (tool receipts), one source per module.
+        self.activity = {}
+        for name in sorted((result['compose'].get('volumes') or {})):
+            if not name.startswith('activity-'):
+                continue
+            volume, = json.loads(self.engine.run(['volume', 'inspect', result['compose']['name'] + '_' + name]))
+            labels = volume.get('Labels') or {}
+            mount = Path(volume['Mountpoint'])
+            if (labels.get('com.docker.compose.project') != result['compose']['name'] or labels.get('com.docker.compose.volume') != name
+                    or volume.get('Driver') != 'local' or not mount.is_absolute() or any(p.is_symlink() for p in (mount, *mount.parents))):
+                raise XocError('untrusted_log_volume', 'Activity volume ownership differs from the validated plan.')
+            self.activity['agent-' + name.removeprefix('activity-')] = mount / 'activity.jsonl'
         from .entitlements import collection_identity
         self.store = Store(directory, identity=collection_identity(root))
         self.indexer = None
@@ -466,6 +478,15 @@ class Collector:
                 with self.store.transaction():
                     for chunk in chunks:
                         self.accept_chunk(source, source_id, chunk)
+                self.store.health(source_id, 'ready' if chunks else 'awaiting-file')
+            except (XocError, OSError, ValueError, subprocess.TimeoutExpired) as exc:
+                self.store.health(source_id, getattr(exc, 'code', 'collection_failed'))
+        for source_id, path in getattr(self, 'activity', {}).items():
+            try:
+                chunks = self.read_files(source_id, None, None, str(path))
+                with self.store.transaction():
+                    for chunk in chunks:
+                        self.accept_chunk('xoc-agent', source_id, chunk)
                 self.store.health(source_id, 'ready' if chunks else 'awaiting-file')
             except (XocError, OSError, ValueError, subprocess.TimeoutExpired) as exc:
                 self.store.health(source_id, getattr(exc, 'code', 'collection_failed'))

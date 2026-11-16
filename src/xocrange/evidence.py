@@ -505,6 +505,12 @@ def serve():
         os.chmod(path, 0o600)
         os.chown(directory, uid, 0)
         os.chmod(directory, 0o500)
+        try:                                       # C1 v0.3 activity log: written by the module only
+            activity = _volume(engine, project, f'activity-{module}')
+            os.chown(activity, uid, 0)
+            os.chmod(activity, 0o700)
+        except XocError:
+            pass                                   # plans from before C1 v0.3 have no activity volume
         listener.listen(16)
         listeners.append((module, uid, listener))
 

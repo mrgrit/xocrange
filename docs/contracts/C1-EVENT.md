@@ -60,3 +60,19 @@ ModSecurity는 transaction 1개와 audit message별 자식 이벤트를 만든�
 이 문서 앞부분의 v0.1 식별·시간·최소화 규칙은 유지되며 새 출력의 schema_version만 v0.2로 대체한다. 원본 전체에는 민감한 내용이 있을 수 있다. 수집 저장소는 0700, DB는 0600이며 관리자만 접근한다. 정규화·원본 보존의 기본 기간은 7일이고, 미분석 outbox는 기간만으로 폐기하지 않는다.
 
 Sysmon의 9자리 소수 초는 원본에 그대로 보관하고 정규화 시 마이크로초 6자리로 절삭한다. Python 3.10과 3.14에서 동일한 결과를 보장한다.
+
+## v0.3 — 에이전트 활동(`xoc-agent`)
+
+생성 주체 `xoc-agent`, category `agent`, 선택 필드 `agent`(role·tool·decision·mode·code·skill·receipt·
+arguments_sha256·result_sha256·module)를 추가했다. 기존 생성 주체는 계속 `xoc.event/0.2.0`을 내보내고
+`xoc-agent` 이벤트만 `xoc.event/0.3.0`이다. 그래서 v0.2만 아는 소비자는 기존 이벤트를 그대로 읽는다.
+
+- 원천: 증거 조회 권한이 있는 유료 모듈(예: Joint Force 운영자)마다 쓰기 가능한 활동 볼륨
+  `activity-<모듈>`이 `/run/xoc-activity`에 붙는다. 모듈은 도구 호출마다 `xoc.agent-activity/0.1.0` JSON 한 줄을
+  `activity.jsonl`에 쓴다. 볼륨 소유자는 증거 서비스가 모듈 사용자로 맞춘다(0700).
+- 수집: 호스트 수집기가 수집원 `agent-<모듈>`로 읽어 정규화한다. tenant_id/range_id는 수집기의 서버 측
+  식별에서만 온다(기록 안의 값은 무시).
+- 내용: 정책이 허용한 호출(`outcome: allowed`)과 거부한 호출(`blocked`, severity 30) 모두 남는다. 인자와
+  결과는 해시만 남고 내용은 남지 않는다. 식별 discriminator는 `receipt`.
+- Wazuh 원본 입력으로 보내지 않는다(디코더 없음). 네트워크 출발지가 없으므로 출발지별 집계에 주소로 나타나지 않는다.
+- Core는 기록만 저장한다. 에이전트 실행·모델 호출은 유료 모듈 쪽에 있다.

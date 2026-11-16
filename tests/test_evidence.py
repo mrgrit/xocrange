@@ -232,3 +232,23 @@ def test_c1_aggregate_gives_per_source_facts_over_days(tmp_path):
         evaluate(sources, {'schema_version': QUERY, 'request_id': 'r4', 'checks': [check]})
     with pytest.raises(XocError):                                   # at most 180 days
         evaluate(sources, {'schema_version': QUERY_V2, 'request_id': 'r5', 'checks': [dict(check, params={**check['params'], 'since_days': 365})]})
+
+
+def test_agent_activity_is_stored_without_native_forwarding_and_left_out_of_source_facts(tmp_path):
+    """C1 v0.3: an agent's tool receipts land in the SIEM store; they never become Wazuh input and,
+    having no network source, never show up as an address in per-source aggregation."""
+    from xocrange.evidence import QUERY_V2
+    store = Store(tmp_path / 'siem')
+    store.set_cursor('native-input-enabled', True)
+    receipt = {"schema_version": "xoc.agent-activity/0.1.0", "at": "2026-11-14T00:20:00Z", "role": "operator",
+               "tool": "siem_search", "decision": "allow", "receipt": "rcpt-0123456789abcdef", "module": "m7-operator"}
+    store.ingest('xoc-agent', 'agent-m7-operator', 1, json.dumps(receipt).encode(), observed='2026-11-14T00:20:01.000000Z')
+    store.ingest('suricata', 'ips-eve', 1, suricata(ATTACKER, 9100001), observed='2026-11-14T00:10:01.000000Z')
+    store.db.commit()
+    rows = [tuple(r) for r in store.db.execute("SELECT producer, json_extract(event,'$.schema_version') FROM events ORDER BY producer")]
+    assert rows == [('suricata', 'xoc.event/0.2.0'), ('xoc-agent', 'xoc.event/0.3.0')]
+    assert [r[0] for r in store.db.execute('SELECT source FROM native_inputs')] == ['suricata']
+    sources = Sources(tmp_path / 'siem' / 'events.sqlite3', now=lambda: __import__('datetime').datetime(2026, 11, 14, 12, tzinfo=__import__('datetime').timezone.utc))
+    result = evaluate(sources, {'schema_version': QUERY_V2, 'request_id': 'r1', 'checks': [
+        {'id': 's', 'type': 'c1_aggregate', 'target': 'siem', 'params': {'group_by': 'network.source.ip', 'since_days': 180}}]})
+    assert [g['key'] for g in result['results'][0]['groups']] == [ATTACKER]
