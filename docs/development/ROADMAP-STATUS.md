@@ -73,5 +73,5 @@ K08의 [콘솔](DEVICE-CONSOLES.md)은 현재 UI와 커스텀 관리 방식을 �
 - Wazuh 전달 큐와 규칙이 v0.2만 받아 에이전트 이벤트가 미확인으로 쌓임 → 큐 v0.3 허용, 규칙 110009. Wazuh 정규식은 문자 묶음(`[23]`)을 지원하지 않아 `|`로 씀. **실행 검증**: Wazuh 4.14.10 일회용 컨테이너에서 에이전트 허용·거부 → 110009, v0.2 suricata → 110020, 미지 버전 거부(543e6a0). 데모 Core에서 `xoc-agent` 14건 저장·Wazuh 확인(110009)·인덱서 전송 14/14.
 - 설치 직후 재시작 몰림(대기 2,600건)으로 SIEM 수용 검사의 Sysmon 시험이 180초를 넘김 → 밀린 입력을 처리하는 동안 최대 600초, 해소 후 60초 대기(f8748c7).
 - `xoc module upgrade --package P --source S`: Core 소스 갱신과 모듈 교체를 트랜잭션 한 번에(f8748c7). **실행 검증**: 데모 Core에서 f8748c7 소스 + m7 새 패키지 1,080초, 수용 검사 통과, 증거 서비스가 새 릴리스를 가리킴, 운영자 주기 정상·스킬 재채택 후 `adopted`.
-- 관찰(미해결): 실패한 설치를 복원한 뒤 Wazuh 보관 기록에 복원으로 사라진 C1 이벤트의 경보 1건이 남아 `unknown_source`로 격리되고 SIEM 상태가 `degraded`로 표시된다(데이터 손실 아님). 복원 때 Manager 보관 기록 커서를 같이 되돌리거나 이런 경보를 별도 표시할지 결정 필요.
-- 검증 안 함: SIEM UI에서 `agent.*` 필드 검색(매핑과 `xoc-agent` 재내보내기는 코드·단위 시험, 화면 확인 전).
+- 복원 뒤 SIEM `degraded`: 원인은 경보가 아니라 수집기였다. 복원으로 Manager 보관 파일이 짧아지면 읽다 만 줄 조각(713바이트)을 일반 증거 기록으로 넣었고, 해석기가 없어 `unknown_source`로 격리됐다. Manager 출력은 수신 기록이므로 잘린 조각은 증거로 넣지 않고 `analysis_fragments_dropped`로 센다(확인할 이벤트는 미확인으로 남아 재전송). 1 MiB 초과 줄은 분석 오류 `analysis_oversize`. 기존 격리 조각은 저장소를 열 때 지운다.
+- SIEM UI `agent.*`: 데모 Core 인덱서에서 관리자 계정으로 `xoc-agent` 154건, `agent.*` 10개 필드 매핑, term·집계·query_string 검색 성공(**실행 검증**). 단 대시보드에 저장된 `xoc-events` 인덱스 패턴은 처음 만들 때(`overwrite=false`)의 65개 필드 그대로라 Discover 필드 목록에 `agent.*`가 없었다 → 설정 때 템플릿에 새로 생긴 필드만 저장된 패턴에 덧붙인다(사용자 편집 유지). SIEM UI 수용 검사에 `core_pattern_lists_template_fields` 추가.

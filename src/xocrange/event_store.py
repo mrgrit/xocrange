@@ -92,6 +92,14 @@ class Store:
         if 'annotation' not in {r[1] for r in self.db.execute('PRAGMA table_info(wazuh_alerts)')}:
             self.db.execute('ALTER TABLE wazuh_alerts ADD COLUMN annotation TEXT')
             self.db.commit()
+        # Before the collector separated them, an unterminated Manager output tail
+        # (left by a restore that shortened the file) was stored as an evidence record
+        # with no adapter and quarantined forever. It is a receipt fragment, not evidence.
+        stale = self.db.execute("SELECT source FROM records INDEXED BY records_quarantined WHERE error='unknown_source' AND source IN ('wazuh','wazuh-archive')").fetchall()
+        if stale:
+            with self.db:
+                self.db.execute("DELETE FROM records WHERE error='unknown_source' AND source IN ('wazuh','wazuh-archive')")
+                for (source,) in stale: self.drop_fragment(source)
         self.db.execute('CREATE INDEX IF NOT EXISTS events_indexing ON events(indexed,confirmed)')
         self.db.execute('CREATE INDEX IF NOT EXISTS events_export_producer ON events(producer,observed) WHERE confirmed IS NOT NULL AND indexed IS NULL')
         self.db.execute('CREATE INDEX IF NOT EXISTS events_export_time ON events(observed) WHERE confirmed IS NOT NULL AND indexed IS NULL')
@@ -148,6 +156,18 @@ class Store:
         with self.db:
             self.db.execute("INSERT OR REPLACE INTO health VALUES (?,?,?)", (source, now(), status))
         seen[source] = (status, time.monotonic())
+
+    def drop_fragment(self, source):
+        """Count an unterminated Manager output tail that was discarded.
+
+        Manager alerts and archives are receipts for evidence already stored here. A
+        tail cut off by a restore cannot be parsed; the event it would have confirmed
+        stays pending and is re-sent, so a real loss shows in the pending counters.
+        """
+        value = self.cursor('analysis-fragments') or {}
+        value[source] = value.get(source, 0) + 1
+        value['last'] = now()
+        self.set_cursor('analysis-fragments', value)
 
     def processing_error(self, source, raw, code):
         from .retention import check_write
@@ -269,6 +289,7 @@ class Store:
             if row[1] and (current-datetime.fromisoformat(row[1].replace('Z','+00:00'))).total_seconds()>=120:result['status']='degraded'
         from .retention import usage
         result['analysis_quarantined'] = self.db.execute('SELECT COUNT(*) FROM processing_errors').fetchone()[0]
+        result['analysis_fragments_dropped'] = self.cursor('analysis-fragments') or {}
         if result['analysis_quarantined']: result['status'] = 'degraded'
         result['storage'] = {**usage(self), 'policy': self.policy}
         if result['storage']['used_bytes'] >= self.policy['ingest_bytes'] or result['storage']['filesystem_free_bytes'] < self.policy['reserve_bytes']:

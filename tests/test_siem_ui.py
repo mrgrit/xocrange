@@ -204,3 +204,24 @@ def test_added_agent_mapping_reexports_only_agent_events(tmp_path):
     assert state() == {'xoc-agent': 1, 'suricata': 0}
     mark_reexport(store, ())
     assert state() == {'xoc-agent': 1, 'suricata': 1}
+
+
+def test_upgraded_core_pattern_gains_only_missing_template_fields():
+    import json as _json
+    from xocrange.indexer import add_pattern_fields
+    edited={'name':'producer','type':'string','count':7,'customLabel':'Source'}
+    class Fake:
+        def __init__(self): self.calls=[]
+        def request(self, method, path, body=None, service='indexer'):
+            self.calls.append((method,path,body,service))
+            if method=='GET': return 200,{'id':'xoc-events','version':'WzEsMV0=','attributes':{'title':'xoc-events-*','fields':_json.dumps([edited]),'fieldFormatMap':'{}'}}
+            return 200,{}
+    fields=[{'name':'producer','type':'string'},{'name':'agent.tool','type':'string'}]
+    client=Fake()
+    assert add_pattern_fields(client,'xoc-events',fields)==['agent.tool']
+    method,path,body,service=client.calls[-1]
+    assert (method,path,service)==('PUT','/siem/api/saved_objects/index-pattern/xoc-events','dashboard')
+    assert body['version']=='WzEsMV0=' and set(body['attributes'])=={'fields'}
+    assert _json.loads(body['attributes']['fields'])==[edited,fields[1]]   # the user's edit is kept
+    again=Fake(); again.request=lambda m,p,b=None,service='indexer':(200,{'attributes':{'fields':_json.dumps(fields)}}) if m=='GET' else (_ for _ in ()).throw(AssertionError('no write'))
+    assert add_pattern_fields(again,'xoc-events',fields)==[]

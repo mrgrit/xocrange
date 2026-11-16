@@ -267,3 +267,40 @@ def test_apache_empty_request_receipt_preserves_raw_and_can_recover(store):
     assert store.db.execute('SELECT confirmed,error FROM native_inputs').fetchone()[0]
     assert store.db.execute('SELECT error FROM native_inputs').fetchone()[0] is None
     assert store.db.execute('SELECT raw FROM records WHERE ref=?',(ref,)).fetchone()[0]==raw
+
+
+def test_manager_output_tail_cut_by_a_restore_is_counted_not_quarantined(store):
+    import base64
+    from xocrange.collector import Collector
+    ingest(store);frame,=pending(store);raw=canonical(receipt(frame,'json'))+b'\n'
+    def chunk(data,offset,reset=False):
+        return {'key':'archive:inode','offset':offset,'reset':reset,'data':base64.b64encode(data).decode(),'anchor':''}
+    collector=Collector.__new__(Collector);collector.store=store
+    with store.transaction():collector.accept_chunk('wazuh-archive','wazuh-archives',chunk(raw[:70],0))
+    # A restore shortens the archive; the buffered tail can never be completed.
+    with store.transaction():collector.accept_chunk('wazuh-archive','wazuh-archives',chunk(raw,0,reset=True))
+    assert store.db.execute('SELECT COUNT(*) FROM records WHERE error IS NOT NULL').fetchone()[0]==0
+    assert store.db.execute('SELECT confirmed FROM native_inputs').fetchone()[0]
+    status=store.status()
+    assert status['quarantined']==0 and status['analysis_fragments_dropped']['wazuh-archive']==1
+
+
+def test_oversize_manager_output_is_an_analysis_error_not_evidence(store):
+    import base64
+    from xocrange.collector import Collector
+    from xocrange.documents import MAX_BYTES
+    collector=Collector.__new__(Collector);collector.store=store
+    big=b'{"x":"'+b'a'*(MAX_BYTES+8)
+    with store.transaction():collector.accept_chunk('wazuh','wazuh-alerts',{'key':'alerts:inode','offset':0,'reset':False,'data':base64.b64encode(big).decode(),'anchor':''})
+    assert store.db.execute('SELECT COUNT(*) FROM records').fetchone()[0]==0
+    assert store.db.execute('SELECT error FROM processing_errors').fetchone()[0]=='analysis_oversize'
+
+
+def test_legacy_quarantined_manager_tail_is_removed_on_open(store):
+    with store.transaction():
+        store.db.execute("INSERT INTO records(ref,source,observed,sha256,raw,error,source_id) VALUES ('xoc-evidence:old','wazuh-archive','2026-11-16T19:17:07Z','0',x'7b','unknown_source','wazuh-archives')")
+        store.db.execute("INSERT INTO records(ref,source,observed,sha256,raw,error,source_id) VALUES ('xoc-evidence:keep','suricata','2026-11-16T19:17:07Z','0',x'7b','invalid_event','ips')")
+    reopened=Store(store.directory)
+    assert [r[0] for r in reopened.db.execute('SELECT ref FROM records WHERE error IS NOT NULL')]==['xoc-evidence:keep']
+    assert reopened.cursor('analysis-fragments')['wazuh-archive']==1
+    reopened.db.close()

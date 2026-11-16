@@ -329,13 +329,23 @@ class Collector:
         else:
             self.store.set_cursor(key, group)
 
+    def unterminated(self, source, source_id, position, raw, truncated=False):
+        """Handle a tail without a newline: the file shrank, or the line is over budget."""
+        if source not in ('wazuh', 'wazuh-archive'):
+            self.store.ingest(source, source_id, position, raw)
+        elif truncated:
+            # Manager output is a receipt stream with no C1 adapter (see Store.drop_fragment).
+            self.store.drop_fragment(source)
+        else:
+            self.store.processing_error(source, raw, 'analysis_oversize')
+
     def accept_chunk(self, source, source_id, chunk):
         store = self.store
         key = chunk['key']
         previous = store.cursor(key) or {'offset': 0, 'buffer': '', 'generation': 0}
         if chunk['reset']:
             if previous['buffer']:
-                store.ingest(source, source_id, f"{key}:{previous['generation']}:truncated", base64.b64decode(previous['buffer']))
+                self.unterminated(source, source_id, f"{key}:{previous['generation']}:truncated", base64.b64decode(previous['buffer']), truncated=True)
             previous = {'offset': 0, 'buffer': '', 'generation': previous['generation'] + 1}
         retained = base64.b64decode(previous['buffer'])
         base = chunk['offset'] - len(retained)
@@ -370,7 +380,7 @@ class Collector:
             consumed = end
         remaining = buffer[consumed:]
         if len(remaining) > MAX_BYTES:
-            store.ingest(source, source_id, f"{key}:{previous['generation']}:{base+consumed}", remaining)
+            self.unterminated(source, source_id, f"{key}:{previous['generation']}:{base+consumed}", remaining)
             remaining = b''
         store.set_cursor(key, {'offset': chunk['offset'] + len(data), 'buffer': base64.b64encode(remaining).decode(),
                                'generation': previous['generation'], 'anchor': chunk['anchor'],

@@ -56,6 +56,8 @@ Docker·Python·Microsoft Ubuntu 26.04 저장소·osquery 저장소·auditd를 �
 
 Wazuh queue에 넣었다고 바로 성공 처리하지 않는다. 실제 `alerts.json`에 같은 event ID·producer·원본 hash가 나타나야 `--confirmed` 조회 대상이 된다. 전송 중 재시작 시 재전송할 수 있지만 검색 저장소는 event ID로 중복 제거한다. `status`는 파싱 격리 건수, 소스 상태, 미분석 건수와 가장 오래 대기한 시간, Sysmon journal의 실제 발생 시각 대비 지연을 표시한다. 누적 journal은 한 회차 최대 5초/4096건씩 처리하며 120초 이상 뒤처지면 `lagging`으로 표시한다.
 
+Manager의 `alerts.json`·`archives.json`은 이미 저장한 증거의 수신 기록이다. 복원·롤백으로 파일이 짧아져 줄 끝이 잘린 조각은 증거로 넣지 않고 `analysis_fragments_dropped`에 출처별로 센다. 그 조각이 확인할 이벤트는 미확인으로 남아 다시 전송되므로 실제 누락은 미분석 건수로 드러난다. 1 MiB를 넘는 한 줄은 분석 오류(`analysis_oversize`)로 격리한다. 이전 버전이 이런 조각을 `unknown_source` 증거 기록으로 격리했다면 저장소를 열 때 지우고 같은 카운터에 더한다.
+
 Native 입력은 별도 ID·frame hash·전송/처리 상태를 갖는다. `archives.json`에서 같은 입력 ID·source·frame hash와 해당 소스의 decoder를 확인해야 분석 완료로 처리한다. 경보가 없는 정상/level 0/no_log 결과도 이 경로로 확인한다. Native 경보는 `xoc.input_id`·`xoc.event_id`·`xoc.evidence_ref`로 연결한다. 재전송으로 새 Wazuh ID가 생겨도 같은 입력의 동일 분석 결과는 첫 원본 한 건을 유지한다. 규칙·분석 결과가 달라진 경우는 별도 경보로 보관한다. [형식·검증 범위](WAZUH-RAW-SOURCES.md)
 
 ### auditd 기록 중단

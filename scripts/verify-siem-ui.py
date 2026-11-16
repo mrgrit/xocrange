@@ -168,6 +168,15 @@ r.on('error',e=>process.exit(['ERR_TLS_CERT_ALTNAME_INVALID','UNABLE_TO_VERIFY_L
         if set(SOURCES)<=found or time.monotonic()>=deadline: break
         time.sleep(3)
     checks['all_eight_fresh_sources_indexed']=code==200 and set(SOURCES)<=found
+    # Discover lists the saved pattern's fields: every template field, including ones
+    # added after the pattern was first created (C1 v0.3 agent.*), must be there.
+    def leaves(properties,prefix=''):
+        for name,field in properties.items():
+            yield from leaves(field['properties'],prefix+name+'.') if 'properties' in field else [prefix+name]
+    template=json.loads((Path(root)/'components/siem-ui/index-template.json').read_text())
+    code,saved=client.request('GET','/siem/api/saved_objects/index-pattern/xoc-events',service='dashboard')
+    names={f.get('name') for f in json.loads(saved.get('attributes',{}).get('fields') or '[]')} if code==200 else set()
+    checks['core_pattern_lists_template_fields']=set(leaves(template['template']['mappings']['properties']))<=names
     deadline=time.monotonic()+180
     while True:
         code,data=client.request('POST','/wazuh-alerts-4.x-*/_search',{'size':0,'query':{'range':{'timestamp':{'gte':since}}},'aggs':{'sources':{'terms':{'field':'data.producer','size':8}}}})

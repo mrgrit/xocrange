@@ -152,6 +152,27 @@ def mark_reexport(store, scope):
         store.db.execute('UPDATE wazuh_alerts SET indexed=NULL')
 
 
+def add_pattern_fields(client, pattern_id, fields):
+    """Append template fields missing from a saved index pattern; keep everything else."""
+    path='/siem/api/saved_objects/index-pattern/'+pattern_id
+    status,current=client.request('GET',path,service='dashboard')
+    try:
+        existing=json.loads(current['attributes'].get('fields') or '[]') if status==200 else None
+    except (KeyError,TypeError,ValueError):
+        existing=None
+    if not isinstance(existing,list):
+        raise XocError('dashboard_objects','Cannot read the Core index pattern fields.')
+    names={f.get('name') for f in existing if isinstance(f,dict)}
+    missing=[f for f in fields if f['name'] not in names]
+    if not missing: return []
+    body={'attributes':{'fields':json.dumps(existing+missing)}}
+    if current.get('version'): body['version']=current['version']
+    status,_=client.request('PUT',path,body,service='dashboard')
+    if status!=200:
+        raise XocError('dashboard_objects','Cannot add new fields to the Core index pattern.')
+    return [f['name'] for f in missing]
+
+
 def initialize(client, root, timeout=240):
     deadline=time.monotonic()+timeout
     while True:
@@ -265,4 +286,7 @@ def initialize(client, root, timeout=240):
     saved=result.get('saved_objects',[])
     if status!=200 or len(saved)!=len(objects) or any(row.get('error',{}).get('statusCode',0) not in (0,409) for row in saved):
         raise XocError('dashboard_objects','Cannot initialize the Core saved searches and dashboard.')
+    # overwrite=false keeps an existing pattern, so a field the template gained later
+    # (C1 v0.3 agent.*) would never reach Discover's field list on an upgraded install.
+    add_pattern_fields(client,objects[0]['id'],fields)
     return {'status':'ready','url':'https://'+client.credentials['public_host']+'/siem/'}
