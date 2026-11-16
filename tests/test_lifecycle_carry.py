@@ -49,3 +49,46 @@ def test_package_images_must_be_pinned_by_digest(image, ok):
             check_package_images(fragment)
         assert error.value.code == 'module_image_unpinned'
     check_package_images({'services': {'built': {'build': {'context': '.', 'dockerfile': 'Dockerfile'}}}})   # source packages still build
+
+
+def _staged(tmp_path):
+    from pathlib import Path
+    import shutil
+    repo = Path(__file__).resolve().parents[1]
+    staged = tmp_path / 'staged'
+    shutil.copytree(repo / 'components', staged / 'components', ignore=shutil.ignore_patterns('__pycache__'))
+    (staged / 'modules.d').mkdir()
+    source = repo / 'tests/fixtures/packages/lifecycle'
+    return staged, source
+
+
+def test_upgrade_replaces_an_installed_package(tmp_path):
+    import shutil
+    from xocrange.lifecycle import stage_package
+    staged, source = _staged(tmp_path)
+    with pytest.raises(XocError) as error:                       # nothing installed yet
+        stage_package(source, staged, replace=True)
+    assert error.value.code == 'module_not_package'
+    assert stage_package(source, staged) == 'fixture-lifecycle'
+    with pytest.raises(XocError) as error:
+        stage_package(source, staged)
+    assert error.value.code == 'module_exists'
+    newer = tmp_path / 'newer'
+    shutil.copytree(source, newer, ignore=shutil.ignore_patterns('__pycache__'))
+    (newer / 'server.py').write_text((newer / 'server.py').read_text() + '\n# v2\n')
+    assert stage_package(newer, staged, replace=True) == 'fixture-lifecycle'
+    assert '# v2' in (staged / 'modules.d/fixture-lifecycle/server.py').read_text()
+
+
+def test_upgrade_cannot_replace_a_core_component(tmp_path):
+    import shutil
+    import yaml
+    from xocrange.lifecycle import stage_package
+    staged, source = _staged(tmp_path)
+    fake = tmp_path / 'fake'
+    shutil.copytree(source, fake, ignore=shutil.ignore_patterns('__pycache__'))
+    manifest = yaml.safe_load((fake / 'module.yaml').read_text()); manifest['id'] = 'siem'
+    (fake / 'module.yaml').write_text(yaml.safe_dump(manifest))
+    with pytest.raises(XocError) as error:
+        stage_package(fake, staged, replace=True)
+    assert error.value.code == 'module_not_package'

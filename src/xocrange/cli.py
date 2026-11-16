@@ -69,7 +69,7 @@ def parser():
     licensing.add_argument('--institution')
     licensing.add_argument('--range', dest='range_id')
     modules = commands.add_parser('module', help='Install/remove selected modules; preserve settings and evidence')
-    modules.add_argument('action', choices=['list','add','remove','credentials','login'])
+    modules.add_argument('action', choices=['list','add','upgrade','remove','credentials','login'])
     modules.add_argument('identifier', nargs='?')
     modules.add_argument('--package', type=Path)
     modules.add_argument('--preview', action='store_true')

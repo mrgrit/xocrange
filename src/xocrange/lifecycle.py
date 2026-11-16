@@ -94,6 +94,36 @@ def check_package_images(fragment):
             raise XocError('module_image_unpinned', 'Module images must come from a registry and be pinned by digest (@sha256:...).')
 
 
+def stage_package(package, staged, *, replace=False):
+    """Validate a module package and place it in the staged release. With replace (upgrade), the
+    package takes the place of the installed package of the same module: one transaction, same
+    settings and credentials volumes, no remove/add round trip."""
+    package = package.absolute()
+    if any(p.is_symlink() for p in (package, *package.parents)) or any(p.is_symlink() for p in package.rglob('*')):
+        raise XocError('module_symlink', 'Module packages must contain regular, declared local files.')
+    manifest = validate(yaml_document(package/'module.yaml'), 'manifest')
+    if manifest['kind'] != 'module':
+        raise XocError('invalid_kind', 'Installable packages must declare kind: module.')
+    declared = {package/'module.yaml', *(within(package, name) for name in [manifest.get('compose','compose.yaml'), *manifest['build_inputs']])}
+    if {p for p in package.rglob('*') if p.is_file()} != declared:
+        raise XocError('module_undeclared_file', 'Every module package file must be declared in its manifest.')
+    check_package_images(yaml_document(within(package, manifest.get('compose', 'compose.yaml'))))
+    identifier = manifest['id']
+    target = staged/'modules.d'/identifier
+    existing = catalog(staged, allow_fixtures=True)
+    if replace:
+        if identifier not in existing or existing[identifier]['path'].parent != target.resolve():
+            raise XocError('module_not_package', 'Only a module installed from a package can be upgraded with a package.')
+    elif identifier in existing:
+        raise XocError('module_exists', 'A package already owns this module identifier.')
+    if sum(p.stat().st_size for p in package.rglob('*') if p.is_file()) > 128*1024**2:
+        raise XocError('module_size', 'Module source exceeds the 128 MiB installation limit.')
+    if replace:
+        shutil.rmtree(target)
+    shutil.copytree(package, target)
+    return identifier
+
+
 def change(root, action, identifier=None, package=None, source=None, *, preview=False):
     if os.geteuid() != 0:
         raise XocError('root_required', 'Module and update operations require sudo.')
@@ -103,23 +133,13 @@ def change(root, action, identifier=None, package=None, source=None, *, preview=
     staged = Path(tempfile.mkdtemp(prefix='selection-', dir=stage_base))
     try:
         copy_source(source or Path(current['release']), staged)
-        if action == 'add' and package:
-            package = package.absolute()
-            if any(p.is_symlink() for p in (package, *package.parents)) or any(p.is_symlink() for p in package.rglob('*')):
-                raise XocError('module_symlink', 'Module packages must contain regular, declared local files.')
-            manifest = validate(yaml_document(package/'module.yaml'), 'manifest')
-            if manifest['kind'] != 'module':
-                raise XocError('invalid_kind', 'Installable packages must declare kind: module.')
-            declared = {package/'module.yaml', *(within(package, name) for name in [manifest.get('compose','compose.yaml'), *manifest['build_inputs']])}
-            if {p for p in package.rglob('*') if p.is_file()} != declared:
-                raise XocError('module_undeclared_file', 'Every module package file must be declared in its manifest.')
-            check_package_images(yaml_document(within(package, manifest.get('compose', 'compose.yaml'))))
-            identifier = manifest['id']
-            if identifier in catalog(staged, allow_fixtures=True):
-                raise XocError('module_exists', 'A package already owns this module identifier.')
-            if sum(p.stat().st_size for p in package.rglob('*') if p.is_file()) > 128*1024**2:
-                raise XocError('module_size', 'Module source exceeds the 128 MiB installation limit.')
-            shutil.copytree(package, staged/'modules.d'/identifier)
+        if action in ('add', 'upgrade') and package:
+            identifier = stage_package(package, staged, replace=action == 'upgrade')
+        if action == 'upgrade':
+            if not package:
+                raise XocError('missing_arguments', 'xoc module upgrade --package <directory>')
+            if identifier not in chosen:
+                raise XocError('module_not_selected', 'The module is not selected.')
         if action == 'add':
             if not identifier:
                 raise XocError('missing_arguments', 'Choose a catalog ID or a module --package directory.')
