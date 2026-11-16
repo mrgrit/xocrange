@@ -298,3 +298,23 @@ def test_update_plans_the_staged_release_with_its_own_planner(tmp_path):
             file.write_bytes(file.read_bytes().replace(b'10.20.30.', b'10.20.130.'))
     assert lifecycle.release_plan(staged, chosen)['lock']['selected']
     shutil.rmtree(staged)
+
+
+def test_evidence_service_is_stopped_backed_up_restored_and_resumed(monkeypatch):
+    """A failed update rewrote xocrange-evidence.service to the new release; the restore left it
+    there, so it crash-looped against the restored plan (stale_plan) and flooded Sysmon."""
+    from xocrange import operations as ops
+    assert 'xocrange-evidence.service' in ops.OWNED_UNITS
+    calls = []
+
+    class Done:
+        def __init__(self, out=''):
+            self.stdout, self.returncode = out, 0
+    monkeypatch.setattr(ops, 'command', lambda args, **kw: calls.append(args) or Done('loaded' if 'LoadState' in args else ''))
+    ops.stop()
+    stopped = [a[2] for a in calls if a[:2] == ['systemctl', 'stop']]
+    assert stopped.index('xocrange-evidence.service') < stopped.index('xocrange-collector.service')
+    calls.clear()
+    ops.resume(['xocrange-core.service', 'xocrange-collector.service', 'xocrange-evidence.service'])
+    started = [a[2] for a in calls if a[:2] == ['systemctl', 'start']]
+    assert started == ['xocrange-core.service', 'xocrange-collector.service', 'xocrange-evidence.service']

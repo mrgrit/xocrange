@@ -136,9 +136,18 @@ class Store:
     def set_cursor(self, name, value):
         self.db.execute("INSERT OR REPLACE INTO cursors VALUES (?,?)", (name, json.dumps(value)))
 
+    HEALTH_REFRESH = 20      # seconds; status() treats a check older than 60 s as stale
+
     def health(self, source, status):
+        # Every write is a commit (fsync). The collector reports ~25 sources per loop, so on slow
+        # disks unchanged statuses are refreshed at most every HEALTH_REFRESH seconds.
+        seen = self.__dict__.setdefault('_health_seen', {})
+        previous = seen.get(source)
+        if previous and previous[0] == status and time.monotonic() - previous[1] < self.HEALTH_REFRESH:
+            return
         with self.db:
             self.db.execute("INSERT OR REPLACE INTO health VALUES (?,?,?)", (source, now(), status))
+        seen[source] = (status, time.monotonic())
 
     def processing_error(self, source, raw, code):
         from .retention import check_write

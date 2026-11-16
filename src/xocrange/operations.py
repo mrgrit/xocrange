@@ -27,7 +27,7 @@ PREFIX = Path('/opt/xocrange')
 PROJECT = 'xoc-core-security-path'
 UNITS = ('xocrange-log-maintenance.timer', 'xocrange-log-maintenance.service',
          'xocrange-observer.timer', 'xocrange-observer.service', 'xocrange-collector.service',
-         'xocrange-osquery.service', 'sysmon.service', 'xocrange-core.service')
+         'xocrange-evidence.service', 'xocrange-osquery.service', 'sysmon.service', 'xocrange-core.service')
 OWNED_UNITS = tuple(u for u in UNITS if u != 'sysmon.service')
 STATE_NAMES = ('platform', 'ui', 'manager', 'siem', 'osquery', 'last-install.json',
                'installer-owned', 'storage-configured', 'telemetry-owned', 'release-inventory.json')
@@ -154,7 +154,8 @@ def active_units():
 
 def stop():
     # Stop the producers before the collector and containers. auditd remains host-owned.
-    for unit in ('xocrange-log-maintenance.timer', 'xocrange-log-maintenance.service', 'xocrange-observer.timer', 'xocrange-observer.service', 'sysmon.service', 'xocrange-osquery.service', 'xocrange-collector.service', 'xocrange-core.service'):
+    # The evidence service reads the installed plan: stop it with the release it serves.
+    for unit in ('xocrange-log-maintenance.timer', 'xocrange-log-maintenance.service', 'xocrange-observer.timer', 'xocrange-observer.service', 'xocrange-evidence.service', 'sysmon.service', 'xocrange-osquery.service', 'xocrange-collector.service', 'xocrange-core.service'):
         if command(['systemctl', 'show', unit, '-p', 'LoadState', '--value'], check=False).stdout.strip() == 'loaded':
             command(['systemctl', 'stop', unit], timeout=300)
     running = command(['docker', '--context', 'default', 'ps', '-q', '--filter', 'label=com.docker.compose.project='+PROJECT]).stdout.split()
@@ -164,7 +165,7 @@ def stop():
 
 def resume(units):
     command(['systemctl', 'daemon-reload'])
-    for unit in ('xocrange-core.service', 'sysmon.service', 'xocrange-osquery.service', 'xocrange-collector.service', 'xocrange-observer.service', 'xocrange-observer.timer', 'xocrange-log-maintenance.timer'):
+    for unit in ('xocrange-core.service', 'sysmon.service', 'xocrange-osquery.service', 'xocrange-collector.service', 'xocrange-evidence.service', 'xocrange-observer.service', 'xocrange-observer.timer', 'xocrange-log-maintenance.timer'):
         if unit in units:
             command(['systemctl', 'start', unit], timeout=600)
 

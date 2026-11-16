@@ -252,3 +252,22 @@ def test_agent_activity_is_stored_without_native_forwarding_and_left_out_of_sour
     result = evaluate(sources, {'schema_version': QUERY_V2, 'request_id': 'r1', 'checks': [
         {'id': 's', 'type': 'c1_aggregate', 'target': 'siem', 'params': {'group_by': 'network.source.ip', 'since_days': 180}}]})
     assert [g['key'] for g in result['results'][0]['groups']] == [ATTACKER]
+
+
+def test_unchanged_health_is_not_rewritten_every_loop(tmp_path, monkeypatch):
+    """Each health write is a commit; unchanged statuses refresh at most every HEALTH_REFRESH s."""
+    import time as clock
+    store = Store(tmp_path / 'siem')
+    t = [1000.0]
+    monkeypatch.setattr(clock, 'monotonic', lambda: t[0])
+    store.health('fw-nftables', 'ready')
+    first = store.db.execute("SELECT checked FROM health WHERE source='fw-nftables'").fetchone()[0]
+    writes = []
+    store.db.set_trace_callback(lambda sql: writes.append(sql) if 'health' in sql else None)
+    t[0] += 5; store.health('fw-nftables', 'ready')                 # unchanged, recent: skipped
+    assert writes == []
+    t[0] += 1; store.health('fw-nftables', 'lagging')               # changed: written at once
+    t[0] += 30; store.health('fw-nftables', 'lagging')              # unchanged but old: refreshed
+    assert len([w for w in writes if w.startswith('INSERT')]) == 2
+    assert store.db.execute("SELECT status FROM health WHERE source='fw-nftables'").fetchone()[0] == 'lagging'
+    assert first
