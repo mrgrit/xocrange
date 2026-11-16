@@ -326,40 +326,6 @@
               "type": "integer"
             }
           }
-        },
-        "agent": {
-          "properties": {
-            "role": {
-              "type": "keyword"
-            },
-            "tool": {
-              "type": "keyword"
-            },
-            "decision": {
-              "type": "keyword"
-            },
-            "mode": {
-              "type": "keyword"
-            },
-            "code": {
-              "type": "keyword"
-            },
-            "skill": {
-              "type": "keyword"
-            },
-            "receipt": {
-              "type": "keyword"
-            },
-            "arguments_sha256": {
-              "type": "keyword"
-            },
-            "result_sha256": {
-              "type": "keyword"
-            },
-            "module": {
-              "type": "keyword"
-            }
-          }
         }
       }
     }
