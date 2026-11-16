@@ -15,13 +15,15 @@ from .planner import catalog, plan, write_plan
 from .lab import run_lab
 
 
-def learner_targets(root, selected, public_host):
-    """Hosts-only learner names (NAMING: xoc.range) for installed practice targets."""
+def learner_targets(root, selected, public_host, domain=None):
+    """Hosts-only learner names (NAMING: xoc.range) for installed practice targets, and the
+    learner's own lab domain with a Live Fire license (ADR 0011)."""
     import ipaddress
     entries = catalog(root)
-    names = sorted(t["id"] + ".xoc.range" for key in selected if key in entries
-                   and entries[key]["manifest"]["kind"] == "component"
-                   for t in entries[key]["manifest"].get("http_targets", []))
+    ids = sorted(t["id"] for key in selected if key in entries
+                 and entries[key]["manifest"]["kind"] == "component"
+                 for t in entries[key]["manifest"].get("http_targets", []))
+    names = [i + ".xoc.range" for i in ids] + ([domain] + [f"{i}.{domain}" for i in ids] if domain and ids else [])
     try:
         ipaddress.ip_address(public_host)
         hosts = f"{public_host} {' '.join(names)}" if names else None
@@ -153,7 +155,8 @@ def run(args):
         secret = private_json(STATE/'credentials.json')
         if args.action == 'targets':
             from .operations import installed
-            return learner_targets(args.root, installed()['selected'], secret['public_host'])
+            from .entitlements import learner_domain
+            return learner_targets(args.root, installed()['selected'], secret['public_host'], learner_domain(args.root))
         return {'url':'https://'+secret['public_host']+'/core/', 'username':'admin', 'password':secret.get('admin_password',secret['bootstrap_password']), 'ca_certificate':'/etc/xocrange/ca.crt', 'note':'Initial credentials; if changed in the UI, use the password you chose.'}
     if args.command == 'agents':
         from .lab import Docker, checked_plan

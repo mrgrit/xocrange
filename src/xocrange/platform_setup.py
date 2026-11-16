@@ -34,7 +34,9 @@ def prepare(engine, project, root, selected, host=None, state=STATE, tls=TLS_STA
     config.setdefault('installation_id', str(uuid.uuid4()))
     write(path, json.dumps(config))
     ensure_ca(tls, host)
-    certificate('web', ingress_names(host), tls)
+    from .entitlements import learner_domain
+    domain = learner_domain(root)
+    certificate('web', ingress_names(host, domain), tls)
     def volume(name, uid, gid=None, mode=0o700):
         base = owned_volume(engine, project, name)
         os.chown(base, uid, uid if gid is None else gid); base.chmod(mode)
@@ -85,6 +87,7 @@ def prepare(engine, project, root, selected, host=None, state=STATE, tls=TLS_STA
     write(ingress/'ingress.pem', (tls/'web.pem').read_bytes()+(tls/'web-key.pem').read_bytes(), 65532)
     web = volume('web-tls', 33)
     for name, value in {'ca.pem':(tls/'ca.pem').read_bytes(), 'host-rule.conf':host_rule(host),
+                        'learner-domains.json':json.dumps([domain] if domain else []),
                         'logo.png':(root/'assets/branding/xoc-range-logo.png').read_bytes()}.items():
         write(web/name, value, 33)
     write(Path('/etc/xocrange/ca.crt'), (tls/'ca.pem').read_bytes(), mode=0o644)

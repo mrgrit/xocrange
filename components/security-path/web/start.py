@@ -7,9 +7,24 @@ import re
 import subprocess
 
 LEARNER_DOMAIN = ".xoc.range"
+# ADR 0011: with a Live Fire license the learner's own lab domain is served as well. The list is
+# written by the platform setup into the read-only TLS volume; only lab names are accepted.
+DOMAINS_FILE = Path("/run/xoc-tls/learner-domains.json")
+LAB_DOMAIN = re.compile(r"(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+(?:lab|test|internal|home\.arpa)")
 
 
-def render(raw):
+def learner_domains(path=DOMAINS_FILE):
+    """Extra learner domains (never xoc.range itself): at most 4 lab names, or none."""
+    try:
+        values = json.loads(path.read_text()) if path.exists() else []
+    except (OSError, ValueError):
+        return []
+    if not isinstance(values, list):
+        return []
+    return [v for v in values[:4] if isinstance(v, str) and len(v) <= 253 and LAB_DOMAIN.fullmatch(v)]
+
+
+def render(raw, domains=()):
     if len(raw.encode()) > 16384:
         raise ValueError("HTTP target configuration exceeds the limit")
     targets = json.loads(raw)
@@ -45,7 +60,8 @@ def render(raw):
     for target in sorted((t for t in services if t.get("public")), key=lambda t: t["id"]):
         host = target["id"] + LEARNER_DOMAIN
         backend = f'http://{target["service"]}:{target["port"]}/'
-        learner.extend(['<VirtualHost *:8443>', f'ServerName {host}',
+        aliases = [f'ServerAlias {target["id"]}.{d}' for d in domains]
+        learner.extend(['<VirtualHost *:8443>', f'ServerName {host}', *aliases,
                         'RemoteIPHeader X-Xoc-Client-IP', 'RemoteIPInternalProxy 10.20.30.20',
                         'RequestHeader unset X-Xoc-Client-IP', 'RequestHeader set X-Forwarded-Proto "https"',
                         'ProxyPreserveHost On', f'ProxyPass / {backend}', f'ProxyPassReverse / {backend}']
@@ -57,7 +73,7 @@ def render(raw):
 
 if __name__ == "__main__":
     try:
-        config, page, learner = render(os.environ.get("XOC_WEB_TARGETS", "[]"))
+        config, page, learner = render(os.environ.get("XOC_WEB_TARGETS", "[]"), learner_domains())
     except (ValueError, TypeError):
         raise SystemExit("Invalid selected-target configuration")
     base = Path("/run/apache2")

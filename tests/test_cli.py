@@ -55,3 +55,5 @@ def test_learner_targets_list_only_selected_reviewed_targets():
     assert result['hosts_line'] == '192.0.2.10 juice.xoc.range'
     assert [t['url'] for t in result['targets']] == ['https://juice.xoc.range/']
     assert learner_targets(root, ['platform'], 'xoc.example.test')['hosts_line'] is None
+    live = learner_targets(root, ['platform', 'security-path', 'target-juice'], '192.0.2.10', 'alice.lab')
+    assert live['hosts_line'] == '192.0.2.10 juice.xoc.range alice.lab juice.alice.lab'   # ADR 0011

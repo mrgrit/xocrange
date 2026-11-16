@@ -25,8 +25,17 @@ Portal, NOC 2F and bundled guides are included; the complete Community release r
   --ref COMMIT       Download an exact 40-character Git commit instead of local source
   --public-host HOST IPv4 address or DNS name for HTTPS (default: host's route IP)
   --restore PATH     Install prerequisites, then restore a verified private backup
+  --livefire HOST    Live Fire Range Control address (default: look for one on the local network)
+  --no-livefire      Install Core only; do not look for a Live Fire server
+  --enroll-code CODE Class enrollment code from the instructor (otherwise asked when a server is found)
+  --lab-domain NAME  This learner's lab domain, e.g. alice.lab (otherwise asked)
+  --trust-vendor-key FILE  Vendor public key the Live Fire license must chain to (if not trusted yet)
   --dry-run          Describe operations without installing or accessing the network
   --help            Show this help
+
+Live Fire (ADR 0011): when a licensed Range Control answers on the local network and a class
+code is given, the Core is enrolled with the learner's lab domain (targets as dvwa.<domain>).
+Without a server or a code, Core is installed alone (xoc.range names, hosts file only).
 
 Running this development installer selects the experimental security-path profile.
 An existing unrelated Docker/containerd installation is never removed or migrated.
@@ -74,6 +83,12 @@ downloaded=
 restore_path=
 expected_install=
 dry_run=false
+livefire_mode=auto
+livefire_server=
+enroll_code=
+lab_domain=
+trust_vendor_key=
+livefire_staging=
 while (($#)); do
     case "$1" in
         --include|--without)
@@ -91,6 +106,17 @@ while (($#)); do
             need_value "$@"
             [[ $2 =~ ^[0-9a-f]{40}$ ]] || fail '--ref requires a full Git commit hash'
             source_ref=$2; shift 2 ;;
+        --livefire) need_value "$@"; livefire_server=$2; shift 2 ;;
+        --no-livefire) livefire_mode=off; shift ;;
+        --enroll-code)
+            need_value "$@"
+            [[ $2 =~ ^[A-Za-z0-9-]{8,16}$ ]] || fail 'Invalid enrollment code'
+            enroll_code=$2; shift 2 ;;
+        --lab-domain)
+            need_value "$@"
+            [[ $2 =~ ^[A-Za-z0-9.-]{3,253}$ ]] || fail 'Invalid lab domain'
+            lab_domain=$2; shift 2 ;;
+        --trust-vendor-key) need_value "$@"; trust_vendor_key=$(realpath -e -- "$2") || fail 'Vendor key file not found'; shift 2 ;;
         --dry-run) dry_run=true; shift ;;
         --help|-h) usage; exit 0 ;;
         *) fail "Unknown option: $1" ;;
@@ -109,6 +135,7 @@ for console_id in console-fw console-ips console-waf portal noc academy-reader; 
 done
 [[ $data_directory =~ ^/[A-Za-z0-9_/-]+$ && $data_directory != / ]] || fail 'Invalid data directory'
 [[ -z $public_host || $public_host =~ ^[A-Za-z0-9][A-Za-z0-9.-]{0,252}$ ]] || fail 'Invalid public hostname'
+[[ -z $livefire_server || $livefire_server =~ ^[A-Za-z0-9][A-Za-z0-9.-]{0,252}$ ]] || fail 'Invalid Live Fire server address'
 if $dry_run; then
     usage
     printf '\nData directory: %s\n' "$data_directory"
@@ -154,6 +181,7 @@ checkpoint=
 on_exit() {
     code=$?
     if [[ -n ${downloaded:-} && -d $downloaded ]]; then rm -rf -- "$downloaded"; fi
+    if [[ -n ${livefire_staging:-} && -d $livefire_staging ]]; then rm -rf -- "$livefire_staging"; fi
     if ((code)); then
         printf '{"status":"failed","stage":"%s","exit_code":%s,"log":"%s"}\n' \
             "$current_stage" "$code" "$log" > "$state/last-attempt.json"
@@ -277,6 +305,48 @@ runtime=$prefix/venvs/$(basename "$release")
 "$runtime/bin/python" -m pip install --require-hashes -r "$release/requirements.lock"
 "$runtime/bin/python" -m pip install --no-deps "$release"
 xoc=("$runtime/bin/xoc" --root "$release")
+
+# Live Fire enrollment (ADR 0011) before the plan, so the platform starts with the learner's
+# domain. Already enrolled Cores, updates without a terminal and --no-livefire skip it.
+livefire_dir=/etc/xocrange/livefire
+livefire_enrolled=
+if [[ -f $livefire_dir/enrollment.json ]]; then
+    livefire_mode=off
+    livefire_enrolled=$("$runtime/bin/python" -c 'import json,sys; print(json.load(open(sys.argv[1]))["domain"])' "$livefire_dir/enrollment.json")
+elif [[ $livefire_mode == auto && -z $enroll_code && ! -t 0 ]]; then
+    livefire_mode=off
+fi
+if [[ $livefire_mode == auto ]]; then
+    stage livefire-enrollment
+    livefire_staging=$state/livefire-$run_id
+    install -d -m 0700 "$livefire_staging"
+    enroll_args=(run --out "$livefire_staging" --trust-dir /etc/xocrange/entitlements/trust --targets)
+    for ((i=0; i<${#selection[@]}; i+=2)); do
+        if [[ ${selection[i]} == --include && ${selection[i+1]} == target-* ]]; then enroll_args+=("${selection[i+1]#target-}"); fi
+    done
+    if [[ -n $livefire_server ]]; then enroll_args+=(--server "$livefire_server"); fi
+    if [[ -n $enroll_code ]]; then enroll_args+=(--code "$enroll_code"); fi
+    if [[ -n $lab_domain ]]; then enroll_args+=(--domain "$lab_domain"); fi
+    if [[ -n $trust_vendor_key ]]; then enroll_args+=(--trust-key "$trust_vendor_key"); fi
+    if [[ -t 0 ]]; then enroll_args+=(--interactive); fi
+    enroll_status=0
+    "$runtime/bin/python" -I "$release/scripts/livefire-enroll.py" "${enroll_args[@]}" > "$livefire_staging/result.json" || enroll_status=$?
+    case $enroll_status in
+        0)
+            mapfile -t enrolled < <("$runtime/bin/python" -c 'import json,sys; d=json.load(open(sys.argv[1])); print(d["vendor_key_id"]); print(d["institution_id"]); print(d["range_id"]); print(d["domain"])' "$livefire_staging/enrollment.json")
+            install -d -m 0755 /etc/xocrange/entitlements
+            "${xoc[@]}" license trust --key-id "${enrolled[0]}" --file "$livefire_staging/vendor.pem" >/dev/null
+            "${xoc[@]}" license activate --file "$livefire_staging/license.json" --institution "${enrolled[1]}" --range "${enrolled[2]}" >/dev/null
+            install -d -m 0700 "$livefire_dir" "$livefire_dir/credentials"
+            install -m 0600 "$livefire_staging"/credentials/* "$livefire_dir/credentials/"
+            install -m 0644 "$livefire_staging/enrollment.json" "$livefire_dir/enrollment.json"
+            livefire_enrolled=${enrolled[3]}
+            ;;
+        3) ;;   # no server or no code: Core only (the message was printed)
+        *) fail 'Live Fire enrollment did not complete (see the message above). To install Core only, add --no-livefire.' ;;
+    esac
+    rm -rf -- "$livefire_staging"; livefire_staging=
+fi
 
 stage module-plan
 plan_json=$state/plan-$run_id.json
@@ -486,6 +556,21 @@ PY
 cp "$state/last-install.json" "$state/last-attempt.json"
 stage operational-maintenance
 bash "$release/scripts/install-operations.sh" "$release" "$runtime"
+if [[ -n $livefire_enrolled ]]; then
+    # Class domain list -> managed /etc/hosts block (ADR 0011). Only on enrolled Cores.
+    stage livefire-hosts
+    printf '%s\n' '[Unit]' 'Description=xOC Range Live Fire: class domain list into /etc/hosts' \
+        'After=network-online.target' '' '[Service]' 'Type=oneshot' \
+        "ExecStart=/usr/bin/python3 -I $prefix/current/scripts/livefire-hosts.py" \
+        'NoNewPrivileges=yes' 'ProtectHome=yes' 'PrivateTmp=yes' \
+        > /etc/systemd/system/xocrange-livefire-hosts.service
+    printf '%s\n' '[Unit]' 'Description=xOC Range Live Fire: refresh the class domain list' '' '[Timer]' \
+        'OnBootSec=1min' 'OnUnitActiveSec=2min' 'RandomizedDelaySec=20s' '' '[Install]' 'WantedBy=timers.target' \
+        > /etc/systemd/system/xocrange-livefire-hosts.timer
+    systemctl daemon-reload
+    systemctl enable --now xocrange-livefire-hosts.timer >/dev/null
+    systemctl start xocrange-livefire-hosts.service || printf 'Warning: the class domain list was not fetched yet; the timer retries.\n' >&2
+fi
 stage release-inventory
 "$runtime/bin/python" "$release/scripts/release-inventory.py" "$release" "$plan_name"
 printf '{"status":"complete","release":"%s","checkpoint":"%s"}\n' "$release" "$checkpoint" > "$state/install-operation.json"
@@ -502,6 +587,10 @@ printf '\nInstalled and verified: experimental platform + fw + IPS + WAF.\n'
 printf 'State: %s/last-install.json\nLogs: %s\n' "$state" "$log"
 printf 'Optional workspaces follow the selected plan. The complete Community release remains under development.\n'
 printf 'Core login details: sudo xoc platform credentials\n'
+if [[ -n $livefire_enrolled ]]; then
+    printf 'Live Fire: enrolled as %s (targets as dvwa.%s). Classmates are reached by their own domains.\n' "$livefire_enrolled" "$livefire_enrolled"
+    printf 'Assessor module credentials: sudo xoc module credentials m15-assessor --from %s/credentials\n' "$livefire_dir"
+fi
 if ((${#ui_selection[@]})); then
     printf 'SIEM login details: sudo xoc siem credentials\nLocal CA certificate: /etc/xocrange/ca.crt\n'
 fi

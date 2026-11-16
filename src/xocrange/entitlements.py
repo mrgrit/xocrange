@@ -31,6 +31,25 @@ def grant(root, directory=DEFAULT):
         raise XocError(getattr(exc, 'code', 'entitlement_unavailable'), 'C7 entitlement validation failed.') from exc
 
 
+DOMAIN_GRACE = 14   # days a learner domain keeps working after the license expires (ADR 0011)
+
+
+def learner_domain(root, directory=DEFAULT, now=None):
+    """The learner's lab domain from a valid Live Fire license, or None (Community: xoc.range only)."""
+    from datetime import datetime, timedelta, timezone
+    try:
+        value = grant(root, directory)
+    except XocError:
+        return None
+    if not value or not value.get('domain'):
+        return None
+    if value['expired']:
+        expires = datetime.fromisoformat(value['expires_at'].replace('Z', '+00:00'))
+        if (now or datetime.now(timezone.utc)) >= expires + timedelta(days=DOMAIN_GRACE):
+            return None
+    return value['domain']
+
+
 COMMUNITY_IDENTITY = ('community', 'local')
 _IDENTIFIER = re.compile(r'[a-zA-Z0-9][a-zA-Z0-9_.-]{0,63}')
 

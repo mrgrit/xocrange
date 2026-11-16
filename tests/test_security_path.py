@@ -224,3 +224,17 @@ def test_networks_keep_the_kt66_address_plan(security_checkout):
     assert compose["networks"]["int"]["ipam"]["config"][0]["ip_range"] == "10.20.40.128/25"
     assert compose["services"]["web"]["networks"] == {"dmz": {"ipv4_address": "10.20.32.80"}, "int": {"ipv4_address": "10.20.40.80"}}
     assert compose["services"]["fw"]["networks"]["ext"] == {"ipv4_address": "10.20.30.1"}
+
+
+def test_learner_vhosts_also_answer_to_the_live_fire_lab_domain(tmp_path):
+    """ADR 0011: with a licensed learner domain, dvwa.alice.lab reaches the same target."""
+    module = runpy.run_path(str(ROOT / "components/security-path/web/start.py"))
+    targets = json.dumps([{"id": "dvwa", "service": "dvwa", "port": 80, "public": True}])
+    _, _, learner = module["render"](targets, ["alice.lab"])
+    assert "ServerName dvwa.xoc.range" in learner and "ServerAlias dvwa.alice.lab" in learner
+    path = tmp_path / "learner-domains.json"
+    for content, expected in [('["alice.lab"]', ["alice.lab"]), ('["www.naver.com", "bob.test"]', ["bob.test"]),
+                              ('["x.lab\\nInclude /tmp/evil"]', []), ('{"a": 1}', []), ("not json", [])]:
+        path.write_text(content)
+        assert module["learner_domains"](path) == expected, content
+    assert module["learner_domains"](tmp_path / "missing.json") == []

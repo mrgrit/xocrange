@@ -132,10 +132,12 @@ backend security_path
 '''
 
 
-def ingress_names(host):
+def ingress_names(host, domain=None):
     """Names served by the TLS ingress: the access address plus the hosts-only
-    learner domain for selected practice targets (<id>.xoc.range)."""
-    return list(dict.fromkeys([host, 'localhost', '127.0.0.1', 'xoc.range', '*.xoc.range']))
+    learner domain for selected practice targets (<id>.xoc.range), and with a Live Fire
+    license the learner's own lab domain (ADR 0011)."""
+    return list(dict.fromkeys([host, 'localhost', '127.0.0.1', 'xoc.range', '*.xoc.range']
+                              + ([domain, '*.' + domain] if domain else [])))
 
 
 def host_rule(host):
@@ -217,7 +219,9 @@ def prepare(engine, project, host=None, state=STATE, root=None):
     credentials['public_host']=host
     write(path,json.dumps(credentials,indent=2)+'\n')
     ensure_ca(state, host)
-    for name, names in [('indexer',['indexer']),('dashboard',['dashboard']),('web',ingress_names(host)),('xoc-indexer-admin',[])]:
+    from .entitlements import learner_domain
+    domain = learner_domain(root) if root is not None else None
+    for name, names in [('indexer',['indexer']),('dashboard',['dashboard']),('web',ingress_names(host, domain)),('xoc-indexer-admin',[])]:
         certificate(name,names,state)
     def populate(volume, uid, files):
         base=owned_volume(engine,project,volume)
@@ -243,7 +247,7 @@ def prepare(engine, project, host=None, state=STATE, root=None):
         if directory.is_symlink():raise XocError('unsafe_config','Dashboard data must not redirect managed paths.')
         directory.mkdir(mode=0o700,exist_ok=True);os.chown(directory,1000,1000)
     write(dashboard_data/'wazuh/config/wazuh.yml',yaml.safe_dump(native),1000)
-    web_files={'ca.pem':(state/'ca.pem').read_bytes(),'host-rule.conf':host_rule(host)}
+    web_files={'ca.pem':(state/'ca.pem').read_bytes(),'host-rule.conf':host_rule(host),'learner-domains.json':json.dumps([domain] if domain else [])}
     if root is not None:
         web_files['logo.png']=(root/'assets/branding/xoc-range-logo.png').read_bytes()
     populate('web-tls',33,web_files)

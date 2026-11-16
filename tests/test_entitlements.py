@@ -276,3 +276,20 @@ def test_issuer_chain_must_be_rooted_in_a_trusted_vendor_key(delegation, tmp_pat
         c7.verify(license(cert=forged), keys, IDENTITY, '0.1.0', NOW)
     for good in ('bob.class1.internal', 'x.home.arpa', 'team-7.test'):
         assert c7.domain(good) == good
+
+
+def test_learner_domain_follows_the_license_with_a_grace_period(monkeypatch):
+    from datetime import timedelta
+    import xocrange.entitlements as host
+    base = {'domain': 'alice.lab', 'expired': False, 'expires_at': '2026-11-01T00:00:00Z'}
+    monkeypatch.setattr(host, 'grant', lambda root, directory=None: dict(base))
+    assert host.learner_domain(ROOT) == 'alice.lab'
+    monkeypatch.setattr(host, 'grant', lambda root, directory=None: dict(base, expired=True))
+    assert host.learner_domain(ROOT, now=NOW.replace(month=11, day=10)) == 'alice.lab'      # within 14 days
+    assert host.learner_domain(ROOT, now=NOW.replace(month=11, day=20)) is None             # after the grace period
+    monkeypatch.setattr(host, 'grant', lambda root, directory=None: None)
+    assert host.learner_domain(ROOT) is None                                                 # Community
+    def broken(root, directory=None):
+        raise XocError('entitlement_signature', 'bad')
+    monkeypatch.setattr(host, 'grant', broken)
+    assert host.learner_domain(ROOT) is None
