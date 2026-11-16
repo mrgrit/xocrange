@@ -175,3 +175,32 @@ def test_local_ca_signs_only_lab_names(tmp_path):
     named = tmp_path/'named'; named.mkdir()
     ui_setup.ensure_ca(named, 'core.school.example')                   # a hostname access address is allowed
     ui_setup.certificate('web', ui_setup.ingress_names('core.school.example'), named)
+
+
+def test_added_agent_mapping_reexports_only_agent_events(tmp_path):
+    """Adding the agent field mapping must not rewrite a multi-GiB store: the stored digest of the
+    mapping without it shows the change is that addition, so only xoc-agent events go out again."""
+    import copy
+    from xocrange.indexer import mapping_digest, mark_reexport, reexport_scope
+    template = json.loads((ROOT / 'components/siem-ui/index-template.json').read_text())
+    assert 'agent' in template['template']['mappings']['properties']
+    previous = copy.deepcopy(template); del previous['template']['mappings']['properties']['agent']
+    old_digest = mapping_digest(previous)
+    assert old_digest == __import__('hashlib').sha256(json.dumps(previous, sort_keys=True).encode()).hexdigest()
+    assert reexport_scope(mapping_digest(template), template) is None
+    assert reexport_scope(old_digest, template) == ('xoc-agent',)
+    other = copy.deepcopy(previous); other['template']['mappings']['properties']['producer'] = {'type': 'text'}
+    assert reexport_scope(mapping_digest(other), template) == ()        # any other change: full re-export
+    assert reexport_scope(None, template) == ()
+    store = Store(tmp_path / 'siem')
+    receipt = {"schema_version": "xoc.agent-activity/0.1.0", "at": "2026-11-16T00:00:00Z", "role": "operator",
+               "tool": "siem_search", "decision": "allow", "receipt": "rcpt-0123456789abcdef", "module": "m7-operator"}
+    store.ingest('xoc-agent', 'agent-m7-operator', 1, json.dumps(receipt).encode())
+    store.ingest('suricata', 'ips-eve', 1, (ROOT / 'tests/fixtures/events/suricata-alert.json').read_bytes())
+    store.db.execute("UPDATE events SET confirmed='2026-11-16T00:00:01Z', indexed='2026-11-16T00:00:02Z'")
+    state = lambda: dict(store.db.execute('SELECT producer, indexed IS NULL FROM events').fetchall())
+    assert state() == {'xoc-agent': 0, 'suricata': 0}
+    mark_reexport(store, ('xoc-agent',))
+    assert state() == {'xoc-agent': 1, 'suricata': 0}
+    mark_reexport(store, ())
+    assert state() == {'xoc-agent': 1, 'suricata': 1}

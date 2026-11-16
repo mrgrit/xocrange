@@ -9,6 +9,8 @@ import ssl
 import time
 from urllib.parse import urlencode
 
+from itertools import combinations
+
 from .errors import XocError
 from .event_store import Store, now
 from .ui_setup import STATE, private_json
@@ -114,6 +116,42 @@ def export(store, client):
     return 'indexer_rejected' if failed else 'ready'
 
 
+# Mapping additions whose fields only these producers carry. Adding one re-exports just
+# those events; a full re-export of a multi-GiB store cannot finish within the service
+# start deadline (it rewrites every row before the Indexer sees one).
+SCOPED_FIELDS = {'agent': ('xoc-agent',)}
+
+
+def mapping_digest(template, without=()):
+    template = json.loads(json.dumps(template))
+    for name in without:
+        template['template']['mappings']['properties'].pop(name, None)
+    return hashlib.sha256(json.dumps(template, sort_keys=True).encode()).hexdigest()
+
+
+def reexport_scope(stored, template):
+    """None: mapping unchanged. (): re-export everything. Producers: re-export only theirs,
+    because the stored mapping equals this one without some scoped field additions."""
+    if stored == mapping_digest(template):
+        return None
+    present = [name for name in SCOPED_FIELDS if name in template['template']['mappings']['properties']]
+    for size in range(1, len(present) + 1):
+        for added in combinations(present, size):
+            if stored == mapping_digest(template, added):
+                return tuple(sorted({p for name in added for p in SCOPED_FIELDS[name]}))
+    return ()
+
+
+def mark_reexport(store, scope):
+    """Queue events for the Indexer again: only the given producers' events, or everything."""
+    if scope:
+        marks=','.join('?'*len(scope))
+        store.db.execute(f'UPDATE events INDEXED BY events_producer_time SET indexed=NULL WHERE producer IN ({marks}) AND confirmed IS NOT NULL',scope)
+    else:
+        store.db.execute('UPDATE events SET indexed=NULL WHERE confirmed IS NOT NULL')
+        store.db.execute('UPDATE wazuh_alerts SET indexed=NULL')
+
+
 def initialize(client, root, timeout=240):
     deadline=time.monotonic()+timeout
     while True:
@@ -148,15 +186,15 @@ def initialize(client, root, timeout=240):
     status,_=client.request('PUT','/xoc-events-*/_mapping?allow_no_indices=true',template['template']['mappings'])
     if status not in (200,404): raise XocError('indexer_mapping','Cannot reconcile the C1 index mapping.')
     store=Store('/var/lib/xocrange/siem')
-    digest=hashlib.sha256(json.dumps(template,sort_keys=True).encode()).hexdigest()
+    digest=mapping_digest(template)
     status,identity=client.request('GET','/')
     cluster=identity.get('cluster_uuid')
     if status!=200 or not isinstance(cluster,str) or cluster=='_na_':
         raise XocError('indexer_identity','Cannot identify the initialized Indexer data store.')
     with store.transaction():
-        if store.cursor('indexer-mapping') != digest or store.cursor('indexer-cluster') != cluster:
-            store.db.execute('UPDATE events SET indexed=NULL WHERE confirmed IS NOT NULL')
-            store.db.execute('UPDATE wazuh_alerts SET indexed=NULL')
+        scope=() if store.cursor('indexer-cluster') != cluster else reexport_scope(store.cursor('indexer-mapping'),template)
+        if scope is not None:
+            mark_reexport(store,scope)
             store.set_cursor('indexer-mapping',digest)
             store.set_cursor('indexer-cluster',cluster)
     store.db.close()
