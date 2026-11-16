@@ -293,3 +293,29 @@ def test_learner_domain_follows_the_license_with_a_grace_period(monkeypatch):
         raise XocError('entitlement_signature', 'bad')
     monkeypatch.setattr(host, 'grant', broken)
     assert host.learner_domain(ROOT) is None
+
+
+def test_registry_login_sends_the_active_license_on_stdin(monkeypatch, tmp_path):
+    """L17: the license is the registry credential; never on the command line."""
+    import xocrange.entitlements as host
+    (tmp_path/'license.json').write_bytes(b'{"signed":"license"}')
+    monkeypatch.setattr(host.os, 'geteuid', lambda: 0)
+    monkeypatch.setattr(host, 'grant', lambda root, directory=None: {'license_id': 'lic-1', 'expired': False, 'modules': {'m15-assessor': '>=0.1.0'}})
+    calls = []
+    class Done:
+        returncode = 0; stderr = ''
+    monkeypatch.setattr(host.subprocess, 'run', lambda args, **kw: calls.append((args, kw.get('input'))) or Done())
+    result = host.registry_login(ROOT, 'registry.example:5443', directory=tmp_path)
+    args, stdin = calls[0]
+    assert args[-4:] == ['registry.example:5443', '--username', 'license', '--password-stdin']
+    assert base64.urlsafe_b64decode(stdin + '==') == b'{"signed":"license"}' and stdin not in ' '.join(args)
+    assert result == {'status': 'logged_in', 'registry': 'registry.example:5443', 'license_id': 'lic-1', 'modules': ['m15-assessor']}
+    for bad in ('', 'http://x', 'a b'):
+        with pytest.raises(XocError):
+            host.registry_login(ROOT, bad, directory=tmp_path)
+    monkeypatch.setattr(host, 'grant', lambda root, directory=None: {'license_id': 'lic-1', 'expired': True, 'modules': {}})
+    with pytest.raises(XocError, match='expired'):
+        host.registry_login(ROOT, 'registry.example:5443', directory=tmp_path)
+    monkeypatch.setattr(host, 'grant', lambda root, directory=None: None)
+    with pytest.raises(XocError):
+        host.registry_login(ROOT, 'registry.example:5443', directory=tmp_path)

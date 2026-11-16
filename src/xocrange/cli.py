@@ -69,11 +69,13 @@ def parser():
     licensing.add_argument('--institution')
     licensing.add_argument('--range', dest='range_id')
     modules = commands.add_parser('module', help='Install/remove selected modules; preserve settings and evidence')
-    modules.add_argument('action', choices=['list','add','remove','credentials'])
+    modules.add_argument('action', choices=['list','add','remove','credentials','login'])
     modules.add_argument('identifier', nargs='?')
     modules.add_argument('--package', type=Path)
     modules.add_argument('--preview', action='store_true')
     modules.add_argument('--from', dest='source_dir', type=Path, help='credentials: directory with range-control.url, client.crt, client.key, ca.crt')
+    modules.add_argument('--registry', help='login: paid module registry host[:port]; the active license is the credential')
+    modules.add_argument('--ca', type=Path, help='login: CA certificate of a registry that has no public certificate')
     evidence = commands.add_parser('evidence', help='Read-only evidence socket for entitled modules (ADR-0008)')
     evidence.add_argument('action', choices=['serve'])
     backup = commands.add_parser('backup', help='Consistent private backup, verification and transactional restore')
@@ -124,6 +126,11 @@ def run(args):
                 from .evidence import reload_service
                 reload_service()
             return value
+        if args.action == 'login':
+            from .entitlements import registry_login
+            if not args.registry:
+                raise XocError('usage', 'xoc module login --registry <host[:port]> [--ca <file>]')
+            return registry_login(args.root, args.registry, args.ca)
         if args.action == 'credentials':
             from .evidence import install_credentials
             if not args.identifier or not args.source_dir:

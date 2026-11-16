@@ -4,6 +4,7 @@ import json
 import re
 import os
 import shutil
+import subprocess
 import tempfile
 from pathlib import Path
 from . import __version__
@@ -29,6 +30,43 @@ def grant(root, directory=DEFAULT):
         return api.load(directory, __version__)
     except (api.Denied, OSError) as exc:
         raise XocError(getattr(exc, 'code', 'entitlement_unavailable'), 'C7 entitlement validation failed.') from exc
+
+
+REGISTRY = re.compile(r'[A-Za-z0-9](?:[A-Za-z0-9.-]{0,252})(?::[0-9]{1,5})?\Z')
+
+
+def registry_login(root, registry, ca=None, directory=DEFAULT):
+    """Log Docker in to the paid module registry with the active license (L17, PACKAGING §8).
+
+    The registry's token service verifies the same signed license and hands out pull tokens only
+    for the modules it grants, until it expires. The license goes to `docker login` on stdin;
+    Docker keeps it in root's configuration. A registry without a public certificate needs its CA
+    (`--ca`), placed in Docker's per-registry trust directory.
+    """
+    import base64
+    if os.geteuid() != 0:
+        raise XocError('root_required', 'Registry login requires sudo.')
+    if not REGISTRY.fullmatch(registry or ''):
+        raise XocError('invalid_registry', 'Give the registry as host or host:port.')
+    value = grant(root, directory)
+    if value is None:
+        raise XocError('commercial_unavailable', 'No Live Fire license is active; Community needs no registry.')
+    if value['expired']:
+        raise XocError('entitlement_expired', 'The license has expired: installed modules keep read and export, new pulls are refused.')
+    if ca is not None:
+        data = Path(ca).read_bytes()
+        if b'-----BEGIN CERTIFICATE-----' not in data or len(data) > 65536:
+            raise XocError('invalid_ca', 'The registry CA must be a PEM certificate.')
+        target = Path('/etc/docker/certs.d')/registry
+        target.mkdir(parents=True, exist_ok=True, mode=0o755)
+        atomic(target/'ca.crt', data)
+        (target/'ca.crt').chmod(0o644)
+    password = base64.urlsafe_b64encode((directory/'license.json').read_bytes()).rstrip(b'=').decode()
+    result = subprocess.run(['docker', '--context', 'default', 'login', registry, '--username', 'license', '--password-stdin'],
+                            input=password, capture_output=True, text=True, timeout=60)
+    if result.returncode:
+        raise XocError('registry_login_failed', 'The registry refused the license: ' + (result.stderr.strip().splitlines() or ['no answer'])[-1][:200])
+    return {'status': 'logged_in', 'registry': registry, 'license_id': value['license_id'], 'modules': sorted(value['modules'])}
 
 
 DOMAIN_GRACE = 14   # days a learner domain keeps working after the license expires (ADR 0011)

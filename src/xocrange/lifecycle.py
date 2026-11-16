@@ -1,6 +1,7 @@
 """Stage a reviewed selection/package, then delegate its transaction to install.sh."""
 import json
 import os
+import re
 from pathlib import Path
 import shutil
 import subprocess
@@ -81,6 +82,18 @@ def copy_source(source, destination):
         shutil.copy2(source/relative, target)
 
 
+PINNED_IMAGE = re.compile(r'[a-z0-9][a-z0-9.-]*(?::[0-9]{1,5})?/[a-z0-9][a-z0-9/._-]*(?::[A-Za-z0-9._-]{1,128})?@sha256:[0-9a-f]{64}')
+
+
+def check_package_images(fragment):
+    """Images in an installable package (paid modules from the registry, L17) must name a
+    registry and be pinned by digest, so what the license unlocked is exactly what runs."""
+    for service in (fragment.get('services') or {}).values():
+        image = service.get('image') if isinstance(service, dict) else None
+        if image is not None and not PINNED_IMAGE.fullmatch(image):
+            raise XocError('module_image_unpinned', 'Module images must come from a registry and be pinned by digest (@sha256:...).')
+
+
 def change(root, action, identifier=None, package=None, source=None, *, preview=False):
     if os.geteuid() != 0:
         raise XocError('root_required', 'Module and update operations require sudo.')
@@ -100,6 +113,7 @@ def change(root, action, identifier=None, package=None, source=None, *, preview=
             declared = {package/'module.yaml', *(within(package, name) for name in [manifest.get('compose','compose.yaml'), *manifest['build_inputs']])}
             if {p for p in package.rglob('*') if p.is_file()} != declared:
                 raise XocError('module_undeclared_file', 'Every module package file must be declared in its manifest.')
+            check_package_images(yaml_document(within(package, manifest.get('compose', 'compose.yaml'))))
             identifier = manifest['id']
             if identifier in catalog(staged, allow_fixtures=True):
                 raise XocError('module_exists', 'A package already owns this module identifier.')

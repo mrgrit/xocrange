@@ -76,6 +76,7 @@ Core 자체 코드와 프로젝트 자산은 [PolyForm Noncommercial 1.0.0](LICE
 - `install.sh`만 내려받아 설치하면 내려받은 소스(약 62 MB)가 `/var/lib/xocrange/download-*`에 남던 문제 수정. 0.1.0을 이 방식으로 설치했다면 `sudo rm -rf /var/lib/xocrange/download-*`로 지워도 된다.
 - 설치·업데이트 중 1분 주기 로그 정리가 실패로 표시되던 문제 수정(이제 그 회차를 건너뜀).
 - Live Fire 연동용 증거 표면(ADR 0008) 포함. 상용 승인이 없는 Community 설치에서는 꺼져 있다.
+- 유료 모듈 전달(L17): `sudo xoc module login --registry <주소> [--ca <파일>]`이 활성 라이선스를 자격 증명으로 공급사 레지스트리에 로그인한다. 레지스트리는 라이선스가 허락한 모듈 이미지만, 만료 전까지만 내준다. 이미지로 받는 모듈 패키지는 레지스트리 주소와 `@sha256:` 다이제스트 고정이 필수다.
 - Live Fire 학생 도메인(ADR 0011): 설치 프로그램이 같은 망에서 Live Fire 서버(Range Control)를 찾는다. 찾으면 반 등록 코드와 학생 실습 도메인(예: `alice.lab`)을 받아 등록하고, 키를 활성화한 뒤 실습 타깃을 `dvwa.alice.lab`처럼 연다. 반 학생들의 도메인은 `/etc/hosts` 관리 블록으로 2분마다 맞춘다. 서버가 없거나 코드가 없으면 지금처럼 Core만 설치한다(`--no-livefire`로 탐색을 끌 수 있다). 라이선스가 만료되면 14일 뒤 학생 도메인을 뺀다.
 - 라이선스 계약 C7 0.2(ADR 0011 §7): 공급사가 서명한 발급자 인증서(`xoc.issuer/0.1.0`)로 학교 Range Control이 레인지 키(`xoc.entitlement/0.2.0`)를 발급할 수 있다. 레인지 키에는 학생의 실습 도메인이 들어갈 수 있다(`.lab`·`.test`·`.internal`·`.home.arpa`). Core는 공급사 키 → 발급자 인증서 → 레인지 키 사슬과 발급 범위(기관·등급·모듈·기간)를 오프라인으로 확인한다. 0.1.0 키는 그대로 받는다.
 - 새로 만드는 로컬 CA에 이름 제한을 건다(ADR 0011). 학생 PC가 신뢰하는 CA가 `xoc.range`·`.lab`·`.test`·`.internal`·`.home.arpa`·내부 서비스 이름·설치 때 정한 관리 호스트 이름만 서명하고, 실제 사이트 인증서는 만들 수 없다. 기존 설치의 CA는 그대로 둔다. 허용 밖의 관리 호스트 이름으로 바꾸면 설치가 `certificate_name_not_allowed`로 멈춘다.
