@@ -7,7 +7,7 @@ import secrets
 import subprocess
 import uuid
 from .registry import build_registry
-from .ui_setup import STATE as TLS_STATE, certificate, host_rule, ingress_config, ingress_names, owned_volume, private_json, public_host, write
+from .ui_setup import STATE as TLS_STATE, certificate, ensure_ca, host_rule, ingress_config, ingress_names, owned_volume, private_json, public_host, write
 from .errors import XocError
 
 STATE = Path('/var/lib/xocrange/platform')
@@ -33,9 +33,7 @@ def prepare(engine, project, root, selected, host=None, state=STATE, tls=TLS_STA
     config.setdefault('ssh_username', None)
     config.setdefault('installation_id', str(uuid.uuid4()))
     write(path, json.dumps(config))
-    if not (tls/'ca.pem').exists():
-        subprocess.run(['openssl','req','-x509','-newkey','rsa:3072','-nodes','-days','3650','-sha256','-keyout',str(tls/'ca-key.pem'),'-out',str(tls/'ca.pem'),'-subj','/CN=xOC Range local CA','-addext','basicConstraints=critical,CA:TRUE','-addext','keyUsage=critical,keyCertSign,cRLSign'],check=True,capture_output=True)
-        (tls/'ca-key.pem').chmod(0o600)
+    ensure_ca(tls, host)
     certificate('web', ingress_names(host), tls)
     def volume(name, uid, gid=None, mode=0o700):
         base = owned_volume(engine, project, name)

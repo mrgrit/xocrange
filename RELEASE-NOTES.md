@@ -76,6 +76,7 @@ Core 자체 코드와 프로젝트 자산은 [PolyForm Noncommercial 1.0.0](LICE
 - `install.sh`만 내려받아 설치하면 내려받은 소스(약 62 MB)가 `/var/lib/xocrange/download-*`에 남던 문제 수정. 0.1.0을 이 방식으로 설치했다면 `sudo rm -rf /var/lib/xocrange/download-*`로 지워도 된다.
 - 설치·업데이트 중 1분 주기 로그 정리가 실패로 표시되던 문제 수정(이제 그 회차를 건너뜀).
 - Live Fire 연동용 증거 표면(ADR 0008) 포함. 상용 승인이 없는 Community 설치에서는 꺼져 있다.
+- 새로 만드는 로컬 CA에 이름 제한을 건다(ADR 0011). 학생 PC가 신뢰하는 CA가 `xoc.range`·`.lab`·`.test`·`.internal`·`.home.arpa`·내부 서비스 이름·설치 때 정한 관리 호스트 이름만 서명하고, 실제 사이트 인증서는 만들 수 없다. 기존 설치의 CA는 그대로 둔다. 허용 밖의 관리 호스트 이름으로 바꾸면 설치가 `certificate_name_not_allowed`로 멈춘다.
 
 ## 출시 전 정리 기록
 

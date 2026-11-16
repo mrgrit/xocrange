@@ -2,6 +2,7 @@ import copy
 import json
 from pathlib import Path
 import shutil
+import subprocess
 import ssl
 
 import pytest
@@ -154,3 +155,23 @@ def test_native_bulk_uses_utf8_over_http(monkeypatch):
     body='{"index":{}}\n{"full_log":"한글 ⍰ 탐지"}\n'
     assert client.request('POST','/_bulk',body,content_type='application/x-ndjson')[0]==200
     assert captured['body']==body.encode('utf-8')
+
+
+def test_local_ca_signs_only_lab_names(tmp_path):
+    """ADR 0011: learners trust the local CA, so it carries DNS name constraints."""
+    from xocrange import ui_setup
+    from xocrange.errors import XocError
+    assert ui_setup.ensure_ca(tmp_path, '192.168.16.100') is True
+    text = subprocess.run(['openssl', 'x509', '-in', str(tmp_path/'ca.pem'), '-noout', '-ext', 'nameConstraints'],
+                          capture_output=True, text=True, check=True).stdout
+    assert all('DNS:' + n in text for n in ('xoc.range', 'lab', 'test', 'internal', 'home.arpa', 'indexer', 'dashboard'))
+    ui_setup.certificate('indexer', ['indexer'], tmp_path)
+    ui_setup.certificate('web', ui_setup.ingress_names('192.168.16.100') + ['alice.lab', '*.alice.lab'], tmp_path)
+    ui_setup.certificate('xoc-indexer-admin', [], tmp_path)
+    with pytest.raises(XocError) as refused:
+        ui_setup.certificate('rogue', ['www.naver.com'], tmp_path)
+    assert refused.value.code == 'certificate_name_not_allowed' and not (tmp_path/'rogue.pem').exists()
+    assert ui_setup.ensure_ca(tmp_path, '192.168.16.100') is False      # an existing CA is kept
+    named = tmp_path/'named'; named.mkdir()
+    ui_setup.ensure_ca(named, 'core.school.example')                   # a hostname access address is allowed
+    ui_setup.certificate('web', ui_setup.ingress_names('core.school.example'), named)

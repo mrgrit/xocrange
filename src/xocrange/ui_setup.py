@@ -146,6 +146,34 @@ def host_rule(host):
             f'    SecRule REQUEST_HEADERS:Host "@rx ^(?:{names})(?::[0-9]+)?$" "t:none,t:lowercase,ctl:ruleRemoveById=920350"\n')
 
 
+# ADR 0011: learners trust this CA on their PCs, so it may only sign lab names, never a real
+# site. DNS names only (IP SANs stay unconstrained): xoc.range, the lab domain suffixes a Live
+# Fire learner domain must end with, the internal service names, and the access hostname chosen
+# at install when it is a name rather than an address.
+LAB_SUFFIXES = ('lab', 'test', 'internal', 'home.arpa')
+INTERNAL_NAMES = ('indexer', 'dashboard', 'localhost')
+
+
+def ca_name_constraints(host):
+    names = ['xoc.range', *LAB_SUFFIXES, *INTERNAL_NAMES]
+    try:
+        ipaddress.ip_address(host)
+    except ValueError:
+        names.append(host)
+    return 'nameConstraints=critical,' + ','.join('permitted;DNS:' + n for n in dict.fromkeys(names))
+
+
+def ensure_ca(state, host):
+    """Create the local CA once. An existing CA is kept (learners already trust it)."""
+    if (state/'ca.pem').exists():
+        return False
+    subprocess.run(['openssl','req','-x509','-newkey','rsa:3072','-nodes','-days','3650','-sha256','-keyout',str(state/'ca-key.pem'),
+                    '-out',str(state/'ca.pem'),'-subj','/CN=xOC Range local CA','-addext','basicConstraints=critical,CA:TRUE',
+                    '-addext','keyUsage=critical,keyCertSign,cRLSign','-addext',ca_name_constraints(host)],check=True,capture_output=True)
+    (state/'ca-key.pem').chmod(0o600)
+    return True
+
+
 def certificate(name, names, state=STATE):
     cert, key = state/(name+'.pem'), state/(name+'-key.pem')
     stamp = state/(name+'-names.json')
@@ -165,8 +193,14 @@ def certificate(name, names, state=STATE):
     subprocess.run(['openssl','req','-new','-newkey','rsa:3072','-nodes','-keyout',str(key),'-out',str(csr),'-subj','/CN='+name],check=True,capture_output=True)
     subprocess.run(['openssl','x509','-req','-in',str(csr),'-CA',str(state/'ca.pem'),'-CAkey',str(state/'ca-key.pem'),'-set_serial',str(secrets.randbits(128)),'-days','397','-sha256','-extfile',str(ext),'-out',str(cert)],check=True,capture_output=True)
     for p in (cert,key): p.chmod(0o600)
+    csr.unlink(); ext.unlink()
+    # The CA's name constraints (ADR 0011) may refuse a name; fail here, not later in a browser.
+    if subprocess.run(['openssl','verify','-CAfile',str(state/'ca.pem'),str(cert)],capture_output=True).returncode:
+        cert.unlink(); key.unlink()
+        raise XocError('certificate_name_not_allowed',
+                       f'The local CA signs only lab names (xoc.range, .lab, .test, .internal, .home.arpa) and the access '
+                       f'hostname chosen at first install; {name} asked for {", ".join(names)}. Use the IP address or that hostname.')
     stamp.write_text(json.dumps(names)); stamp.chmod(0o600)
-    csr.unlink();ext.unlink()
 
 
 def prepare(engine, project, host=None, state=STATE, root=None):
@@ -182,9 +216,7 @@ def prepare(engine, project, host=None, state=STATE, root=None):
     host=public_host(host or credentials.get('public_host') or json.loads(subprocess.check_output(['ip','-j','-4','route','get','1.1.1.1'],text=True))[0]['prefsrc'])
     credentials['public_host']=host
     write(path,json.dumps(credentials,indent=2)+'\n')
-    if not (state/'ca.pem').exists():
-        subprocess.run(['openssl','req','-x509','-newkey','rsa:3072','-nodes','-days','3650','-sha256','-keyout',str(state/'ca-key.pem'),'-out',str(state/'ca.pem'),'-subj','/CN=xOC Range local CA','-addext','basicConstraints=critical,CA:TRUE','-addext','keyUsage=critical,keyCertSign,cRLSign'],check=True,capture_output=True)
-        (state/'ca-key.pem').chmod(0o600)
+    ensure_ca(state, host)
     for name, names in [('indexer',['indexer']),('dashboard',['dashboard']),('web',ingress_names(host)),('xoc-indexer-admin',[])]:
         certificate(name,names,state)
     def populate(volume, uid, files):
