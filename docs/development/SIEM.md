@@ -91,7 +91,7 @@ Ubuntu의 기본 `auditd.conf`는 로그 파티션이 차면 auditd 기록을 �
 
 root 전용 `/var/lib/xocrange/siem/retention.json`에서 `days`, `ingest_bytes`, `database_bytes`, `reserve_bytes`, `index_days`, `archive_days`를 조정할 수 있다. 기본값은 각각 1일·24 GiB·32 GiB·2 GiB·7일·2일이다. collector 재시작 때 설정을 검증한다. 미확인 입력·미색인 증거는 나이만으로 제거하지 않으며, 여유가 부족하면 cursor를 보존하고 수집을 중지한다. 여유 확보 후 다시 수집한다.
 
-Wazuh의 날짜별 hardlink 회전을 인식하고, 압축된 파일도 이전 논리 offset부터 이어 읽는다. archive 정리는 읽기가 끝났고 활성 hardlink가 아닌 닫힌 파일에만 적용한다. 새 SQLite 저장소는 `auto_vacuum=INCREMENTAL`로 만들고, 정리 때마다 빈 페이지를 최대 256 MiB씩 파일시스템에 돌려준다. 이전 버전에서 만든 저장소(`auto_vacuum=0`)는 수집기를 멈춘 상태에서 `PRAGMA auto_vacuum=INCREMENTAL; VACUUM;`을 한 번 실행해야 전환된다(2026-11-11 개발 VM: 38 GB → 6.1 GB, 약 5분). `status.storage`로 할당량·사용량·파일시스템 여유를 구분한다.
+Wazuh의 날짜별 hardlink 회전을 인식하고, 압축된 파일도 이전 논리 offset부터 이어 읽는다. archive 정리는 읽기가 끝났고 활성 hardlink가 아닌 닫힌 파일에만 적용한다. 새 SQLite 저장소는 `auto_vacuum=INCREMENTAL`로 만들고, 정리 때마다 빈 페이지를 최대 256 MiB씩 파일시스템에 돌려준다. 이전 버전에서 만든 저장소(`auto_vacuum=0`)는 수집기를 멈춘 상태에서 `PRAGMA auto_vacuum=INCREMENTAL; VACUUM;`을 한 번 실행해야 전환된다(2026-11-11 개발 VM: 38 GB → 6.1 GB, 약 5분). `status.storage`로 할당량·사용량·파일시스템 여유를 구분한다. 정리는 수집 루프마다 4초씩 나눠 하며, 행을 지운 조각마다 `retention` 상태를 갱신한다(한 바퀴가 길어도 진행 중이면 `ready`). 아무것도 지우지 못한 조각만 이어지면 상태가 600초 뒤 낡아 `degraded`가 된다.
 
 Wazuh 원본 경보(`wazuh_alerts`)는 원본 바이트와 작은 `xoc` 연결 정보(`annotation`)만 저장하고, Indexer로 보낼 검색 문서는 내보낼 때 다시 만든다. 만들어지는 문서는 이전 릴리스가 저장하던 문서와 바이트까지 같다. 이전 릴리스가 저장한 행은 저장된 문서를 그대로 쓴다. 전체 사본을 저장하던 때는 문서가 경보 행의 절반 이상, DB의 약 1/3이었다.
 

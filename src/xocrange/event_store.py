@@ -320,6 +320,7 @@ class Store:
         # per pass. Starting each slice at the first table let it spend the
         # whole budget on newly expired rows while the last table never ran.
         start = getattr(self, '_prune_resume', 0)
+        self.prune_deleted = 0      # rows removed by this call: an unfinished pass that removes rows is still working
         for index in [*range(start, len(tables)), *range(start)]:
             table, condition, params = tables[index]
             while True:
@@ -328,6 +329,7 @@ class Store:
                     return False
                 with self.db:
                     deleted = self.db.execute(f'DELETE FROM {table} WHERE rowid IN (SELECT rowid FROM {table} WHERE {condition} LIMIT ?)', (*params, batch)).rowcount
+                self.prune_deleted += deleted
                 if deleted < batch:
                     break
         self._prune_resume = 0

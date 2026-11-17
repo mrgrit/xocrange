@@ -538,12 +538,19 @@ class Collector:
         """One bounded slice of retention work; True when the pass is complete.
 
         Collection, delivery and export must keep running while expired rows
-        are removed, so a long pass is spread over several loops.
+        are removed, so a long pass is spread over several loops. A slice that
+        removed rows refreshes the retention health: on the demo Core one pass
+        over a busy day's expiry took 73 minutes and the SIEM showed degraded
+        all that time although deletion was working. A slice that removes
+        nothing does not, so a stuck pass still goes stale; disk use has its
+        own limit in Store.status.
         """
         import sqlite3
         from .retention import maintain
         try:
             if not self.store.prune(budget=budget):
+                if getattr(self.store, 'prune_deleted', 0):
+                    self.store.health('retention', 'ready')
                 return False
             self.store.health('retention', maintain(self))
         except (XocError, OSError, ValueError, sqlite3.DatabaseError):

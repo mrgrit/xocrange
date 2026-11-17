@@ -92,10 +92,11 @@ def test_budgeted_prune_stops_at_the_deadline_and_resumes(tmp_path, monkeypatch)
     clock=itertools.count()  # one tick per deadline check
     monkeypatch.setattr(event_store.time,'monotonic',lambda:next(clock))
     count=lambda:store.db.execute('SELECT (SELECT count(*) FROM events)+(SELECT count(*) FROM records)').fetchone()[0]
-    assert store.prune(budget=0) is False and count()==80
+    assert store.prune(budget=0) is False and count()==80 and store.prune_deleted==0
     passes=[]
     while not store.prune(budget=8,batch=5):
         passes.append(count());assert len(passes)<100
+        assert store.prune_deleted>0 or passes[-1]==0       # an unfinished slice reports what it removed
     assert len(passes)>=3 and passes==sorted(passes,reverse=True) and passes[0]<80
     assert count()==0 and store.db.execute('PRAGMA freelist_count').fetchone()[0]==0
 
@@ -104,13 +105,27 @@ def test_collector_runs_file_retention_only_after_the_store_pass_completes(monke
     from xocrange import retention
     calls=[]
     class FakeStore:
-        def __init__(self):self.results=[False,False,True]
+        def __init__(self):self.results=[False,False,True];self.prune_deleted=0
         def prune(self,budget):calls.append(('prune',budget));return self.results.pop(0)
         def health(self,source,status):calls.append((source,status))
     monkeypatch.setattr(retention,'maintain',lambda collector:'ready')
     collector=Collector.__new__(Collector);collector.store=FakeStore()
     assert [collector.maintain() for _ in range(3)]==[False,False,True]
     assert calls==[('prune',4),('prune',4),('prune',4),('retention','ready')]
+
+
+def test_an_unfinished_pass_that_removes_rows_keeps_retention_healthy(monkeypatch):
+    from xocrange import retention
+    calls=[]
+    class FakeStore:
+        def __init__(self):self.slices=[(False,64),(False,0),(True,10)];self.prune_deleted=0
+        def prune(self,budget):
+            done,self.prune_deleted=self.slices.pop(0);return done
+        def health(self,source,status):calls.append((source,status))
+    monkeypatch.setattr(retention,'maintain',lambda collector:'ready')
+    collector=Collector.__new__(Collector);collector.store=FakeStore()
+    assert [collector.maintain() for _ in range(3)]==[False,False,True]
+    assert calls==[('retention','ready'),('retention','ready')]       # the slice that removed nothing did not refresh it
 
 
 def test_wazuh_dated_hardlinks_recover_unread_tail_without_duplicates(tmp_path):
