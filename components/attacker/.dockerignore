@@ -1,0 +1,4 @@
+*
+!Dockerfile
+!sshd.conf
+!start.sh

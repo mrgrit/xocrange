@@ -1,0 +1,35 @@
+services:
+  attacker:
+    build: {context: ., dockerfile: Dockerfile}
+    hostname: attacker
+    init: true
+    networks:
+      ext:
+        ipv4_address: 10.20.30.202
+    # The learner's attack terminal for the bundled lessons: on the external network only, so
+    # everything it sends to the lab crosses the firewall, the IPS and the WAF with its own
+    # source address. NET_RAW stays for port scans; the start script sets the route and then
+    # removes NET_ADMIN and SETPCAP from the bounding set before sshd runs.
+    read_only: false
+    cap_drop: [ALL]
+    cap_add: [AUDIT_WRITE, CHOWN, DAC_OVERRIDE, FOWNER, KILL, NET_ADMIN, NET_BIND_SERVICE, NET_RAW, SETGID, SETPCAP, SETUID, SYS_CHROOT]
+    restart: unless-stopped
+    depends_on: [fw]
+    volumes:
+    - attacker-config:/run/xoc-attacker:ro
+    - attacker-data:/var/lib/xoc-attacker
+    - attacker-home:/home
+networks:
+  ext:
+    internal: true
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.enable_ip_masquerade: 'false'
+    ipam:
+      config:
+      - subnet: 10.20.30.0/24
+        gateway: 10.20.30.254
+volumes:
+  attacker-config: {}
+  attacker-data: {}
+  attacker-home: {}

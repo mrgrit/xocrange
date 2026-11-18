@@ -86,6 +86,12 @@ def prepare(engine, project, root, selected, host=None, state=STATE, tls=TLS_STA
         from .office_setup import account
         account(volume('office-config', 0), config)
         write(path, json.dumps(config))
+    if 'attacker' in selected:
+        from .office_setup import account, lab_hosts
+        terminal = volume('attacker-config', 0)
+        account(terminal, config)       # the same lab account as the office PC
+        write(terminal/'hosts', lab_hosts(planned, domain))
+        write(path, json.dumps(config))
     ingress = volume('ingress-config', 65532)
     write(ingress/'haproxy.cfg', ingress_config(host), 65532)
     write(ingress/'ingress.pem', (tls/'web.pem').read_bytes()+(tls/'web-key.pem').read_bytes(), 65532)

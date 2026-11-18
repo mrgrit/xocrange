@@ -17,6 +17,8 @@ table inet xoc_ips {
         ip saddr 10.20.70.21 ip daddr 10.20.30.0/24 tcp sport 22 counter name inspected queue num 0
         ip saddr 10.20.70.0/24 ip daddr 10.20.32.80 tcp dport 8080 counter name inspected queue num 0
         ip saddr 10.20.32.80 ip daddr 10.20.70.0/24 tcp sport 8080 counter name inspected queue num 0
+        ip saddr 10.20.70.21 ip daddr 10.20.30.202 tcp dport { 4444, 8000 } counter name inspected queue num 0
+        ip saddr 10.20.30.202 ip daddr 10.20.70.21 tcp sport { 4444, 8000 } counter name inspected queue num 0
         # Agents on the office network report to the Manager's agent port only (encrypted
         # Wazuh protocol, not inspected). The Manager has no route back, so the source is
         # translated below.

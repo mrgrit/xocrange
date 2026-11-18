@@ -168,7 +168,13 @@ def run(args):
             return learner_targets(args.root, installed()['selected'], secret['public_host'], learner_domain(args.root))
         result = {'url':'https://'+secret['public_host']+'/core/', 'username':'admin', 'password':secret.get('admin_password',secret['bootstrap_password']), 'ca_certificate':'/etc/xocrange/ca.crt', 'note':'Initial credentials; if changed in the UI, use the password you chose.'}
         if secret.get('office_password'):
-            result['office_pc'] = {'ssh':'ssh -p 2222 '+secret['office_username']+'@'+secret['public_host'], 'username':secret['office_username'], 'password':secret['office_password']}
+            from .operations import installed
+            chosen = installed()['selected']
+            account = {'username':secret['office_username'], 'password':secret['office_password']}
+            if 'office-pc' in chosen:
+                result['office_pc'] = dict(account, ssh='ssh -p 2222 '+secret['office_username']+'@'+secret['public_host'])
+            if 'attacker' in chosen:
+                result['attack_terminal'] = dict(account, ssh='ssh -p 2202 '+secret['office_username']+'@'+secret['public_host'])
         return result
     if args.command == 'agents':
         from .lab import Docker, checked_plan

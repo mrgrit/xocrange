@@ -41,6 +41,12 @@
       "published": 2222,
       "host_ip": "0.0.0.0",
       "protocol": "tcp"
+     },
+     {
+      "target": 2202,
+      "published": 2202,
+      "host_ip": "0.0.0.0",
+      "protocol": "tcp"
      }
     ],
     "volumes": [

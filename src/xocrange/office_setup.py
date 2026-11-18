@@ -1,4 +1,4 @@
-"""Office PC provisioning (ADR 0012): the lab account before start, the agent key after the Manager is up."""
+"""Office PC and attack terminal provisioning (ADR 0012, 0013): the lab account before start, the agent key after the Manager is up."""
 import os
 from pathlib import Path
 import secrets
@@ -24,6 +24,15 @@ def account(volume, config):
         raise XocError('office_account', 'Could not prepare the office PC account.')
     write(volume/'username', config['office_username'] + '\n')
     write(volume/'password.hash', hashed + '\n')
+
+
+def lab_hosts(planned, domain=None):
+    """Names the attack terminal resolves to the firewall's external address: the learner
+    names of the selected practice targets, so its requests cross fw, IPS and WAF."""
+    targets = sorted({t['id'] for t in (planned or {}).get('registry', {}).get('targets', [])
+                      if not str(t.get('component_id', '')).startswith('fixture-')})
+    names = [f'{t}.xoc.range' for t in targets] + ([f'{t}.{domain}' for t in targets] if domain else [])
+    return ('10.20.30.1 ' + ' '.join(names) + '\n') if names else ''
 
 
 def agent_key(engine, project, client, state=STATE):

@@ -282,6 +282,8 @@ def test_office_rules_reach_only_the_web_gateway_and_the_agent_port():
         "ip saddr 10.20.70.21 ip daddr 10.20.30.0/24 tcp sport 22 counter name inspected queue num 0",
         "ip saddr 10.20.70.0/24 ip daddr 10.20.32.80 tcp dport 8080 counter name inspected queue num 0",
         "ip saddr 10.20.32.80 ip daddr 10.20.70.0/24 tcp sport 8080 counter name inspected queue num 0",
+        "ip saddr 10.20.70.21 ip daddr 10.20.30.202 tcp dport { 4444, 8000 } counter name inspected queue num 0",
+        "ip saddr 10.20.30.202 ip daddr 10.20.70.21 tcp sport { 4444, 8000 } counter name inspected queue num 0",
         "ip saddr 10.20.70.0/24 ip daddr 10.20.32.100 tcp dport 1514 accept",
         "ip saddr 10.20.32.100 ip daddr 10.20.70.0/24 tcp sport 1514 ct state established accept",
         "ip saddr 10.20.70.0/24 ip daddr 10.20.32.100 tcp dport 1514 masquerade",
@@ -307,4 +309,41 @@ def test_office_account_is_a_hash_and_the_ingress_forwards_ssh(tmp_path, monkeyp
     account(tmp_path, again)
     assert again["office_password"] == config["office_password"]
     text = ingress_config("192.0.2.10")
-    assert "bind :2222" in text and "server fw 10.20.30.1:2222" in text and text.count("mode tcp") == 2
+    assert "bind :2222" in text and "server fw 10.20.30.1:2222" in text and text.count("mode tcp") == 4
+
+
+def test_attack_terminal_is_on_the_external_network_only(office_checkout):
+    """ADR 0013: the lessons' attack terminal reaches the lab only through the firewall."""
+    shutil.copytree(ROOT / "components/attacker", office_checkout / "components/attacker")
+    compose = plan(office_checkout, preset="security-path", include=["attacker", "management"], allow_experimental=True)["compose"]
+    terminal = compose["services"]["attacker"]
+    assert terminal["networks"] == {"ext": {"ipv4_address": "10.20.30.202"}} and "ports" not in terminal
+    assert {"target": 2202, "published": 2202, "host_ip": "0.0.0.0", "protocol": "tcp"} in compose["services"]["ingress"]["ports"]
+    fw = (ROOT / "components/security-path/fw/rules.nft").read_text()
+    assert "ip saddr 10.20.30.202 ip daddr 10.20.30.1 tcp dport 80 dnat to 10.20.32.80:8080" in fw
+    # From the office PC only the two practice ports reach the terminal.
+    assert [line.strip() for line in fw.splitlines() if "10.20.30.202" in line and "accept" in line and "dport" in line] == [
+        "ip saddr 10.20.70.21 ip daddr 10.20.30.202 tcp dport { 4444, 8000 } counter name forwarded_office accept"]
+    fragment = yaml.safe_load((office_checkout / "components/attacker/compose.yaml").read_text())
+    fragment["services"]["attacker"]["networks"]["int"] = {}
+    (office_checkout / "components/attacker/compose.yaml").write_text(yaml.safe_dump(fragment))
+    with pytest.raises(XocError) as error:
+        plan(office_checkout, preset="security-path", include=["attacker"], allow_experimental=True)
+    assert error.value.code == "schema_violation"
+
+
+def test_attack_terminal_resolves_learner_names_to_the_firewall():
+    from xocrange.office_setup import lab_hosts
+    from xocrange.ui_setup import ingress_config
+    planned = {"registry": {"targets": [{"id": "dvwa", "component_id": "target-dvwa"}, {"id": "juice", "component_id": "target-juice"},
+                                        {"id": "sample", "component_id": "fixture-security-probe"}]}}
+    assert lab_hosts(planned) == "10.20.30.1 dvwa.xoc.range juice.xoc.range\n"
+    assert lab_hosts(planned, "alice.lab") == "10.20.30.1 dvwa.xoc.range juice.xoc.range dvwa.alice.lab juice.alice.lab\n"
+    assert lab_hosts({}) == ""
+    assert "server attacker 10.20.30.202:22" in ingress_config("192.0.2.10")
+    start = runpy.run_path(str(ROOT / "components/security-path/web/start.py"))
+    config, _, _ = start["render"](json.dumps([{"id": "dvwa", "service": "dvwa", "port": 80, "public": True},
+                                               {"id": "sample", "service": "lab-target", "port": 8080}]), ["alice.lab"])
+    plain = config.split("<VirtualHost *:8080>")
+    assert any("ServerName dvwa.xoc.test" in v and "ServerAlias dvwa.xoc.range" in v and "ServerAlias dvwa.alice.lab" in v for v in plain)
+    assert not any("ServerName sample.xoc.test" in v and "ServerAlias" in v for v in plain)

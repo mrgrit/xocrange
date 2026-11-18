@@ -50,7 +50,10 @@ def render(raw, domains=()):
     for target in sorted(services, key=lambda t: t["id"]):
         host = target["id"] + ".xoc.test"
         backend = f'http://{target["service"]}:{target["port"]}/'
-        lines.extend(['<VirtualHost *:8080>', f'ServerName {host}', 'ProxyPreserveHost On',
+        # The attack terminal on the external network (ADR 0013) uses the learner names
+        # over plain HTTP through fw -> IPS -> this WAF, with its own source address.
+        names = [f'ServerAlias {target["id"]}{LEARNER_DOMAIN}'] + [f'ServerAlias {target["id"]}.{d}' for d in domains] if target.get("public") else []
+        lines.extend(['<VirtualHost *:8080>', f'ServerName {host}', *names, 'ProxyPreserveHost On',
                       f'ProxyPass / {backend}', f'ProxyPassReverse / {backend}'] + console + ['</VirtualHost>'])
         links.append(f'<li><a href="http://{host}:8080/">{html.escape(target["id"])}</a></li>')
     # Learner access goes through the TLS ingress -> fw -> IPS -> this WAF as

@@ -25,6 +25,11 @@ table inet xoc_fw {
         ip saddr 10.20.30.0/24 ip daddr 10.20.70.21 tcp dport 22 ct state new limit rate 10/second burst 20 packets log prefix "[xoc-fw] ACCEPT " group 10 snaplen 128 queue-threshold 1
         ip saddr 10.20.30.0/24 ip daddr 10.20.70.21 tcp dport 22 counter name forwarded_office accept
         ip saddr 10.20.70.21 ip daddr 10.20.30.0/24 tcp sport 22 ct state established,related accept
+        # The office PC may fetch from or connect back to the attack terminal on the two
+        # practice ports (ADR 0013): the lessons' download and reverse-connection cases.
+        ip saddr 10.20.70.21 ip daddr 10.20.30.202 tcp dport { 4444, 8000 } ct state new limit rate 10/second burst 20 packets log prefix "[xoc-fw] ACCEPT " group 10 snaplen 128 queue-threshold 1
+        ip saddr 10.20.70.21 ip daddr 10.20.30.202 tcp dport { 4444, 8000 } counter name forwarded_office accept
+        ip saddr 10.20.30.202 ip daddr 10.20.70.21 tcp sport { 4444, 8000 } ct state established,related accept
         limit rate 10/second burst 20 packets log prefix "[xoc-fw] DROP " group 10 snaplen 128 queue-threshold 1
     }
 }
@@ -36,5 +41,7 @@ table ip xoc_dnat {
         ip daddr 10.20.30.1 tcp dport 8080 dnat to 10.20.32.80:8080
         ip saddr 10.20.30.20 ip daddr 10.20.30.1 tcp dport 8443 dnat to 10.20.32.80:8443
         ip saddr 10.20.30.0/24 ip daddr 10.20.30.1 tcp dport 2222 dnat to 10.20.70.21:22
+        # The attack terminal reaches the web gateway on the usual HTTP port (ADR 0013).
+        ip saddr 10.20.30.202 ip daddr 10.20.30.1 tcp dport 80 dnat to 10.20.32.80:8080
     }
 }

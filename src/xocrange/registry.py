@@ -15,6 +15,7 @@ SERVICE_LABELS = {
     'dashboard': ('Wazuh Dashboard', 'siem'), 'lab-target': ('연결 시험용 타깃', 'target'),
     'lab-client': ('연결 시험용 클라이언트', 'client'),
     'office-pc': ('업무용 리눅스 PC', 'client'),
+    'attacker': ('공격 실습 단말', 'client'),
     'dvwa': ('DVWA', 'target'), 'juiceshop': ('OWASP Juice Shop', 'target'),
 }
 

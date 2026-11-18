@@ -139,6 +139,16 @@ backend office_ssh
     mode tcp
     timeout server 1h
     server fw 10.20.30.1:2222
+# SSH to the attack terminal on the external network (ADR 0013).
+frontend attacker_ssh
+    bind :2202
+    mode tcp
+    timeout client 1h
+    default_backend attacker_ssh
+backend attacker_ssh
+    mode tcp
+    timeout server 1h
+    server attacker 10.20.30.202:22
 '''
 
 

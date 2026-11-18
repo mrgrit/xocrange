@@ -126,7 +126,7 @@ for ((i=0; i<${#selection[@]}; i++)); do
     if [[ ${selection[i]} == --without && ${selection[i+1]:-} == siem ]]; then siem_selection=(); ui_selection=(); fi
     if [[ ${selection[i]} == --without && ${selection[i+1]:-} == siem-ui ]]; then ui_selection=(); fi
 done
-for console_id in console-fw console-ips console-waf portal noc academy-reader office-pc; do
+for console_id in console-fw console-ips console-waf portal noc academy-reader office-pc attacker; do
     console_excluded=false
     for ((i=0; i<${#selection[@]}; i++)); do
         if [[ ${selection[i]} == --without && ${selection[i+1]:-} == "$console_id" ]]; then console_excluded=true; fi
