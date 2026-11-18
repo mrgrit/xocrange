@@ -3,7 +3,8 @@ FROM ubuntu:26.04@sha256:6a06111c3b0a8600feadb270aec771dc239bf407b25625f93f44ab0
 # sudo, cron and a Wazuh agent that reports to the Manager. The agent version follows the
 # Manager (tests/integration/agent).
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl gnupg \
-        openssh-server openssh-client rsyslog sudo cron iproute2 util-linux procps less vim-tiny && \
+        openssh-server openssh-client rsyslog sudo cron iproute2 util-linux procps less vim \
+        netcat-openbsd net-tools iptables && \
     curl --fail --proto '=https' https://packages.wazuh.com/key/GPG-KEY-WAZUH -o /tmp/wazuh.asc && \
     gpg --batch --dearmor -o /usr/share/keyrings/wazuh.gpg /tmp/wazuh.asc && \
     printf 'deb [signed-by=/usr/share/keyrings/wazuh.gpg] https://packages.wazuh.com/4.x/apt/ stable main\n' > /etc/apt/sources.list.d/wazuh.list && \

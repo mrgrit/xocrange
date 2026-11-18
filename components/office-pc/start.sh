@@ -30,6 +30,8 @@ fi
 install -d -m 0755 /var/log
 touch /var/log/auth.log /var/log/syslog
 chown syslog:adm /var/log/auth.log /var/log/syslog
+[[ -f /var/log/btmp ]] || install -o root -g utmp -m 0660 /dev/null /var/log/btmp
+[[ -f /var/log/wtmp ]] || install -o root -g utmp -m 0664 /dev/null /var/log/wtmp
 rm -f /run/rsyslogd.pid
 rsyslogd
 cron
