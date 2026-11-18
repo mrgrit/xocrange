@@ -20,6 +20,7 @@ networks:
 - pipe
 - dmz
 - int
+- office
 config_keys:
 - XOC_WEB_TARGETS
 contracts:

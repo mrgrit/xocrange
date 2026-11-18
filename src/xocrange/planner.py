@@ -190,7 +190,7 @@ def plan(root: Path, *, preset="bootstrap", include=(), without=(), allow_fixtur
             raise XocError("experimental_component", "The security-path runtime requires explicit experimental selection.")
         siem = identifier == "siem" and manifest["kind"] == "component"
         siem_ui = identifier == "siem-ui" and manifest["kind"] == "component"
-        schema = "security-compose-fragment" if security_path else "siem-compose-fragment" if siem else "siem-ui-compose-fragment" if siem_ui else "management-compose-fragment" if identifier == "management" else "console-compose-fragment" if identifier in ("console-fw","console-ips","console-waf","portal","noc","academy-reader") else "target-compose-fragment" if identifier in PRACTICE_TARGETS and manifest["kind"] == "component" else "compose-fragment"
+        schema = "security-compose-fragment" if security_path else "siem-compose-fragment" if siem else "siem-ui-compose-fragment" if siem_ui else "management-compose-fragment" if identifier == "management" else "console-compose-fragment" if identifier in ("console-fw","console-ips","console-waf","portal","noc","academy-reader") else "target-compose-fragment" if identifier in PRACTICE_TARGETS and manifest["kind"] == "component" else "office-compose-fragment" if identifier == "office-pc" and manifest["kind"] == "component" else "compose-fragment"
         fragment = validate(yaml_document(fragment_path), schema)
         if schema == "compose-fragment":
             # Only the reviewed management ingress publishes on external
@@ -200,8 +200,8 @@ def plan(root: Path, *, preset="bootstrap", include=(), without=(), allow_fixtur
                     raise XocError("public_port", "Extensions may publish host ports on loopback only; learner access goes through the ingress.")
         if siem:
             service = fragment["services"]["siem"]
-            if fragment["networks"] != {"int": {"internal": True}} or service["networks"] != ["int"] or any(k in service for k in ("ports", "sysctls", "environment", "command", "entrypoint")):
-                raise XocError("siem_privileges", "SIEM has only reviewed private Manager volumes and its internal network.")
+            if set(fragment["networks"]) != {"int", "dmz"} or fragment["networks"]["int"] != {"internal": True} or service["networks"] != {"int": {}, "dmz": {"ipv4_address": "10.20.32.100"}} or any(k in service for k in ("ports", "sysctls", "environment", "command", "entrypoint")):
+                raise XocError("siem_privileges", "SIEM has only reviewed private Manager volumes, its internal network and its agent address on the dmz.")
 
         if security_path:
             security_role_policy(fragment)

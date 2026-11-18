@@ -1,0 +1,5 @@
+*
+!Dockerfile
+!ossec.conf
+!sshd.conf
+!start.sh

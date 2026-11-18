@@ -219,7 +219,8 @@ def test_devices_filter_before_they_route():
 def test_networks_keep_the_kt66_address_plan(security_checkout):
     compose = security_plan(security_checkout)["compose"]
     subnets = {name: network["ipam"]["config"][0]["subnet"] for name, network in compose["networks"].items() if "ipam" in network}
-    assert subnets == {"ext": "10.20.30.0/24", "pipe": "10.20.31.0/24", "dmz": "10.20.32.0/24", "int": "10.20.40.0/24"}
+    assert subnets == {"ext": "10.20.30.0/24", "pipe": "10.20.31.0/24", "dmz": "10.20.32.0/24", "int": "10.20.40.0/24",
+                       "office": "10.20.70.0/24"}
     assert compose["networks"]["int"]["internal"] is True
     assert compose["networks"]["int"]["ipam"]["config"][0]["ip_range"] == "10.20.40.128/25"
     assert compose["services"]["web"]["networks"] == {"dmz": {"ipv4_address": "10.20.32.80"}, "int": {"ipv4_address": "10.20.40.80"}}
@@ -238,3 +239,72 @@ def test_learner_vhosts_also_answer_to_the_live_fire_lab_domain(tmp_path):
         path.write_text(content)
         assert module["learner_domains"](path) == expected, content
     assert module["learner_domains"](tmp_path / "missing.json") == []
+
+
+@pytest.fixture
+def office_checkout(security_checkout):
+    for name in ("office-pc", "siem", "management"):
+        shutil.copytree(ROOT / "components" / name, security_checkout / "components" / name)
+    return security_checkout
+
+
+def test_office_network_hangs_off_the_ips_and_carries_the_office_pc(office_checkout):
+    """ADR 0012: staff PCs sit on their own network behind the IPS (the kt66 user zone range)."""
+    security_checkout = office_checkout
+    compose = plan(security_checkout, preset="security-path", include=["office-pc", "siem", "management"],
+                   allow_experimental=True)["compose"]
+    assert compose["services"]["ips"]["networks"]["office"] == {"ipv4_address": "10.20.70.1"}
+    pc = compose["services"]["office-pc"]
+    assert pc["networks"] == {"office": {"ipv4_address": "10.20.70.21"}}
+    # The PC is on the office network only: no backend, no host port.
+    assert "ports" not in pc and "NET_RAW" not in pc["cap_add"] and "SYS_ADMIN" not in pc["cap_add"]
+    # The Manager's agent address is on the dmz; its other ports stay on the backend network.
+    assert compose["services"]["siem"]["networks"] == {"int": {}, "dmz": {"ipv4_address": "10.20.32.100"}}
+    assert {"target": 2222, "published": 2222, "host_ip": "0.0.0.0", "protocol": "tcp"} in compose["services"]["ingress"]["ports"]
+
+
+def test_office_pc_fragment_rejects_other_privileges(office_checkout):
+    security_checkout = office_checkout
+    path = security_checkout / "components/office-pc/compose.yaml"
+    fragment = yaml.safe_load(path.read_text())
+    fragment["services"]["office-pc"]["networks"]["int"] = {}
+    path.write_text(yaml.safe_dump(fragment))
+    with pytest.raises(XocError) as error:
+        plan(security_checkout, preset="security-path", include=["office-pc"], allow_experimental=True)
+    assert error.value.code == "schema_violation"
+
+
+def test_office_rules_reach_only_the_web_gateway_and_the_agent_port():
+    ips = (ROOT / "components/security-path/ips/rules.nft").read_text()
+    office = [line.strip() for line in ips.splitlines() if "10.20.70." in line and not line.strip().startswith("#")]
+    assert office == [
+        "ip saddr 10.20.30.0/24 ip daddr 10.20.70.21 tcp dport 22 counter name inspected queue num 0",
+        "ip saddr 10.20.70.21 ip daddr 10.20.30.0/24 tcp sport 22 counter name inspected queue num 0",
+        "ip saddr 10.20.70.0/24 ip daddr 10.20.32.80 tcp dport 8080 counter name inspected queue num 0",
+        "ip saddr 10.20.32.80 ip daddr 10.20.70.0/24 tcp sport 8080 counter name inspected queue num 0",
+        "ip saddr 10.20.70.0/24 ip daddr 10.20.32.100 tcp dport 1514 accept",
+        "ip saddr 10.20.32.100 ip daddr 10.20.70.0/24 tcp sport 1514 ct state established accept",
+        "ip saddr 10.20.70.0/24 ip daddr 10.20.32.100 tcp dport 1514 masquerade",
+    ]
+    assert "policy drop" in ips
+    fw = (ROOT / "components/security-path/fw/rules.nft").read_text()
+    assert "ip saddr 10.20.30.0/24 ip daddr 10.20.30.1 tcp dport 2222 dnat to 10.20.70.21:22" in fw
+    # Nothing forwards from the office network to the backend network.
+    assert "10.20.40." not in ips and "10.20.40." not in fw
+
+
+def test_office_account_is_a_hash_and_the_ingress_forwards_ssh(tmp_path, monkeypatch):
+    monkeypatch.setattr("os.chown", lambda *a, **k: None)
+    from xocrange.office_setup import account
+    from xocrange.ui_setup import ingress_config
+    config = {}
+    account(tmp_path, config)
+    assert config["office_username"] == "student" and len(config["office_password"]) >= 16
+    hashed = (tmp_path / "password.hash").read_text().strip()
+    assert hashed.startswith("$6$") and config["office_password"] not in hashed
+    assert (tmp_path / "username").read_text() == "student\n"
+    again = dict(config)
+    account(tmp_path, again)
+    assert again["office_password"] == config["office_password"]
+    text = ingress_config("192.0.2.10")
+    assert "bind :2222" in text and "server fw 10.20.30.1:2222" in text and text.count("mode tcp") == 2

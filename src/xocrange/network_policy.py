@@ -8,6 +8,8 @@ LAB_NETWORKS = {
     "ext": ("10.20.30.0/24", "10.20.30.254"),
     "pipe": ("10.20.31.0/24", "10.20.31.254"),
     "dmz": ("10.20.32.0/24", "10.20.32.254"),
+    # Office network (ADR 0012): staff PCs behind the IPS, the kt66 user zone range.
+    "office": ("10.20.70.0/24", "10.20.70.254"),
 }
 # The backend network keeps the kt66 internal range. Fragments only declare it
 # internal; the planner assigns this addressing. Static endpoints use the lower
@@ -15,7 +17,8 @@ LAB_NETWORKS = {
 BACKEND_NETWORK = ("10.20.40.0/24", "10.20.40.254", "10.20.40.128/25")
 LAB_ENDPOINTS = {
     "fw": {"ext": {"ipv4_address": "10.20.30.1"}, "pipe": {"ipv4_address": "10.20.31.1"}},
-    "ips": {"pipe": {"ipv4_address": "10.20.31.2"}, "dmz": {"ipv4_address": "10.20.32.1"}},
+    "ips": {"pipe": {"ipv4_address": "10.20.31.2"}, "dmz": {"ipv4_address": "10.20.32.1"},
+            "office": {"ipv4_address": "10.20.70.1"}},
     "web": {"dmz": {"ipv4_address": "10.20.32.80"}, "int": {"ipv4_address": "10.20.40.80"}},
 }
 
@@ -23,8 +26,8 @@ LAB_ENDPOINTS = {
 def security_role_policy(fragment):
     capabilities = {"fw": {"NET_ADMIN"}, "ips": {"NET_ADMIN", "NET_RAW"},
                     "web": {"NET_ADMIN", "SETUID", "SETGID"}}
-    if set(fragment["networks"]) != {"ext", "pipe", "dmz", "int"}:
-        raise XocError("security_topology", "Security path requires ext/pipe/dmz/int networks.")
+    if set(fragment["networks"]) != {"ext", "pipe", "dmz", "int", "office"}:
+        raise XocError("security_topology", "Security path requires ext/pipe/dmz/int/office networks.")
     for name, (subnet, gateway) in LAB_NETWORKS.items():
         expected = {"internal": True, "driver": "bridge",
                     "driver_opts": {"com.docker.network.bridge.enable_ip_masquerade": "false"},

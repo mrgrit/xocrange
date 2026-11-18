@@ -10,5 +10,25 @@ table inet xoc_ips {
         ip saddr 10.20.32.80 ip daddr 10.20.30.0/24 tcp sport 8080 counter name inspected queue num 0
         ip saddr 10.20.30.20 ip daddr 10.20.32.80 tcp dport 8443 counter name inspected queue num 0
         ip saddr 10.20.32.80 ip daddr 10.20.30.20 tcp sport 8443 counter name inspected queue num 0
+        # Office network (ADR 0012). SSH from the external side to the office PC, and the
+        # office PC to the web gateway, are inspected in both directions. Nothing else
+        # enters or leaves the office network.
+        ip saddr 10.20.30.0/24 ip daddr 10.20.70.21 tcp dport 22 counter name inspected queue num 0
+        ip saddr 10.20.70.21 ip daddr 10.20.30.0/24 tcp sport 22 counter name inspected queue num 0
+        ip saddr 10.20.70.0/24 ip daddr 10.20.32.80 tcp dport 8080 counter name inspected queue num 0
+        ip saddr 10.20.32.80 ip daddr 10.20.70.0/24 tcp sport 8080 counter name inspected queue num 0
+        # Agents on the office network report to the Manager's agent port only (encrypted
+        # Wazuh protocol, not inspected). The Manager has no route back, so the source is
+        # translated below.
+        ip saddr 10.20.70.0/24 ip daddr 10.20.32.100 tcp dport 1514 accept
+        ip saddr 10.20.32.100 ip daddr 10.20.70.0/24 tcp sport 1514 ct state established accept
+    }
+}
+add table ip xoc_ips_nat
+flush table ip xoc_ips_nat
+table ip xoc_ips_nat {
+    chain postrouting {
+        type nat hook postrouting priority srcnat; policy accept;
+        ip saddr 10.20.70.0/24 ip daddr 10.20.32.100 tcp dport 1514 masquerade
     }
 }

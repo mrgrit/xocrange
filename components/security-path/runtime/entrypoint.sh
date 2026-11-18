@@ -8,6 +8,7 @@ case "${1:-}" in
     # Filter before routing: forwarding is enabled when the namespace is created.
     nft -f /etc/xoc/fw.nft
     ip route replace 10.20.32.0/24 via 10.20.31.2
+    ip route replace 10.20.70.0/24 via 10.20.31.2
     if [[ ${XOC_POLICY_STATE:-0} == 1 ]]; then python3 -B /usr/local/lib/xoc/console/broker.py fw init; fi
     if [[ ${XOC_CONSOLE:-0} == 1 ]]; then python3 -B /usr/local/lib/xoc/console/broker.py fw & fi
     exec python3 -B /usr/local/lib/xoc/nflog.py
@@ -28,6 +29,7 @@ case "${1:-}" in
     ;;
   web)
     ip route replace 10.20.30.0/24 via 10.20.32.1
+    ip route replace 10.20.70.0/24 via 10.20.32.1
     # Route setup is the only NET_ADMIN operation; Apache runs as www-data.
     exec setpriv --reuid=33 --regid=33 --clear-groups python3 -B /usr/local/lib/xoc/start-web.py
     ;;

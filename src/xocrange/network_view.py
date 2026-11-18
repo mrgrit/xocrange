@@ -3,7 +3,7 @@
 Runs in the root host observer, never in a web process. Every command is fixed and read-only:
 `docker network/container inspect` with reviewed format fields, `bridge -j fdb show br <bridge>`,
 and `nsenter -t <pid> -n ip -j route|neigh|addr show` in the network namespace of the router-like
-lab services. The result is bounded and holds only lab addressing (ext/pipe/dmz/int), MAC
+lab services. The result is bounded and holds only lab addressing (ext/pipe/dmz/int/office), MAC
 addresses, interface state, packet counters and routes; no environment, mounts or host routes.
 """
 from __future__ import annotations
@@ -15,7 +15,7 @@ from pathlib import Path
 import re
 import subprocess
 
-SEGMENTS = ('ext', 'pipe', 'dmz', 'int')
+SEGMENTS = ('ext', 'pipe', 'dmz', 'int', 'office')
 ROUTERS = ('ingress', 'fw', 'ips', 'web')
 LIMIT = 64
 MAC = re.compile(r'^[0-9a-f]{2}(?::[0-9a-f]{2}){5}$')

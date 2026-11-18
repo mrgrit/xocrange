@@ -25,7 +25,7 @@
       "type": "object",
       "additionalProperties": false,
       "patternProperties": {
-        "^(user|ext|pipe|dmz|int|app|ot)$": {
+        "^(user|ext|pipe|dmz|int|app|ot|office)$": {
           "type": "object",
           "additionalProperties": false,
           "required": [
@@ -183,7 +183,8 @@
                   "dmz",
                   "int",
                   "app",
-                  "ot"
+                  "ot",
+                  "office"
                 ]
               },
               "additionalProperties": {

@@ -6,7 +6,7 @@ window.DataCenter=(()=>{
  const preview=id=>(data?.preview_floors||[]).includes(id);
  function hostCommand(){const h=data?.host_access?.host;if(!/^[a-z_][a-z0-9_-]{0,31}$/.test(sshUser||'')||!Number.isInteger(sshPort)||sshPort<1||sshPort>65535||!/^[a-zA-Z0-9][a-zA-Z0-9.-]*$/.test(h||''))return '';return 'ssh '+(sshPort===22?'':'-p '+sshPort+' ')+sshUser+'@'+h;}
  function sshFields(){const cmd=hostCommand();if($('dc-ssh-command'))$('dc-ssh-command').value=cmd||'Linux 계정을 입력하면 SSH 명령이 표시됩니다.';const b=document.querySelector('[data-dc-copy=ssh]');if(b)b.disabled=!cmd;}
- const SEG={ext:'외부망',pipe:'중계망',dmz:'DMZ',int:'내부망'};
+ const SEG={ext:'외부망',pipe:'중계망',dmz:'DMZ',int:'내부망',office:'업무망'};
  function table(head,rows){if(!rows.length)return '<p class="dc-note">수집된 항목이 없습니다.</p>';return `<div class="dc-table-wrap"><table class="dc-table"><thead><tr>${head.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${esc(c??'-')}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;}
  function num(n){return Number.isInteger(n)?n.toLocaleString('ko-KR'):'-';}
  function titleOf(service){return data.assets.find(x=>x.service===service)?.title||service;}
@@ -44,9 +44,10 @@ window.DataCenter=(()=>{
   sw.forEach((a,i)=>{const s=a.segment,y=y0+i*rowH,members=(s.endpoints||[]).map(e=>e.service).filter(x=>!Object.values(hop).includes(x)||x===hop[s.id]);
    svg+=`<rect x="8" y="${y}" width="${W-16}" height="24" rx="5" class="dc-topo-switch"/><text x="16" y="${y+16}" class="dc-topo-label">${esc(SEG[s.id])} ${esc(s.subnet||'')}</text>`;
    svg+=`<text x="${W-14}" y="${y+16}" text-anchor="end" class="dc-topo-small">연결 장비 ${(s.endpoints||[]).length}대</text>`;
+   if(s.id==='office')svg+=`<text x="${W/2}" y="${y-6}" text-anchor="middle" class="dc-topo-small">IPS의 세 번째 인터페이스에 연결</text>`;
    if(hop[s.id]&&i<sw.length-1){svg+=`<line x1="${W/2}" y1="${y+24}" x2="${W/2}" y2="${y+rowH}" class="dc-topo-link"/><rect x="${W/2-34}" y="${y+31}" width="68" height="20" rx="10" class="dc-topo-router"/><text x="${W/2}" y="${y+45}" text-anchor="middle" class="dc-topo-label">${esc(HOP[hop[s.id]])}</text>`;}
   });
-  return svg+'</svg><p class="dc-note">요청 경로: 외부 → HTTPS 진입점 → 방화벽 → IPS → 웹 방화벽(WAF) → 내부 타깃. 스위치를 선택하면 포트 연결도와 MAC 주소 표를, 방화벽·IPS·웹 방화벽을 선택하면 라우팅 표와 ARP 표를 볼 수 있습니다.</p>';
+  return svg+'</svg><p class="dc-note">요청 경로: 외부 → HTTPS 진입점 → 방화벽 → IPS → 웹 방화벽(WAF) → 내부 타깃. 업무망은 IPS에서 갈라지며, 업무망의 PC는 웹 방화벽과 SIEM 에이전트 포트로만 나갑니다. 스위치를 선택하면 포트 연결도와 MAC 주소 표를, 방화벽·IPS·웹 방화벽을 선택하면 라우팅 표와 ARP 표를 볼 수 있습니다.</p>';
  }
  function facilityInspector(node){
   const list=data.facilities||[],f=list.find(x=>x.id===selectedFacility),floor=data.floors.find(x=>x.id===designFloor);

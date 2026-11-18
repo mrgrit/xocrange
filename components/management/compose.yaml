@@ -23,6 +23,10 @@ services:
       published: 443
       host_ip: 0.0.0.0
       protocol: tcp
+    - target: 2222
+      published: 2222
+      host_ip: 0.0.0.0
+      protocol: tcp
     volumes:
     - ingress-config:/run/xoc-secrets:ro
     depends_on:

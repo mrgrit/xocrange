@@ -1,0 +1,36 @@
+services:
+  office-pc:
+    build: {context: ., dockerfile: Dockerfile}
+    hostname: office-pc01
+    init: true
+    networks:
+      office:
+        ipv4_address: 10.20.70.21
+    # A staff PC: the learner signs in over SSH and uses sudo, so the root file system is
+    # writable and setuid programs work (no no-new-privileges). The start script sets the
+    # route, then removes NET_ADMIN and SETPCAP from the bounding set before sshd runs.
+    read_only: false
+    cap_drop: [ALL]
+    cap_add: [AUDIT_WRITE, CHOWN, DAC_OVERRIDE, FOWNER, KILL, NET_ADMIN, NET_BIND_SERVICE, SETGID, SETPCAP, SETUID, SYS_CHROOT]
+    restart: unless-stopped
+    depends_on: [ips]
+    volumes:
+    - office-config:/run/xoc-office:ro
+    - office-data:/var/lib/xoc-office
+    - office-home:/home
+    - office-logs:/var/log
+networks:
+  office:
+    internal: true
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.enable_ip_masquerade: 'false'
+    ipam:
+      config:
+      - subnet: 10.20.70.0/24
+        gateway: 10.20.70.254
+volumes:
+  office-config: {}
+  office-data: {}
+  office-home: {}
+  office-logs: {}

@@ -18,6 +18,7 @@ provides:
 conflicts: []
 networks:
 - int
+- dmz
 config_keys: []
 contracts:
   C1: 0.2.0

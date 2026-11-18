@@ -5,7 +5,7 @@ import yaml
 
 
 def configure(original):
-    original.setdefault("vars", {}).setdefault("address-groups", {})["HOME_NET"] = "[10.20.32.0/24]"
+    original.setdefault("vars", {}).setdefault("address-groups", {})["HOME_NET"] = "[10.20.32.0/24,10.20.70.0/24]"
     original.setdefault("stream", {})["inline"] = True
     original["nfq"] = {"mode": "accept", "fail-open": False}
     original["default-log-dir"] = "/var/log/suricata"

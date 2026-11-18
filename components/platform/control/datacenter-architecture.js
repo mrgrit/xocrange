@@ -18,7 +18,7 @@ window.DataCenterArchitecture=(()=>{
   (Array.isArray(kids)?kids:[kids]).filter(Boolean).forEach(c=>n.append(c));return n;
  }
  const quad=(x,y,z,w,d,a)=>el('polygon',{points:pts([iso(x,y,z),iso(x+w,y,z),iso(x+w,y+d,z),iso(x,y+d,z)]),...a});
- const zoneColor=id=>({ext:'#ff718b',pipe:'#ffb16b',dmz:'#e5cb74',int:'#7ad6b5',app:'#b29cde',mgmt:'#9aaeba',ot:'#80c7dc'}[id]||'#a1b3be');
+ const zoneColor=id=>({ext:'#ff718b',pipe:'#ffb16b',dmz:'#e5cb74',int:'#7ad6b5',app:'#b29cde',mgmt:'#9aaeba',ot:'#80c7dc',office:'#8fb4e8'}[id]||'#a1b3be');
  const racksOf=f=>LAYOUT.racks.filter(r=>r.floor===f);
  const assetsOf=f=>LAYOUT.it_assets.filter(a=>a.floor===f);
  const alive=a=>a.health?.state==='running';

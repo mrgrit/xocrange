@@ -1,76 +1,82 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Reviewed management privileges",
-  "const": {
-    "services": {
-      "ingress": {
-        "read_only": true,
-        "cap_drop": [
-          "ALL"
-        ],
-        "security_opt": [
-          "no-new-privileges:true"
-        ],
-        "restart": "no",
-        "build": {
-          "context": ".",
-          "dockerfile": "ingress.Dockerfile"
-        },
-        "user": "65532:65532",
-        "networks": {
-          "user": {},
-          "ext": {
-            "ipv4_address": "10.20.30.20"
-          }
-        },
-        "ports": [
-          {
-            "target": 8080,
-            "published": 80,
-            "host_ip": "0.0.0.0",
-            "protocol": "tcp"
-          },
-          {
-            "target": 8443,
-            "published": 443,
-            "host_ip": "0.0.0.0",
-            "protocol": "tcp"
-          }
-        ],
-        "volumes": [
-          "ingress-config:/run/xoc-secrets:ro"
-        ],
-        "depends_on": [
-          "web"
-        ]
-      }
+ "$schema": "http://json-schema.org/draft-07/schema#",
+ "title": "Reviewed management privileges",
+ "const": {
+  "services": {
+   "ingress": {
+    "read_only": true,
+    "cap_drop": [
+     "ALL"
+    ],
+    "security_opt": [
+     "no-new-privileges:true"
+    ],
+    "restart": "no",
+    "build": {
+     "context": ".",
+     "dockerfile": "ingress.Dockerfile"
     },
+    "user": "65532:65532",
     "networks": {
-      "user": {
-        "internal": false
-      },
-      "ext": {
-        "internal": true,
-        "driver": "bridge",
-        "driver_opts": {
-          "com.docker.network.bridge.enable_ip_masquerade": "false"
-        },
-        "ipam": {
-          "config": [
-            {
-              "subnet": "10.20.30.0/24",
-              "gateway": "10.20.30.254"
-            }
-          ]
-        }
-      }
+     "user": {},
+     "ext": {
+      "ipv4_address": "10.20.30.20"
+     }
     },
-    "volumes": {
-      "ingress-config": {},
-      "web-tls": {},
-      "platform-config": {},
-      "platform-data": {},
-      "platform-socket": {}
+    "ports": [
+     {
+      "target": 8080,
+      "published": 80,
+      "host_ip": "0.0.0.0",
+      "protocol": "tcp"
+     },
+     {
+      "target": 8443,
+      "published": 443,
+      "host_ip": "0.0.0.0",
+      "protocol": "tcp"
+     },
+     {
+      "target": 2222,
+      "published": 2222,
+      "host_ip": "0.0.0.0",
+      "protocol": "tcp"
+     }
+    ],
+    "volumes": [
+     "ingress-config:/run/xoc-secrets:ro"
+    ],
+    "depends_on": [
+     "web"
+    ]
+   }
+  },
+  "networks": {
+   "user": {
+    "internal": false
+   },
+   "ext": {
+    "internal": true,
+    "driver": "bridge",
+    "driver_opts": {
+     "com.docker.network.bridge.enable_ip_masquerade": "false"
+    },
+    "ipam": {
+     "config": [
+      {
+       "subnet": "10.20.30.0/24",
+       "gateway": "10.20.30.254"
+      }
+     ]
     }
+   }
+  },
+  "volumes": {
+   "ingress-config": {},
+   "web-tls": {},
+   "platform-config": {},
+   "platform-data": {},
+   "platform-socket": {}
   }
+ }
 }

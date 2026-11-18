@@ -166,7 +166,10 @@ def run(args):
             from .operations import installed
             from .entitlements import learner_domain
             return learner_targets(args.root, installed()['selected'], secret['public_host'], learner_domain(args.root))
-        return {'url':'https://'+secret['public_host']+'/core/', 'username':'admin', 'password':secret.get('admin_password',secret['bootstrap_password']), 'ca_certificate':'/etc/xocrange/ca.crt', 'note':'Initial credentials; if changed in the UI, use the password you chose.'}
+        result = {'url':'https://'+secret['public_host']+'/core/', 'username':'admin', 'password':secret.get('admin_password',secret['bootstrap_password']), 'ca_certificate':'/etc/xocrange/ca.crt', 'note':'Initial credentials; if changed in the UI, use the password you chose.'}
+        if secret.get('office_password'):
+            result['office_pc'] = {'ssh':'ssh -p 2222 '+secret['office_username']+'@'+secret['public_host'], 'username':secret['office_username'], 'password':secret['office_password']}
+        return result
     if args.command == 'agents':
         from .lab import Docker, checked_plan
         from .manager_api import ManagerClient

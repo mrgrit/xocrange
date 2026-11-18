@@ -126,7 +126,7 @@ for ((i=0; i<${#selection[@]}; i++)); do
     if [[ ${selection[i]} == --without && ${selection[i+1]:-} == siem ]]; then siem_selection=(); ui_selection=(); fi
     if [[ ${selection[i]} == --without && ${selection[i+1]:-} == siem-ui ]]; then ui_selection=(); fi
 done
-for console_id in console-fw console-ips console-waf portal noc academy-reader; do
+for console_id in console-fw console-ips console-waf portal noc academy-reader office-pc; do
     console_excluded=false
     for ((i=0; i<${#selection[@]}; i++)); do
         if [[ ${selection[i]} == --without && ${selection[i+1]:-} == "$console_id" ]]; then console_excluded=true; fi
@@ -535,6 +535,10 @@ if "$runtime/bin/python" -c 'import json,sys; sys.exit("siem" not in json.load(o
     stage siem-telemetry
     bash "$release/scripts/install-telemetry.sh" "$release" "$runtime" "$plan_name"
     "$runtime/bin/python" "$release/scripts/verify-siem.py" "$release" "$plan_name"
+    if "$runtime/bin/python" -c 'import json,sys; sys.exit("office-pc" not in json.load(open(sys.argv[1]))["lock"]["selected"])' "$plan_json"; then
+        stage office-agent
+        "$runtime/bin/python" "$release/scripts/setup-office.py" "$release" "$plan_name"
+    fi
     if "$runtime/bin/python" -c 'import json,sys; sys.exit("siem-ui" not in json.load(open(sys.argv[1]))["lock"]["selected"])' "$plan_json"; then
         stage siem-ui-acceptance
         "$runtime/bin/python" "$release/scripts/verify-siem-ui.py" "$release" "$plan_name"

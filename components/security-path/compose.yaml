@@ -39,6 +39,8 @@ services:
         ipv4_address: 10.20.31.2
       dmz:
         ipv4_address: 10.20.32.1
+      office:
+        ipv4_address: 10.20.70.1
     sysctls:
       net.ipv4.ip_forward: '1'
     restart: 'no'
@@ -111,6 +113,15 @@ networks:
       config:
       - subnet: 10.20.32.0/24
         gateway: 10.20.32.254
+  office:
+    internal: true
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.enable_ip_masquerade: 'false'
+    ipam:
+      config:
+      - subnet: 10.20.70.0/24
+        gateway: 10.20.70.254
 volumes:
   fw-logs: {}
   ips-logs: {}

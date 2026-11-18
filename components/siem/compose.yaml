@@ -7,7 +7,12 @@ services:
     cap_drop: [ALL]
     cap_add: [CHOWN, DAC_OVERRIDE, FOWNER, KILL, SETUID, SETGID, SYS_CHROOT]
     security_opt: [no-new-privileges:true]
-    networks: [int]
+    # The dmz address is where agents on the office network reach the agent port (1514)
+    # through the IPS (ADR 0012); the IPS forwards nothing else to it.
+    networks:
+      int: {}
+      dmz:
+        ipv4_address: 10.20.32.100
     restart: 'no'
     tmpfs:
     - /run:size=16m,mode=0755
@@ -23,6 +28,15 @@ services:
     - siem-config:/run/xoc-manager:ro
 networks:
   int: {internal: true}
+  dmz:
+    internal: true
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.enable_ip_masquerade: 'false'
+    ipam:
+      config:
+      - subnet: 10.20.32.0/24
+        gateway: 10.20.32.254
 volumes:
   siem-logs: {}
   siem-etc: {}

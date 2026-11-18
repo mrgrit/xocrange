@@ -82,6 +82,10 @@ def prepare(engine, project, root, selected, host=None, state=STATE, tls=TLS_STA
         volume('console-'+device+'-state', 33 if device=='waf' else 0)
         if 'console-'+device in selected:
             volume('console-'+device+'-socket', 33 if device=='waf' else 0, 33, 0o770)
+    if 'office-pc' in selected:
+        from .office_setup import account
+        account(volume('office-config', 0), config)
+        write(path, json.dumps(config))
     ingress = volume('ingress-config', 65532)
     write(ingress/'haproxy.cfg', ingress_config(host), 65532)
     write(ingress/'ingress.pem', (tls/'web.pem').read_bytes()+(tls/'web-key.pem').read_bytes(), 65532)

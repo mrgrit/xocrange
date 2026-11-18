@@ -129,6 +129,16 @@ frontend https
 backend security_path
     mode http
     server fw 10.20.30.1:8443
+# SSH to the office PC (ADR 0012). The firewall forwards it through the IPS.
+frontend office_ssh
+    bind :2222
+    mode tcp
+    timeout client 1h
+    default_backend office_ssh
+backend office_ssh
+    mode tcp
+    timeout server 1h
+    server fw 10.20.30.1:2222
 '''
 
 

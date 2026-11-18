@@ -12,7 +12,7 @@ from .errors import XocError
 from .planner import catalog, plan
 from . import operations as ops
 
-DEFAULT_OPTIONAL = {'siem','siem-ui','console-fw','console-ips','console-waf','portal','noc','academy-reader'}
+DEFAULT_OPTIONAL = {'siem','siem-ui','console-fw','console-ips','console-waf','portal','noc','academy-reader','office-pc'}
 REQUIRED = {'platform','security-path','management','fixture-security-probe'}
 
 
