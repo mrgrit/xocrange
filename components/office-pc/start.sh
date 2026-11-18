@@ -36,11 +36,16 @@ rm -f /run/rsyslogd.pid
 rsyslogd
 cron
 
-# The agent starts when the installer has placed this PC's key (after the Manager is up).
+# The agent runs with the key the installer placed (after the Manager is up). The key can
+# change later (a restore or a clear resets the Manager's registrations), so keep following it.
 (
-    while [[ ! -f $config/client.keys ]]; do sleep 5; done
-    install -o root -g wazuh -m 0640 "$config/client.keys" /var/ossec/etc/client.keys
-    /var/ossec/bin/wazuh-control start || true
+    while true; do
+        if [[ -f $config/client.keys ]] && ! cmp -s "$config/client.keys" /var/ossec/etc/client.keys; then
+            install -o root -g wazuh -m 0640 "$config/client.keys" /var/ossec/etc/client.keys
+            /var/ossec/bin/wazuh-control restart || true
+        fi
+        sleep 15
+    done
 ) >/var/log/xoc-office-agent.log 2>&1 &
 
 # sshd and every session it starts run without NET_ADMIN and SETPCAP: sudo cannot change
