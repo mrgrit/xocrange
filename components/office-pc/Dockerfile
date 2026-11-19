@@ -14,7 +14,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
     rm -f /etc/ssh/ssh_host_*_key /etc/ssh/ssh_host_*_key.pub && \
     sed -i 's/^session\s\+required\s\+pam_loginuid.so/session optional pam_loginuid.so/' /etc/pam.d/sshd /etc/pam.d/cron && \
     sed -i 's/^module(load="imklog"/#module(load="imklog"/' /etc/rsyslog.conf && \
-    printf 'LANG=C.UTF-8\n' > /etc/default/locale
+    printf 'LANG=C.UTF-8\n' > /etc/default/locale && \
+    (userdel -r ubuntu 2>/dev/null || true)
 COPY ossec.conf /var/ossec/etc/ossec.conf
 COPY sshd.conf /etc/ssh/sshd_config.d/10-xoc-office.conf
 COPY start.sh /usr/local/sbin/xoc-office-start

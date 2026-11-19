@@ -6,7 +6,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
         python3 netcat-openbsd net-tools nmap hydra sqlmap nikto gobuster dirb && \
     rm -rf /var/lib/apt/lists/* && rm -f /etc/ssh/ssh_host_*_key /etc/ssh/ssh_host_*_key.pub && \
     sed -i 's/^session\s\+required\s\+pam_loginuid.so/session optional pam_loginuid.so/' /etc/pam.d/sshd && \
-    printf 'LANG=C.UTF-8\n' > /etc/default/locale
+    printf 'LANG=C.UTF-8\n' > /etc/default/locale && \
+    (userdel -r ubuntu 2>/dev/null || true)
 COPY sshd.conf /etc/ssh/sshd_config.d/10-xoc-attacker.conf
 COPY start.sh /usr/local/sbin/xoc-attacker-start
 RUN chmod 0755 /usr/local/sbin/xoc-attacker-start
