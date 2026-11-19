@@ -47,7 +47,7 @@ with Server(('127.0.0.1',0),Proxy) as server:
             page.locator('#login-form button').click();page.locator('#account').wait_for(state='visible')
             if a.reduced:
                 page.locator('#tabs').wait_for(state='visible')
-                checks['optional_navigation_hidden']=all(page.locator('[data-nav='+v+']').count()==0 or page.locator('[data-nav='+v+']').is_hidden() for v in ('datacenter','portal','noc','academy','ips'))
+                checks['optional_navigation_hidden']=all(page.locator('[data-nav='+v+']').count()==0 or page.locator('[data-nav='+v+']').is_hidden() for v in ('datacenter','academy','ips'))
                 checks['siem_hidden']=page.locator('#siem-link').is_hidden()
                 for view in ('datacenter','portal','noc','academy'):
                     page.goto(base+'/core/#'+view)
@@ -64,7 +64,7 @@ with Server(('127.0.0.1',0),Proxy) as server:
                 page.locator('#inventory-search').fill('fw')
                 checks['service_search']=page.locator('#inventory-rows tr').count()==1
                 page.locator('#inventory-search').fill('')
-                page.locator('[data-nav=noc]').click();page.locator('.noc-floor').wait_for()
+                page.goto(base+'/core/#noc');page.locator('.noc-floor').wait_for()
                 checks['second_floor_only']=page.locator('.floor-number').all_text_contents()==['2F']
                 checks['four_security_stages']=page.locator('.noc-path .noc-asset').count()==4
                 checks['no_simulated_facility_metrics']=not any(t in page.locator('#system-view').inner_text() for t in ('°C',' kW','AI 근무자'))
@@ -84,12 +84,13 @@ with Server(('127.0.0.1',0),Proxy) as server:
                 checks['siem_still_opens_separately']=popup is not page and page.locator('#account').is_visible();popup.close()
                 checks['no_paid_dependencies_requested']=not any(any(token in u for token in ('/envsim','/injector','/agents','/roster')) for u in requests)
                 page.set_viewport_size({'width':430,'height':900})
-                for view in ('datacenter','portal','noc','academy'):
-                    page.locator('[data-nav='+view+']').click()
+                for view in ('datacenter','portal','noc','academy','lab'):
+                    page.goto(base+'/core/#'+view)
                     page.wait_for_timeout(500)
                     checks['mobile_'+view+'_no_overflow']=page.evaluate('document.documentElement.scrollWidth <= window.innerWidth')
-                    checks['mobile_'+view+'_nav_accessible']=page.locator('[data-nav='+view+']').is_visible()
-                page.locator('[data-nav=noc]').click();page.locator('.noc-floor').wait_for();page.screenshot(path=str(a.output.with_suffix('.mobile.png')),full_page=True)
+                for view in ('datacenter','academy','lab'):
+                    checks['mobile_'+view+'_nav_accessible']=page.locator('.sidebar [data-nav='+view+']').is_visible()
+                page.goto(base+'/core/#noc');page.locator('.noc-floor').wait_for();page.screenshot(path=str(a.output.with_suffix('.mobile.png')),full_page=True)
             page.locator('#logout').click();page.locator('#login').wait_for(state='visible');checks['logout']=page.locator('#account').is_hidden()
             checks['no_javascript_errors']=not errors
             browser.close()

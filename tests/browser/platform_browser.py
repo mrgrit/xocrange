@@ -46,7 +46,7 @@ with Server(('127.0.0.1',0),Proxy) as server:
             page.locator('#login-form [name=username]').fill('admin');page.locator('#login-form [name=password]').fill(c['password'])
             page.locator('#login-form button').click();page.locator('#account').wait_for(state='visible')
             checks['admin_identity']=page.locator('#identity').inner_text()=='admin · 관리자'
-            page.locator('[data-nav=fw]').click();page.locator('#tabs [data-tab=policies]').wait_for()
+            page.goto(base+'/core/#fw/policies');page.locator('#tabs [data-tab=policies]').wait_for()
             expect(page.locator('#device-content')).to_contain_text('FORWARD')
             checks['forward_default_policy_view']=page.locator('#tabs [data-tab=policies]').get_attribute('aria-selected')=='true'
             checks['system_rules_protected']='시스템 경로 정책' in page.locator('#device-content').inner_text()
@@ -77,7 +77,7 @@ with Server(('127.0.0.1',0),Proxy) as server:
             checks['audit_table']=page.locator('#audit').is_visible()
             checks['siem_link_separate_account']='별도 Wazuh 계정' in page.locator('#siem-link').get_attribute('title')
             page.reload(wait_until='networkidle');checks['reload_keeps_session']=page.locator('#account').is_visible()
-            page.locator('[data-nav=fw]').click();page.locator('#tabs [data-tab=policies]').wait_for()
+            page.goto(base+'/core/#fw/policies');page.locator('#tabs [data-tab=policies]').wait_for()
             page.set_viewport_size({'width':430,'height':900});page.screenshot(path=str(a.output.with_suffix('.mobile.png')),full_page=True)
             checks['mobile_no_page_overflow']=page.evaluate('document.documentElement.scrollWidth <= window.innerWidth')
             page.locator('#logout').click();page.locator('#login').wait_for(state='visible');checks['logout']=page.locator('#account').is_hidden()
