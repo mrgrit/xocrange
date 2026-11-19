@@ -6,3 +6,4 @@
 #workspace-nav>button.active,.sidebar nav .active{background:#3a285a;color:#f2ebff;box-shadow:inset 3px 0 #4ce5e1}.sidebar nav .active svg,.sidebar nav .active small{color:#62ebe5}
 
 #workspace-nav>button{color:#b9adc9}#workspace-nav>button:hover{background:#2a203e}
+.nav-slot>button,.nav-slot>a{color:#b9adc9}.nav-slot>button:hover,.nav-slot>a:hover{background:#2a203e}
