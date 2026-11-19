@@ -89,6 +89,8 @@ def session_data(request):
         result.update(authenticated=True, username=request.user.username, role=p.role, must_change_password=p.must_change_password)
         from .workspace import session_navigation
         result['navigation'] = session_navigation(p.role) if not p.must_change_password else []
+        from .workspace import edition
+        result.update(edition=edition(), lab_domain=(settings.CONFIG.get('lab') or {}).get('domain'), public_host=settings.CONFIG['public_host'])
     return result
 
 

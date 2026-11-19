@@ -178,6 +178,50 @@ def test_screens_show_the_edition_of_the_active_license(app,registry_files,issue
     assert app.get('/core/api/datacenter').json()['edition']=={'tier':'community','label':'Community','state':'invalid'}
 
 
+def test_lab_page_lists_targets_and_lab_hosts_only_when_installed(app,registry_files,monkeypatch):
+    from django.conf import settings
+    data,files,_=registry_files
+    assert app.get('/core/api/lab').status_code==401
+    login(app,'viewer')
+    empty=app.get('/core/api/lab').json()
+    assert empty['targets']==[] and empty['endpoints']==[] and empty['hosts_line'] is None
+    monkeypatch.setitem(settings.CONFIG,'lab',{'domain':'alice.lab','targets':['dvwa'],'username':'student','password':'lab-only-secret'})
+    shown=app.get('/core/api/lab').json()
+    assert shown['targets']==[{'id':'dvwa','names':['dvwa.xoc.range','dvwa.alice.lab']}]
+    assert shown['hosts_line']==settings.CONFIG['public_host']+' dvwa.xoc.range dvwa.alice.lab'
+    assert shown['endpoints']==[]          # the account is shown only with a lab host that uses it
+    for identifier,title in (('office-pc','Office PC'),('attacker','Attack terminal')):
+        data['components'].append({'id':identifier,'title':title,'version':'0.1.0','commercial':False,'minimum_tier':'community'})
+    files['REGISTRY_FILE'].write_text(json.dumps(data))
+    ends={e['id']:e for e in app.get('/core/api/lab').json()['endpoints']}
+    host=settings.CONFIG['public_host']
+    assert ends['attacker']['ssh']==f'ssh -p 2202 student@{host}' and ends['office-pc']['ssh']==f'ssh -p 2222 student@{host}'
+    assert ends['attacker']['inside']==['curl http://dvwa.xoc.range/','ssh -p 2222 student@10.20.30.1']
+    assert ends['office-pc']['password']=='lab-only-secret'
+    assert 'office' in {s['id'] for s in app.get('/core/api/lab').json()['segments']}
+
+
+def test_license_page_is_for_administrators(app,registry_files,issuer,tmp_path,monkeypatch):
+    from django.conf import settings
+    _,_,_=registry_files;sign,keys=issuer
+    directory=tmp_path/'license'
+    monkeypatch.setattr(settings,'ENTITLEMENT_DIR',str(directory),raising=False)
+    login(app,'operator')
+    assert app.get('/core/api/license').status_code==403
+    assert app.get('/core/api/session').json()['edition']['label']=='Community'
+    send(app,'logout',{});login(app)
+    none=app.get('/core/api/license').json()
+    assert none['license'] is None and none['edition']['state']=='none' and none['components']
+    (directory/'trust').mkdir(parents=True)
+    (directory/'identity.json').write_text(json.dumps(IDENTITY))
+    (directory/'trust/ephemeral-test.pem').write_text(keys['ephemeral-test'])
+    (directory/'license.json').write_text(json.dumps(sign()))
+    shown=app.get('/core/api/license').json()
+    assert shown['edition']['state']=='active' and shown['license']['range_id']==IDENTITY['range_id']
+    assert set(shown['license'])=={'license_id','institution_id','range_id','domain','expires_at','modules'}
+    assert app.get('/core/api/session').json()['edition']['tier']==shown['edition']['tier']
+
+
 def test_force_password_change_blocks_inventory_and_revoked_session(app,registry_files):
     from control.models import Profile
     login(app)

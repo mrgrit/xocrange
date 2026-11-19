@@ -56,7 +56,7 @@ with Server(('127.0.0.1',0),Proxy) as server:
             else:
                 page.locator('#dc-stage').wait_for()
                 checks['datacenter_default']=page.locator('#page-title').inner_text()=='데이터센터'
-                page.locator('[data-nav=portal]').click()
+                page.goto(base+'/core/#portal')
                 page.locator('#inventory-rows tr').nth(9).wait_for()
                 checks['portal_available']=page.locator('#page-title').inner_text()=='운영 개요'
                 checks['installed_inventory_visible']=page.locator('#inventory-rows tr').count()==10
@@ -78,7 +78,7 @@ with Server(('127.0.0.1',0),Proxy) as server:
                 page.locator('.guide-card').nth(1).click();page.locator('.reading').wait_for()
                 checks['readable_article']=page.locator('.reading h2').inner_text()=='보안 트래픽 경로 이해하기'
                 page.screenshot(path=str(a.output.with_suffix('.reader.png')),full_page=True)
-                page.locator('[data-nav=portal]').click();page.locator('#inventory-rows').wait_for()
+                page.goto(base+'/core/#portal');page.locator('#inventory-rows').wait_for()
                 with page.expect_popup() as opened:page.locator('#siem-link').click()
                 popup=opened.value;popup.locator('input[type=password]').wait_for(timeout=60000)
                 checks['siem_still_opens_separately']=popup is not page and page.locator('#account').is_visible();popup.close()

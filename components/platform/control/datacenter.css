@@ -53,3 +53,5 @@
 .dc-sw-port-jack{fill:#0b141c}.dc-sw-cable{stroke:#7fe0b6;stroke-width:2}.dc-sw-cable-down{stroke:#7d7f8c;stroke-width:2;stroke-dasharray:3 3}.dc-sw-card{fill:#142a3b;stroke:#33536a}
 .dc-facility{cursor:pointer}.dc-facility:hover,.dc-facility:focus-visible,.dc-facility.selected{filter:drop-shadow(0 0 5px #8ddcff99)}
 .dc-facility-group{font-size:11px;color:#86a9bf;margin:16px 0 0;letter-spacing:.5px}.dc-checks{margin:0;padding-left:18px;color:#bdd0df;font-size:12px;line-height:1.8}
+.dc-link{color:#b8eee9;font-size:11px;text-decoration:none;border:1px solid #58416f;border-radius:5px;padding:7px 10px;white-space:nowrap}.dc-link:hover{background:#44305a}
+@media(max-width:720px){.dc-link{display:none}}

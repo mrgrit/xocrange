@@ -4,11 +4,15 @@ const stateNames={running:'실행 중',degraded:'상태 점검 필요',exited:'�
 function stateBadge(state){return `<span class="badge ${state==='running'?'allow':['exited','dead','missing'].includes(state)?'deny':['unknown','created'].includes(state)?'off':'detect'}">${esc(stateNames[state]||stateNames.unknown)}</span>`;}
 function workspaceNavigation(){
  const navigation=session.navigation||[];
- $('workspace-nav').innerHTML=navigation.filter(p=>['datacenter','portal','noc','academy'].includes(p.id)).map(p=>`<button data-nav="${p.id}" title="${esc(p.title)}" aria-label="${esc(p.title)}">${icon(p.id==='noc'?'wave':p.id==='academy'?'list':'grid')}<span>${esc(p.title)}</span>${p.id==='noc'?'<small>2F</small>':''}</button>`).join('');
- $('workspace-nav').hidden=!$('workspace-nav').children.length;
- for(const b of document.querySelectorAll('[data-nav]'))if(['fw','ips','waf'].includes(b.dataset.nav))b.hidden=!session.consoles?.includes(b.dataset.nav);
- const first=navigation.find(p=>p.id==='datacenter')||navigation.find(p=>p.id==='portal')||navigation.find(p=>['fw','ips','waf'].includes(p.id));
- document.querySelector('.brand').href=first?.route||'#access';
+ const button=p=>`<button data-nav="${p.id}" title="${esc(p.title)}" aria-label="${esc(p.title)}">${icon(p.id==='academy'?'list':'grid')}<span>${esc(p.title)}</span></button>`;
+ const fill=(slot,items,caption)=>{$(slot).innerHTML=items.join('');$(slot).hidden=!items.length;if(caption)$(caption).hidden=!items.length;};
+ fill('workspace-nav',navigation.filter(p=>p.id==='datacenter').map(button));
+ fill('learn-nav',navigation.filter(p=>p.id==='academy').map(button),'learn-caption');
+ // Installed modules bring their own entry (C4 panel on its component-owned route).
+ fill('module-nav',navigation.filter(p=>p.route.startsWith('/core/#module/')).map(p=>`<a href="${esc(p.route.slice(6))}" title="${esc(p.title)}">${icon('grid')}<span>${esc(p.title)}</span></a>`),'module-caption');
+ $('devices-nav').hidden=!(session.consoles||[]).length;
+ const first=navigation.find(p=>p.id==='datacenter');
+ document.querySelector('.brand').href=first?.route||'#lab';
 }
 function panelLink(p,label){return `<a class="workspace-link" href="${esc(p.route)}" ${p.route==='/siem/'?'target="_blank" rel="noopener noreferrer"':''}>${esc(label||p.title)} ${icon('arrow')}</a>`;}
 function assetPanel(asset){return workspaceData.panels.find(p=>p.component_id===asset.component_id&&p.id!=='portal')||workspaceData.panels.find(p=>p.id===({fw:'fw',ips:'ips',web:'waf',dashboard:'siem',siem:'siem',indexer:'siem'}[asset.service]));}

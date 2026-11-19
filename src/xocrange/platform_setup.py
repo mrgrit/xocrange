@@ -44,7 +44,19 @@ def prepare(engine, project, root, selected, host=None, state=STATE, tls=TLS_STA
     config_volume = volume('platform-config', 65532)
     from .entitlements import sync_platform
     sync_platform(config_volume)
-    write(config_volume/'config.json', json.dumps({k:config[k] for k in ('secret_key','bootstrap_password','public_host','siem_available','consoles','ssh_username')}), 65532)
+    platform_config = {k:config[k] for k in ('secret_key','bootstrap_password','public_host','siem_available','consoles','ssh_username')}
+    # The lab page (실습 환경) shows where to practise: target names and, when the office PC
+    # or the attack terminal is selected, the lab account. The account is for the lab only.
+    from .office_setup import USERNAME
+    lab = {'domain': domain, 'targets': sorted({t['id'] for t in (planned or {}).get('registry', {}).get('targets', [])
+                                                if not str(t.get('component_id', '')).startswith('fixture-')})}
+    if {'office-pc', 'attacker'} & set(selected):
+        config.setdefault('office_username', USERNAME)
+        config.setdefault('office_password', secrets.token_urlsafe(12))
+        write(path, json.dumps(config))
+        lab.update(username=config['office_username'], password=config['office_password'])
+    platform_config['lab'] = lab
+    write(config_volume/'config.json', json.dumps(platform_config), 65532)
     if planned is not None:
         write(config_volume/'registry.json', json.dumps(build_registry(planned, config['installation_id'])), 65532)
     volume('platform-observation', 0, 33, 0o750)
