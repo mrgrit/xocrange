@@ -25,7 +25,7 @@ async function workspaceView(sequence){
  if(view==='module'){const panel=d.panels.find(p=>p.route==='/core/#module/'+tab);d.assets=d.assets.filter(a=>a.component_id===panel.component_id);d.components=d.components.filter(c=>c.id===panel.component_id);$('page-title').textContent=panel.title;}
  let content=workspaceSummary(d)+observationNote(d);
  if(view!=='noc'){
-  content+=`<section class="panel"><div class="toolbar"><div class="toolbar-title">작업 공간</div><span class="tag">Community</span></div><div class="launch-grid">${d.panels.filter(p=>p.id!=='portal').map(p=>`<div class="launch-card">${icon(p.id==='noc'?'wave':p.id==='fw'?'shield':'grid')}<div><strong>${esc(p.title)}</strong><small>${esc(p.component_id)}</small></div>${panelLink(p,'열기')}</div>`).join('')}</div></section>`;
+  content+=`<section class="panel"><div class="toolbar"><div class="toolbar-title">작업 공간</div><span class="tag">${esc((d.edition||{}).label||'Community')}${(d.edition||{}).state==='expired'?' · 만료':''}</span></div><div class="launch-grid">${d.panels.filter(p=>p.id!=='portal').map(p=>`<div class="launch-card">${icon(p.id==='noc'?'wave':p.id==='fw'?'shield':'grid')}<div><strong>${esc(p.title)}</strong><small>${esc(p.component_id)}</small></div>${panelLink(p,'열기')}</div>`).join('')}</div></section>`;
  }else{
   const path=['ingress','fw','ips','web'];const stages=path.map(service=>d.assets.find(a=>a.service===service)).filter(Boolean);
   const targets=d.assets.filter(a=>a.kind==='target');const support=d.assets.filter(a=>!stages.includes(a)&&!targets.includes(a));

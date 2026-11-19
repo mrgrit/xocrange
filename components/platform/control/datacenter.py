@@ -163,7 +163,7 @@ def endpoint(request, floor=None):
         ssh_username = settings.CONFIG.get('ssh_username')
         if not isinstance(ssh_username, str) or not re.fullmatch(r'[a-z_][a-z0-9_-]{0,31}', ssh_username):
             ssh_username = None
-        value.update(schema_version='xoc.datacenter/0.1.0', tier='community',
+        value.update(schema_version='xoc.datacenter/0.1.0', tier=value['edition']['tier'],
                      panels=available_panels, racks=[dict(r, asset_ids=[a['asset_id'] for a in value['assets'] if a['rack_id']==r['id']]) for r in RACKS],
                      host_access={'host':settings.CONFIG['public_host'], 'username_hint':ssh_username, 'port':22},
                      floors=[dict(id=i,title=t,subtitle=s,minimum_tier=m,enabled=i in allowed,

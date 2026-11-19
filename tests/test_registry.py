@@ -153,6 +153,31 @@ def test_paid_routes_revalidate_signature_and_expiry_for_each_request(app,regist
     assert app.get('/core/api/modules/platform').status_code==200
 
 
+def test_screens_show_the_edition_of_the_active_license(app,registry_files,issuer,tmp_path,monkeypatch):
+    """The data center and workspace headers said Community whatever the license was (2026-11-19)."""
+    from django.conf import settings
+    _,_,_=registry_files;sign,keys=issuer
+    directory=tmp_path/'license'
+    monkeypatch.setattr(settings,'ENTITLEMENT_DIR',str(directory),raising=False)
+    login(app)
+    for path in ('/core/api/registry','/core/api/datacenter'):
+        assert app.get(path).json()['edition']=={'tier':'community','label':'Community','state':'none'}
+    assert app.get('/core/api/datacenter').json()['tier']=='community'
+    (directory/'trust').mkdir(parents=True)
+    (directory/'identity.json').write_text(json.dumps(IDENTITY))
+    (directory/'trust/ephemeral-test.pem').write_text(keys['ephemeral-test'])
+    token=directory/'license.json';token.write_text(json.dumps(sign()))
+    shown=app.get('/core/api/datacenter').json()
+    assert shown['edition']['state']=='active' and shown['edition']['tier']==shown['tier']==sign()['payload']['tier']!='community'
+    assert app.get('/core/api/registry').json()['edition']['label']==shown['edition']['label']
+    # The label never unlocks anything: the floors stay as Core serves them.
+    assert shown['allowed_floors']==['2F','B1','SITE','6F']
+    token.write_text(json.dumps(sign(expires_at='2021-01-01T00:00:00Z')))
+    assert app.get('/core/api/datacenter').json()['edition']['state']=='expired'
+    damaged=sign();damaged['payload']['tier']='joint-force';token.write_text(json.dumps(damaged))
+    assert app.get('/core/api/datacenter').json()['edition']=={'tier':'community','label':'Community','state':'invalid'}
+
+
 def test_force_password_change_blocks_inventory_and_revoked_session(app,registry_files):
     from control.models import Profile
     login(app)

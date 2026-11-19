@@ -70,6 +70,23 @@ def session_navigation(role):
         return []
 
 
+EDITION_LABELS = {'community': 'Community', 'live-fire': 'Live Fire', 'joint-force': 'Joint Force'}
+
+
+def edition():
+    """The edition this installation runs under, for display only. Access is decided by
+    authorize(); an unreadable or untrusted license is shown as Community, never as paid."""
+    directory = getattr(settings, 'ENTITLEMENT_DIR', '/run/xoc-platform/entitlements')
+    try:
+        grant = entitlements.load(directory, '0.1.0')
+    except (entitlements.Denied, OSError, ValueError, KeyError, TypeError):
+        return {'tier': 'community', 'label': EDITION_LABELS['community'], 'state': 'invalid'}
+    if grant is None or grant.get('tier') not in EDITION_LABELS:
+        return {'tier': 'community', 'label': EDITION_LABELS['community'], 'state': 'none'}
+    return {'tier': grant['tier'], 'label': EDITION_LABELS[grant['tier']], 'state': 'expired' if grant['expired'] else 'active',
+            'expires_at': grant.get('expires_at')}
+
+
 def snapshot(data):
     checked = datetime.now(timezone.utc)
     observation, age, fresh = {}, None, False
@@ -96,7 +113,7 @@ def snapshot(data):
         assets.append(dict(asset, health=health))
     return {'assets':assets,'observation':{'fresh':fresh,'observed_at':observation.get('observed_at') if fresh else None,
             'age_seconds':round(age) if age is not None and age >= 0 else None,'max_age_seconds':45,'scope':'container_state'},
-            'served_at':checked.isoformat()}
+            'served_at':checked.isoformat(), 'edition':edition()}
 
 
 @require_GET
