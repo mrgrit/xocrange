@@ -83,3 +83,16 @@ Community 번들(`contents/academy/wazuh-threat-hunting`, 36차시)의 본문·�
 도구를 다시 돌리지 않는다는 점을 `source-map.json`에 적는다.
 
 차시별 상세 목록: [content-ledger/](content-ledger/) (A 시작하기, B 웹 01~08, C 웹 09~15, D 호스트 16~23, E 호스트·네트워크 24~30).
+
+## 6. 전환 기록
+
+차시를 옮길 때마다 여기에 적는다. "본문"은 명령·검색식·설명·결과값, "그림"은 화면 캡처와 도식이다.
+구역의 `mapping_status`: `pending-review`(손대지 않음) → `text-ported`(본문 전환, 그림은 이전 것) →
+`ported`(그림까지 교체).
+
+| 차시 | 본문 | 그림 | 실행한 Core | 비고 |
+|---|---|---|---|---|
+| 20 sudo 권한 사용 | 전환(2026-11-19) | 이전 환경 캡처 6장 그대로 | 192.168.16.51·52, Joint Force 라이선스 | 공격 실습 단말 → `ssh -p 2222 student@10.20.30.1` → `id`·`sudo -l`·`sudo -i id`·`sudo cat /etc/shadow`. 경보 5402(`COMMAND=/bin/bash --login -c id`, `/usr/bin/cat /etc/shadow`), `agent.name: office-pc01`. 원본과 다른 점: 5403은 그 PC에서 그 계정의 첫 sudo 한 번에만 난다. 슬라이드 243·244의 "3 hits"는 캡처와 함께 고친다 |
+
+전환에 쓰는 도구: `contents/scripts/replace-asset.py`(그림 한 장을 새 PNG로 교체하고 참조·목록을 맞춘다).
+

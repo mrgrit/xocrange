@@ -6,7 +6,7 @@
   "blocks": [
     {
       "type": "p",
-      "text": "ccc로 로그인한 뒤 root 권한 명령을 실행한다. sudo는 sudoers 정책에 따라 다른 계정의 권한으로 명령을 실행하는 도구이다. 기본 대상은 root이다. root로 직접 SSH 인증하는 8.5와 구분한다. [7]"
+      "text": "student로 로그인한 뒤 root 권한 명령을 실행한다. sudo는 sudoers 정책에 따라 다른 계정의 권한으로 명령을 실행하는 도구이다. 기본 대상은 root이다. root로 직접 SSH 인증하는 8.5와 구분한다. [7]"
     },
     {
       "type": "image",
@@ -18,24 +18,24 @@
     {
       "type": "command",
       "id": "C08-40",
-      "where": "공격자 VM · att 셸",
-      "text": "ssh -p 2204 ccc@192.168.0.107",
-      "result": "bastion의 ccc 셸이 열린다.",
+      "where": "공격 실습 단말 · student 셸",
+      "text": "ssh -p 2222 student@10.20.30.1",
+      "result": "업무용 PC(office-pc01)의 student 셸이 열린다.",
       "syntax": "root 설정의 원상복구를 마친 뒤 일반 계정으로 접속한다.",
-      "purpose": "권한 사용을 관찰할 ccc SSH 세션을 연다."
+      "purpose": "권한 사용을 관찰할 student SSH 세션을 연다."
     },
     {
       "type": "command",
       "id": "C08-41",
-      "where": "xocrange-bastion · SSH로 접속한 ccc 셸",
+      "where": "업무용 PC · SSH로 접속한 student 셸",
       "text": "id\nsudo -l",
-      "result": "제시한 사례의 ccc에는 (ALL) NOPASSWD: ALL이 있다. 이는 암호 재입력 없이 허용된 대상 계정으로 모든 명령을 실행할 수 있는 실습용 설정이다.",
+      "result": "실습 환경의 student에는 (ALL) NOPASSWD: ALL이 있다. 이는 암호 재입력 없이 허용된 대상 계정으로 모든 명령을 실행할 수 있는 실습용 설정이다.",
       "syntax": "sudo -l은 현재 사용자가 실행할 수 있는 명령을 나열한다. 실행 전 계정과 허용 정책을 확인한다.",
       "purpose": "로그인 계정의 그룹과 실제 sudo 허용 범위를 확인한다."
     },
     {
       "type": "p",
-      "text": "sudo 그룹에 속했는지만 보지 말고 sudo -l의 실제 허용 범위를 읽는다. docker 그룹 권한도 별도로 점검할 대상이다. 성공 기준은 일반 계정의 실행 요청과 root 권한 실행을 로그에서 구분하는 것이다."
+      "text": "sudo 그룹에 속했는지만 보지 말고 sudo -l의 실제 허용 범위를 읽는다. 성공 기준은 일반 계정의 실행 요청과 root 권한 실행을 로그에서 구분하는 것이다."
     },
     {
       "type": "h",
@@ -44,16 +44,16 @@
     {
       "type": "command",
       "id": "C08-42",
-      "where": "xocrange-bastion · SSH로 접속한 ccc 셸",
+      "where": "업무용 PC · SSH로 접속한 student 셸",
       "text": "sudo -i id\nid",
-      "result": "첫 출력은 uid=0(root), 다음 출력은 uid=1000(ccc)이다. 첫 명령이 끝나면 ccc 셸로 돌아온다.",
+      "result": "첫 출력은 uid=0(root), 다음 출력은 uid=1000(student)이다. 첫 명령이 끝나면 student 셸로 돌아온다.",
       "syntax": "sudo -i는 대상 사용자의 로그인 환경을 사용한다. 뒤에 id를 붙였으므로 해당 명령을 실행한 뒤 돌아온다. 명령 없는 sudo -i는 대화형 셸을 열어 exit가 필요하다.",
-      "purpose": "root 권한으로 id를 실행한 뒤 ccc 권한으로 돌아온 것을 비교한다."
+      "purpose": "root 권한으로 id를 실행한 뒤 student 권한으로 돌아온 것을 비교한다."
     },
     {
       "type": "command",
       "id": "C08-43",
-      "where": "xocrange-bastion · SSH로 접속한 ccc 셸",
+      "where": "업무용 PC · SSH로 접속한 student 셸",
       "text": "ls -l /etc/shadow\nsudo cat /etc/shadow > /dev/null\necho $?",
       "result": "echo $?가 0이면 읽기 명령이 성공했다. 실제 내용 확인·복사는 하지 않아도 sudo 실행 기록은 남는다.",
       "syntax": "shadow는 암호 해시와 암호 만료 정보를 담는 보호된 파일이다. ls로 존재와 권한을 확인한 뒤 root 권한의 cat으로 읽는다. >는 cat의 출력을 /dev/null로 보내고 /dev/null은 받은 데이터를 버린다. 해시는 화면에 표시하지 않는다.",
@@ -61,7 +61,7 @@
     },
     {
       "type": "p",
-      "text": "ccc의 NOPASSWD 정책에서는 sudo 암호 질문을 생략한다. 여기서는 5402·5403과 COMMAND를 조회한다. sudo -l 결과에 암호 인증을 요구하는 정책이 있으면 그 정책에 따른 인증 결과를 기록한다."
+      "text": "student의 NOPASSWD 정책에서는 sudo 암호 질문을 생략한다. 여기서는 5402·5403과 COMMAND를 조회한다. sudo -l 결과에 암호 인증을 요구하는 정책이 있으면 그 정책에 따른 인증 결과를 기록한다."
     },
     {
       "type": "h",
@@ -70,9 +70,9 @@
     {
       "type": "query",
       "id": "Q08-08",
-      "where": "Windows · Discover · wazuh-alerts-*",
-      "text": "agent.name: \"bastion\" AND\n(rule.id: \"5402\" OR rule.id: \"5403\")",
-      "result": "ccc가 USER=root로 요청한 COMMAND를 찾는다. 이번 sudo -i id에는 5403, cat에는 5402가 적용됐다.",
+      "where": "브라우저 · Discover · wazuh-alerts-*",
+      "text": "agent.name: \"office-pc01\" AND\n(rule.id: \"5402\" OR rule.id: \"5403\")",
+      "result": "student가 USER=root로 요청한 COMMAND를 찾는다. sudo -i id와 cat에는 모두 5402가 적용된다. 5403은 이 PC에서 student의 sudo가 처음 관찰된 한 번에만 함께 나타난다.",
       "syntax": "5402는 root 대상 sudo 실행, 5403은 Wazuh의 첫 관찰 조건과 관련된 규칙이다. 두 규칙을 함께 조회하고 full_log를 읽는다.",
       "purpose": "sudo의 root 대상 실행 요청과 최초 관찰 경보를 찾는다."
     },
@@ -85,11 +85,11 @@
     },
     {
       "type": "p",
-      "text": "data.srcuser는 원문의 ccc, data.dstuser는 USER=root, data.pwd는 PWD, data.command는 COMMAND 뒤에서 나온다. PWD는 명령을 요청할 때의 작업 디렉터리이다. 명령이 읽거나 쓴 파일은 COMMAND의 경로와 실행 기록에서 찾는다. 대화형 터미널이면 TTY가 기록될 수 있고 비대화형 실행에는 없을 수 있다."
+      "text": "data.srcuser는 원문의 student, data.dstuser는 USER=root, data.pwd는 PWD, data.command는 COMMAND 뒤에서 나온다. PWD는 명령을 요청할 때의 작업 디렉터리이다. 명령이 읽거나 쓴 파일은 COMMAND의 경로와 실행 기록에서 찾는다. 대화형 터미널이면 TTY가 기록될 수 있고 비대화형 실행에는 없을 수 있다."
     },
     {
       "type": "p",
-      "text": "cat 기록의 COMMAND는 /usr/bin/cat /etc/shadow이다. > /dev/null은 ccc의 셸이 처리한 출력 방향이므로 sudo 명령 인수에는 포함되지 않는다. sudo-i의 COMMAND는 /bin/bash --login -c id로 나타났다."
+      "text": "cat 기록의 COMMAND는 /usr/bin/cat /etc/shadow이다. > /dev/null은 student의 셸이 처리한 출력 방향이므로 sudo 명령 인수에는 포함되지 않는다. sudo -i의 COMMAND는 /bin/bash --login -c id로 나타났다."
     },
     {
       "type": "h",
@@ -101,7 +101,7 @@
     },
     {
       "type": "p",
-      "text": "5403은 Wazuh가 보관한 첫 관찰 상태에 영향을 받는다. 이 디코더의 FTS(최초 관찰) 조건은 이름·출발 사용자·위치를 사용한다. 이번 기록에는 sudo의 PAM 경고에도 5403이 나타났으나 명령 필드는 없었다. root 권한으로 실행한 명령은 COMMAND가 포함된 sudo 원문과 실행 결과에서 확인한다."
+      "text": "5403은 Wazuh가 보관한 첫 관찰 상태에 영향을 받는다. 이 디코더의 FTS(최초 관찰) 조건은 이름·출발 사용자·위치를 사용한다. 실습 환경에서는 student가 이 PC에서 처음 sudo를 실행한 한 번에만 5403이 나타났고, 이후의 실행에는 5402만 적용됐다. root 권한으로 실행한 명령은 COMMAND가 포함된 sudo 원문과 실행 결과에서 확인한다."
     },
     {
       "type": "p",
@@ -113,13 +113,13 @@
     },
     {
       "type": "p",
-      "text": "sudo 정책과 shadow 내용은 그대로 유지된다. 조사를 마치면 exit로 ccc SSH 셸을 닫고, 8.7은 공격자 VM에서 새 연결로 시작한다."
+      "text": "sudo 정책과 shadow 내용은 그대로 유지된다. 조사를 마치면 exit로 student SSH 셸을 닫고, 8.7은 공격 실습 단말에서 새 연결로 시작한다."
     }
   ],
   "source": {
     "file": "volume01-chapter08.json",
     "section_index": 6,
     "revision": "REV01",
-    "mapping_status": "pending-review"
+    "mapping_status": "text-ported"
   }
 }

@@ -52,7 +52,7 @@
         },
         {
           "type": "text",
-          "text": "/etc/passwd: 계정 목록(누구나 읽기) — 'ccc:x:1000:1000::/home/ccc:/bin/bash'  UID 0 = root 와 같은 권한"
+          "text": "/etc/passwd: 계정 목록(누구나 읽기) — 'student:x:1000:1000::/home/student:/bin/bash'  UID 0 = root 와 같은 권한"
         },
         {
           "type": "text",
@@ -157,7 +157,7 @@
         },
         {
           "type": "text",
-          "text": "공격자 VM 에서 학생이 직접 입력하는 명령과 실제 결과. # 줄은 설명, 노란색은 확인할 결과"
+          "text": "공격 실습 단말에서 업무용 PC 로 접속해 학생이 직접 입력하는 명령과 실제 결과. # 줄은 설명, 노란색은 확인할 결과"
         }
       ]
     },
@@ -367,7 +367,7 @@
         },
         {
           "type": "text",
-          "text": "5402 = root 로 sudo 성공, 5403 = 그 사용자가 sudo 를 처음 씀"
+          "text": "5402 = root 로 sudo 성공, 5403 = 그 사용자가 이 PC 에서 sudo 를 처음 쓴 한 번"
         },
         {
           "type": "text",
@@ -383,7 +383,7 @@
         },
         {
           "type": "text",
-          "text": "xOC Range bastion 의 ccc 는 비밀번호 없이 sudo(NOPASSWD)라 5401(암호 3회 실패)은 생기지 않는다"
+          "text": "업무용 PC 의 student 는 비밀번호 없이 sudo(NOPASSWD)라 5401(암호 3회 실패)은 생기지 않는다"
         }
       ]
     }
