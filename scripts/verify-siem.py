@@ -16,7 +16,12 @@ engine = Docker(plan_dir / 'compose.yaml', result['compose']['name'])
 # A restored appliance can have durable input waiting from before maintenance.
 # Drain it before generating a new timed probe; never skip a journal cursor or
 # treat queued data as decoded. Brand-new installations normally pass immediately.
-recovery_deadline = time.monotonic() + 900
+# The wait lasts as long as the backlog keeps shrinking: a failed update followed
+# by its restore leaves hours of journal, and giving up while the collector is
+# still working it off only starts another restore. It fails when the oldest
+# waiting input has not become newer for 900 s, or after four hours in total.
+recovery_started = last_progress = time.monotonic()
+best = None
 last_notice = 0
 while True:
     report = store.status()
@@ -24,7 +29,11 @@ while True:
     caught_up = (lag is not None and lag < 90 and report['oldest_pending_seconds'] < 90
                  and report.get('oldest_native_input_pending_seconds', 0) < 90)
     if caught_up: break
-    if time.monotonic() >= recovery_deadline:
+    if lag is not None:
+        oldest = max(lag, report['oldest_pending_seconds'], report.get('oldest_native_input_pending_seconds', 0))
+        if best is None or oldest < best - 30:
+            best = oldest; last_progress = time.monotonic()
+    if time.monotonic() >= min(last_progress + 900, recovery_started + 14400):
         result = {'status':'failed', 'phase':'recovery-backlog', 'store':report,
                   'scope':'Retained input has not caught up; no data or cursor was skipped.'}
         Path('/var/lib/xocrange/siem-acceptance.json').write_text(json.dumps(result,indent=2)+'\n')
