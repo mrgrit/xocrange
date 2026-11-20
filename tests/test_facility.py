@@ -226,3 +226,58 @@ def test_the_facility_capability_is_refused_to_community_modules_and_without_the
     with pytest.raises(XocError) as exc:
         plan(checkout, include=['M7'], entitlement_dir=_licensed(tmp_path, issuer), allow_experimental=True)
     assert exc.value.code == 'missing_capability'
+
+
+def operated():
+    """The sample with the optional parts a module 0.2 sends: actions, drills, a drill and work in progress."""
+    document = sample()
+    document['catalog']['faults'].append({'id': 'gpu_ecc_dbe', 'title': 'GPU 메모리 정정 불가 오류', 'system': 'compute',
+                                          'default_minutes': 30, 'targets': [{'id': 'gpu-03', 'title': 'GPU 노드 03'}]})
+    document['catalog']['operations'] = [
+        {'id': 'drain_node', 'title': '노드 작업 제외(drain)', 'system': 'compute', 'minutes': 0, 'needs_drain': False,
+         'targets': [{'id': 'gpu-03', 'title': 'GPU 노드 03'}]},
+        {'id': 'power_cap', 'title': 'GPU 전력 상한 설정', 'system': 'compute', 'minutes': 0, 'needs_drain': False,
+         'targets': [{'id': 'cluster', 'title': 'GPU 클러스터 전체'}], 'value': {'min': 50, 'max': 100, 'unit': '%', 'default': 80}}]
+    document['catalog']['drills'] = [{'id': 'ai05b', 'title': '학습 작업이 멈췄다', 'brief': '학습 작업이 중단됐다는 알림이 왔다.',
+                                      'course': 'ai', 'level': 2, 'minutes': 40, 'time_scale': 10}]
+    document['drill'] = {'id': 'ai05b', 'title': '학습 작업이 멈췄다', 'brief': '학습 작업이 중단됐다는 알림이 왔다.', 'status': 'running',
+                         'started_at': stamp(-60), 'ended_at': None, 'elapsed_min': 10.0, 'minutes': 40, 'open_faults': 1}
+    document['work'] = [{'op': 'replace_gpu', 'title': 'GPU 모듈 교체', 'target': 'gpu-03', 'target_title': 'GPU 노드 03', 'minutes_left': 12.5}]
+    return document
+
+
+OPERATED_BROKEN = [edit(['catalog', 'operations', 0, 'system'], 'it'), edit(['catalog', 'operations', 0, 'needs_drain'], 'no'),
+                   edit(['catalog', 'operations', 1, 'value', 'max'], 500), edit(['catalog', 'operations', 0, 'answer'], 'x'),
+                   edit(['catalog', 'drills', 0, 'level'], 9), edit(['catalog', 'drills', 0, 'brief'], '<b>'),
+                   edit(['catalog', 'drills', 0, 'steps'], []), edit(['drill', 'status'], 'graded'), edit(['drill', 'faults'], []),
+                   edit(['drill', 'open_faults'], -1), edit(['work', 0, 'target'], '../x'), edit(['work', 0, 'minutes_left'], -1)]
+
+
+def test_operator_actions_drills_and_work_are_optional_parts_of_the_contract(application):
+    from control.facility import checked
+    document = operated()
+    assert not list(STATE.iter_errors(document))
+    value = checked(document)
+    assert value['drill']['status'] == 'running' and value['work'][0]['op'] == 'replace_gpu'
+    assert [o['id'] for o in value['catalog']['operations']] == ['drain_node', 'power_cap'] and value['catalog']['drills'][0]['course'] == 'ai'
+    assert checked(sample())['drill'] is None and checked(sample())['work'] == []          # a 0.1 module still validates
+    for change in OPERATED_BROKEN:
+        broken = copy.deepcopy(document); change(broken)
+        assert list(STATE.iter_errors(broken)), broken
+        with pytest.raises((ValueError, KeyError, TypeError)):
+            checked(broken)
+
+
+def test_operate_and_drill_requests_become_files(app, facility):
+    install, state, requests = facility; install(); login(app)
+    (state/'state.json').write_text(json.dumps(operated()))
+    for body in ({'action': 'operate', 'op': 'drain_node', 'target': 'gpu-03'},
+                 {'action': 'operate', 'op': 'power_cap', 'target': 'cluster', 'value': 70},
+                 {'action': 'drill_start', 'drill': 'ai05b'}, {'action': 'drill_stop'}):
+        response = send(app, 'facility/requests', body)
+        assert response.status_code == 202, body
+        written = json.loads((requests/(response.json()['request_id'] + '.json')).read_text())
+        assert not list(REQUEST.iter_errors(written)) and {k: written[k] for k in body} == body
+    for body in ({'action': 'operate', 'op': 'drain_node'}, {'action': 'operate', 'op': 'Drain', 'target': 'gpu-03'},
+                 {'action': 'drill_start'}, {'action': 'drill_stop', 'drill': 'ai05b'}, {'action': 'inject', 'fault': 'x', 'target': 'y', 'minutes': 5, 'value': 3}):
+        assert send(app, 'facility/requests', body).status_code == 400, body
