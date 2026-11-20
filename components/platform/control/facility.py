@@ -32,6 +32,12 @@ FLOOR = re.compile(r'B1|SITE|[1-9]F')
 STAMP = re.compile(r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?Z')
 UNSAFE = re.compile(r'[\x00-\x1f<>]')
 STATUS = ('normal', 'warning', 'critical', 'off')
+SYSTEMS = ('power', 'cooling', 'security', 'fire', 'compute', 'network', 'storage')
+COURSE = re.compile(r'[a-z0-9-]{0,32}')
+ACTIONS = {'inject': ('fault', 'target', 'minutes'), 'clear': ('handle',), 'clear_all': (), 'shed': ('group',),
+           'restore': ('group',), 'time_scale': ('value',), 'operate': ('op', 'target'), 'drill_start': ('drill',),
+           'drill_stop': ()}
+OPTIONAL = {'operate': ('value',)}
 
 
 def _state_dir():
@@ -92,15 +98,54 @@ def _metric(value):
     return {'key': _match(item['key'], KEY), 'label': _text(item['label'], 60), 'value': reading, 'unit': _text(item['unit'], 16, empty=True)}
 
 
+def _targets(value):
+    return [{'id': _match(t['id'], TARGET), 'title': _text(t['title'], 80)} for t in (_obj(x, ('id', 'title')) for x in _list(value, 32))]
+
+
+def _integer(value, low, high):
+    if isinstance(value, bool) or not isinstance(value, int):
+        _fail()
+    return int(_number(value, low, high))
+
+
+def _operation(o):
+    row = {'id': _match(o['id'], KEY), 'title': _text(o['title'], 80), 'system': _choice(o['system'], SYSTEMS),
+           'minutes': _integer(o['minutes'], 0, 240),
+           'needs_drain': o['needs_drain'] if isinstance(o['needs_drain'], bool) else _fail(),
+           'targets': _targets(o['targets'])}
+    if 'value' in o:
+        v = _obj(o['value'], ('min', 'max', 'unit', 'default'))
+        row['value'] = {'min': _number(v['min'], 0.1, 120), 'max': _number(v['max'], 0.1, 120),
+                        'unit': _text(v['unit'], 16, empty=True), 'default': _number(v['default'], 0.1, 120)}
+    return row
+
+
+def _drill(d):
+    if d is None:
+        return None
+    d = _obj(d, ('id', 'title', 'brief', 'status', 'started_at', 'ended_at', 'elapsed_min', 'minutes', 'open_faults'))
+    return {'id': _match(d['id'], KEY), 'title': _text(d['title'], 120), 'brief': _text(d['brief'], 600, empty=True),
+            'status': _choice(d['status'], ('running', 'finished', 'stopped')), 'started_at': _match(d['started_at'], STAMP),
+            'ended_at': None if d['ended_at'] is None else _match(d['ended_at'], STAMP),
+            'elapsed_min': None if d['elapsed_min'] is None else _number(d['elapsed_min'], 0),
+            'minutes': _integer(d['minutes'], 1, 480), 'open_faults': _integer(d['open_faults'], 0, 64)}
+
+
 def checked(value):
     """The module's document, field by field (contract xoc.facility-state/0.1.0). Anything
-    outside the contract rejects the whole document; nothing from it is shown."""
+    outside the contract rejects the whole document; nothing from it is shown. Operator
+    actions, drills and work in progress are optional parts of the same contract."""
     top = _obj(value, ('schema_version', 'generated_at', 'sequence', 'time_scale', 'load_source', 'summary', 'assets',
-                       'aisles', 'alarms', 'faults', 'catalog', 'handled', 'events'))
+                       'aisles', 'alarms', 'faults', 'catalog', 'handled', 'events'), ('drill', 'work'))
     if top['schema_version'] != 'xoc.facility-state/0.1.0' or isinstance(top['sequence'], bool) or not isinstance(top['sequence'], int) or top['sequence'] < 0:
         _fail()
-    catalog = _obj(top['catalog'], ('faults', 'shed_groups'))
-    return {
+    catalog = _obj(top['catalog'], ('faults', 'shed_groups'), ('operations', 'drills'))
+    extra = {
+        'drill': _drill(top.get('drill')),
+        'work': [{'op': _match(w['op'], KEY), 'title': _text(w['title'], 80), 'target': _match(w['target'], TARGET),
+                  'target_title': _text(w['target_title'], 80), 'minutes_left': _number(w['minutes_left'], 0, 1e6)}
+                 for w in (_obj(x, ('op', 'title', 'target', 'target_title', 'minutes_left')) for x in _list(top.get('work', []), 16))]}
+    return extra | {
         'generated_at': _match(top['generated_at'], STAMP), 'sequence': top['sequence'],
         'time_scale': _number(top['time_scale'], 0.1, 120), 'load_source': _choice(top['load_source'], ('profile', 'measured')),
         'summary': [_metric(m) for m in _list(top['summary'], 24)],
@@ -119,10 +164,16 @@ def checked(value):
                     'expires_at': _match(f['expires_at'], STAMP), 'requested_by': _text(f['requested_by'], 150)}
                    for f in (_obj(x, ('handle', 'fault', 'title', 'target', 'started_at', 'expires_at', 'requested_by')) for x in _list(top['faults'], 32))],
         'catalog': {
-            'faults': [{'id': _match(f['id'], KEY), 'title': _text(f['title'], 120), 'system': _choice(f['system'], ('power', 'cooling', 'security', 'fire')),
-                        'targets': [{'id': _match(t['id'], TARGET), 'title': _text(t['title'], 80)} for t in (_obj(x, ('id', 'title')) for x in _list(f['targets'], 32))],
+            'faults': [{'id': _match(f['id'], KEY), 'title': _text(f['title'], 120), 'system': _choice(f['system'], SYSTEMS),
+                        'targets': _targets(f['targets']),
                         'default_minutes': int(_number(f['default_minutes'], 1, 120))}
-                       for f in (_obj(x, ('id', 'title', 'system', 'targets', 'default_minutes')) for x in _list(catalog['faults'], 64))],
+                       for f in (_obj(x, ('id', 'title', 'system', 'targets', 'default_minutes')) for x in _list(catalog['faults'], 128))],
+            'operations': [_operation(_obj(x, ('id', 'title', 'system', 'minutes', 'needs_drain', 'targets'), ('value',)))
+                           for x in _list(catalog.get('operations', []), 96)],
+            'drills': [{'id': _match(d['id'], KEY), 'title': _text(d['title'], 120), 'brief': _text(d['brief'], 600, empty=True),
+                        'course': _match(d['course'], COURSE) if d['course'] else '', 'level': _integer(d['level'], 1, 5),
+                        'minutes': _integer(d['minutes'], 1, 480), 'time_scale': _number(d['time_scale'], 0.1, 120)}
+                       for d in (_obj(x, ('id', 'title', 'brief', 'course', 'level', 'minutes', 'time_scale')) for x in _list(catalog.get('drills', []), 128))],
             'shed_groups': [{'id': _match(g['id'], ID), 'title': _text(g['title'], 80), 'impact': _text(g['impact'], 200),
                              'load_kw': _number(g['load_kw']), 'shed': g['shed'] if isinstance(g['shed'], bool) else _fail()}
                             for g in (_obj(x, ('id', 'title', 'impact', 'load_kw', 'shed')) for x in _list(catalog['shed_groups'], 16))]},
@@ -214,12 +265,13 @@ def request_change(request):
     from .workspace import registry, access
     from .views import data as body
     try:
-        value = body(request, ('action',), ('fault', 'target', 'minutes', 'handle', 'group', 'value'))
-        action = _choice(value['action'], ('inject', 'clear', 'clear_all', 'shed', 'restore', 'time_scale'))
-        fields = {'inject': ('fault', 'target', 'minutes'), 'clear': ('handle',), 'clear_all': (), 'shed': ('group',),
-                  'restore': ('group',), 'time_scale': ('value',)}[action]
-        if set(value) - {'action'} != set(fields):
+        value = body(request, ('action',), ('fault', 'target', 'minutes', 'handle', 'group', 'value', 'op', 'drill'))
+        action = _choice(value['action'], tuple(ACTIONS))
+        fields = ACTIONS[action]
+        given = set(value) - {'action'}
+        if not set(fields) <= given or not given <= set(fields) | set(OPTIONAL.get(action, ())):
             _fail()
+        fields = tuple(fields) + tuple(k for k in OPTIONAL.get(action, ()) if k in given)
         document = {'schema_version': 'xoc.facility-request/0.1.0', 'request_id': secrets.token_hex(16),
                     'created_at': datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
                     'requested_by': _text(request.user.username, 150), 'action': action}
@@ -231,9 +283,11 @@ def request_change(request):
         if 'handle' in fields: document['handle'] = _match(value['handle'], RID)
         if 'group' in fields: document['group'] = _match(value['group'], ID)
         if 'value' in fields: document['value'] = _number(value['value'], 0.1, 120)
+        if 'op' in fields: document['op'] = _match(value['op'], KEY)
+        if 'drill' in fields: document['drill'] = _match(value['drill'], KEY)
     except (ValueError, ValidationError):
         return JsonResponse({'error': 'invalid_input'}, status=400)
-    target = document.get('fault') or document.get('group') or document.get('handle') or ''
+    target = document.get('fault') or document.get('op') or document.get('drill') or document.get('group') or document.get('handle') or ''
     try:
         component = module(registry())
         if component is None:
@@ -257,5 +311,5 @@ def request_change(request):
     except (OSError, ValueError, KeyError, TypeError):
         return JsonResponse({'error': 'facility_request_failed'}, status=503)
     audit(request, 'facility_' + action, 'requested', target,
-          after={k: document[k] for k in ('request_id', 'fault', 'target', 'minutes', 'handle', 'group', 'value') if k in document})
+          after={k: document[k] for k in ('request_id', 'fault', 'target', 'minutes', 'handle', 'group', 'value', 'op', 'drill') if k in document})
     return JsonResponse({'request_id': document['request_id']}, status=202)

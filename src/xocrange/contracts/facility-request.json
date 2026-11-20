@@ -35,7 +35,10 @@
         "clear_all",
         "shed",
         "restore",
-        "time_scale"
+        "time_scale",
+        "operate",
+        "drill_start",
+        "drill_stop"
       ]
     },
     "fault": {
@@ -63,6 +66,14 @@
       "type": "number",
       "minimum": 0.1,
       "maximum": 120
+    },
+    "op": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{0,47}$"
+    },
+    "drill": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{0,47}$"
     }
   },
   "allOf": [
@@ -124,6 +135,35 @@
       "then": {
         "required": [
           "value"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "action": {
+            "const": "operate"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "op",
+          "target"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "action": {
+            "const": "drill_start"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "drill"
         ]
       }
     }

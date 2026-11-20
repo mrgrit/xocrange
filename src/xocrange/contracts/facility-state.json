@@ -366,7 +366,7 @@
       "properties": {
         "faults": {
           "type": "array",
-          "maxItems": 64,
+          "maxItems": 128,
           "items": {
             "type": "object",
             "additionalProperties": false,
@@ -393,7 +393,10 @@
                   "power",
                   "cooling",
                   "security",
-                  "fire"
+                  "fire",
+                  "compute",
+                  "network",
+                  "storage"
                 ]
               },
               "targets": {
@@ -468,6 +471,164 @@
               }
             }
           }
+        },
+        "operations": {
+          "type": "array",
+          "maxItems": 96,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "title",
+              "system",
+              "minutes",
+              "needs_drain",
+              "targets"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]{0,47}$"
+              },
+              "title": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 80,
+                "pattern": "^[^\u0000-\u001f<>]*$"
+              },
+              "system": {
+                "enum": [
+                  "power",
+                  "cooling",
+                  "security",
+                  "fire",
+                  "compute",
+                  "network",
+                  "storage"
+                ]
+              },
+              "minutes": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 240
+              },
+              "needs_drain": {
+                "type": "boolean"
+              },
+              "targets": {
+                "type": "array",
+                "maxItems": 32,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "id",
+                    "title"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "pattern": "^(?:\\*|[a-z][a-z0-9-]{0,63}|[1-9]F|B1|SITE)$"
+                    },
+                    "title": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 80,
+                      "pattern": "^[^\u0000-\u001f<>]*$"
+                    }
+                  }
+                }
+              },
+              "value": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "min",
+                  "max",
+                  "unit",
+                  "default"
+                ],
+                "properties": {
+                  "min": {
+                    "type": "number",
+                    "minimum": 0.1,
+                    "maximum": 120
+                  },
+                  "max": {
+                    "type": "number",
+                    "minimum": 0.1,
+                    "maximum": 120
+                  },
+                  "unit": {
+                    "type": "string",
+                    "minLength": 0,
+                    "maxLength": 16,
+                    "pattern": "^[^\u0000-\u001f<>]*$"
+                  },
+                  "default": {
+                    "type": "number",
+                    "minimum": 0.1,
+                    "maximum": 120
+                  }
+                }
+              }
+            }
+          }
+        },
+        "drills": {
+          "type": "array",
+          "maxItems": 128,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "title",
+              "brief",
+              "course",
+              "level",
+              "minutes",
+              "time_scale"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]{0,47}$"
+              },
+              "title": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 120,
+                "pattern": "^[^\u0000-\u001f<>]*$"
+              },
+              "brief": {
+                "type": "string",
+                "minLength": 0,
+                "maxLength": 600,
+                "pattern": "^[^\u0000-\u001f<>]*$"
+              },
+              "course": {
+                "type": "string",
+                "pattern": "^[a-z0-9-]{0,32}$"
+              },
+              "level": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 5
+              },
+              "minutes": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 480
+              },
+              "time_scale": {
+                "type": "number",
+                "minimum": 0.1,
+                "maximum": 120
+              }
+            }
+          }
         }
       }
     },
@@ -536,6 +697,132 @@
             "minLength": 1,
             "maxLength": 240,
             "pattern": "^[^\\u0000-\\u001f<>]*$"
+          }
+        }
+      }
+    },
+    "drill": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "title",
+            "brief",
+            "status",
+            "started_at",
+            "ended_at",
+            "elapsed_min",
+            "minutes",
+            "open_faults"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{0,47}$"
+            },
+            "title": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120,
+              "pattern": "^[^\u0000-\u001f<>]*$"
+            },
+            "brief": {
+              "type": "string",
+              "minLength": 0,
+              "maxLength": 600,
+              "pattern": "^[^\u0000-\u001f<>]*$"
+            },
+            "status": {
+              "enum": [
+                "running",
+                "finished",
+                "stopped"
+              ]
+            },
+            "started_at": {
+              "type": "string",
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\\.[0-9]{1,6})?Z$"
+            },
+            "ended_at": {
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "string",
+                  "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\\.[0-9]{1,6})?Z$"
+                }
+              ]
+            },
+            "elapsed_min": {
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "number",
+                  "minimum": -1000000000.0,
+                  "maximum": 1000000000.0
+                }
+              ]
+            },
+            "minutes": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 480
+            },
+            "open_faults": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 64
+            }
+          }
+        }
+      ]
+    },
+    "work": {
+      "type": "array",
+      "maxItems": 16,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "op",
+          "title",
+          "target",
+          "target_title",
+          "minutes_left"
+        ],
+        "properties": {
+          "op": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{0,47}$"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80,
+            "pattern": "^[^\u0000-\u001f<>]*$"
+          },
+          "target": {
+            "type": "string",
+            "pattern": "^(?:\\*|[a-z][a-z0-9-]{0,63}|[1-9]F|B1|SITE)$"
+          },
+          "target_title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80,
+            "pattern": "^[^\u0000-\u001f<>]*$"
+          },
+          "minutes_left": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1000000.0
           }
         }
       }
