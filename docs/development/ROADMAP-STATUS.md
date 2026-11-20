@@ -18,6 +18,8 @@ K06의 현재 선택 구성 수집·SIEM 회귀와 K07 공통 보안을 구현�
 | K11 운영 | portable 백업·업데이트·자동 복구, 빈 VM 설치+복원, 로그 회전, 버전/이미지/패키지 목록, 최소 구성 자원 검증 | 장기 운영·다중 사용자 부하와 RC 권리 확정 |
 | K12 RC | 단계별 실행 증거와 미완료 범위 관리, [G1 체크리스트](K12-RC-CHECKLIST.md) | G1 전체 통합·배포 검증. 체크리스트의 "RC를 막는 항목" |
 
+2026-11-20 시설 모듈 연결([ADR 0014](../adr/0014-facility-module-channel.md)): Live Fire의 시설 시뮬레이터(M4)가 쓰는 상태를 Core가 읽고, 운영자의 요청(장애 넣기·되돌리기·부하 차단·시간 배속)을 넘기는 단방향 볼륨 두 개와 계약 `xoc.facility-state/0.1.0`·`xoc.facility-request/0.1.0`을 추가했다. 시뮬레이터와 장애 주입은 Core에 없다. 실행 검증(개발 VM, 모듈 설치): 모듈 화면에서 항온항습기 정지를 넣자 해당 통로 온도가 23.9 → 50.9 °C로 오르고 경보 5건이 뜬 뒤 정한 시간에 자동 복구됐고, 데이터센터 B1 보기가 실시간 값을 보였으며, 요청 3건이 감사 기록에 남았다(화면 오류 0, API 오류 0). 남은 것: 시설 경보의 SIEM 수집, 설비 표의 설비 이름 표시(지금은 ID), 실제 컨테이너에 영향을 주는 장애(새 ADR 필요).
+
 2026-11-13 밤 K12 진행([검증](RETENTION-ADDRESS-PLAN-2026-11-13.md)): 모듈 트랜잭션이 SIEM 수용에서 롤백된 원인(재시작 직후 보존 정리가 캐시가 빈 상태에서 3분 넘게 수집을 막음)을 루프당 3초 분할 정리로 수정했다. `xoc update`가 정책이 바뀐 릴리스를 설치된 planner로 미리 계획해 거부하던 결함을 고쳤다. 실습망을 kt66 주소 체계(ext 10.20.30, pipe 10.20.31, dmz 10.20.32, int 10.20.40)로 바꿔 배포했다. 그 위에서 `console-fw`·`console-waf` 개별 제외·재추가(메뉴·API 제외 확인), 장비 broker·Core HTTPS 수준 동시 apply(신규 `concurrent_core.py`), 로그인이 필요한 통합 시험(`device_console` 51, `workspaces` 78/85, `console_restart` 16, `academy_acceptance` 33)을 실행해 통과했다.
 
 2026-11-14 소유자 결정과 후속([기록](RC-FRESH-VM-2026-11-13.md#6-auditd-기록-중단의-표시와-자동-재개)): Core 라이선스를 PolyForm Noncommercial 1.0.0(`LICENSE`)과 교육용 추가 허락(`LICENSE-EDUCATION.md`)으로 정하고 kt66 자산·로고 배포 허락을 NOTICE에 기록했다. RC 범위는 설치기 기본 구성(ssh-lab·bootstrap 단독은 이후). 수업 전 초기화 `xoc siem clear`를 추가해 새 VM에서 검증했다. 디스크 고갈 뒤 auditd가 기록을 중단한 채 남고 SIEM은 `ready`로 표시하던 결함을 찾아, 중단 표시와 자동 재개로 고쳤다. 실제 외부 PC의 출처 IP 보존도 확인했다.
