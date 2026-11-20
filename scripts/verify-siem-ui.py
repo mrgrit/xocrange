@@ -109,7 +109,14 @@ r.on('error',e=>process.exit(['ERR_TLS_CERT_ALTNAME_INVALID','UNABLE_TO_VERIFY_L
     parser_request=headers.get('X-Xoc-Request-Id')
     from xocrange.event_store import Store
     store=Store('/var/lib/xocrange/siem')
-    deadline=time.monotonic()+30
+    # The three checks below look for the record of a request this script just sent. Right
+    # after an install the collector is still working through what the installation itself
+    # produced (image builds, restarts), and a record can arrive minutes late. Wait for the
+    # backlog first, bounded; a collector that never catches up fails the checks as before.
+    caught_up=time.monotonic()+900
+    while time.monotonic()<caught_up and store.status().get('oldest_pending_seconds',0)>=15:
+        time.sleep(5)
+    deadline=time.monotonic()+120
     parser_evidence=None
     while parser_request and time.monotonic()<deadline:
         # Bound the lookup to this probe; scanning retained multi-GiB evidence
@@ -121,7 +128,7 @@ r.on('error',e=>process.exit(['ERR_TLS_CERT_ALTNAME_INVALID','UNABLE_TO_VERIFY_L
     checks['waf_marker_blocks_siem']=request('/siem/api/status',headers={'X-Xoc-Probe':'waf-block'})[0]==403
     code,headers,_=request('/siem/api/status',headers={'X-Xoc-Client-IP':'198.51.100.99','X-Forwarded-For':'198.51.100.99','X-Forwarded-Proto':'http'})
     request_id=headers.get('X-Xoc-Request-Id')
-    deadline=time.monotonic()+30
+    deadline=time.monotonic()+120
     source=None
     while request_id and time.monotonic()<deadline:
         row=store.db.execute("SELECT json_extract(event,'$.network.source.ip') FROM events WHERE producer='apache-access' AND json_extract(event,'$.correlation.transaction_id')=?",(request_id,)).fetchone()
@@ -135,7 +142,7 @@ r.on('error',e=>process.exit(['ERR_TLS_CERT_ALTNAME_INVALID','UNABLE_TO_VERIFY_L
         stopped=request('/siem/api/status',headers={'X-Xoc-Probe':'ips-block'},timeout=5)[0] in (502,504)
     except (urllib.error.URLError,TimeoutError,ConnectionError):
         stopped=True
-    deadline=time.monotonic()+30
+    deadline=time.monotonic()+120
     ips_evidence=None
     while time.monotonic()<deadline:
         ips_evidence=store.db.execute("SELECT id FROM events WHERE producer='suricata' AND observed>=? AND json_extract(event,'$.network.source.ip')='10.20.30.20' AND json_extract(event,'$.rule.id')='1000001' AND json_extract(event,'$.event.outcome')='blocked'",(cutoff,)).fetchone()
