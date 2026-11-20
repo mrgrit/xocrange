@@ -104,8 +104,9 @@ def checked(value):
         'generated_at': _match(top['generated_at'], STAMP), 'sequence': top['sequence'],
         'time_scale': _number(top['time_scale'], 0.1, 120), 'load_source': _choice(top['load_source'], ('profile', 'measured')),
         'summary': [_metric(m) for m in _list(top['summary'], 24)],
-        'assets': [{'id': _match(a['id'], ID), 'status': _choice(a['status'], STATUS), 'metrics': [_metric(m) for m in _list(a['metrics'], 12)]}
-                   for a in (_obj(x, ('id', 'status', 'metrics')) for x in _list(top['assets'], 200))],
+        'assets': [{'id': _match(a['id'], ID), 'status': _choice(a['status'], STATUS), 'metrics': [_metric(m) for m in _list(a['metrics'], 12)],
+                    **({'title': _text(a['title'], 60)} if 'title' in a else {})}
+                   for a in (_obj(x, ('id', 'status', 'metrics'), ('title',)) for x in _list(top['assets'], 200))],
         'aisles': [{'id': _match(a['id'], AISLE), 'floor': _match(a['floor'], FLOOR), 'temp_c': _number(a['temp_c']), 'status': _choice(a['status'], STATUS),
                     'metrics': [_metric(m) for m in _list(a.get('metrics', []), 8)]}
                    for a in (_obj(x, ('id', 'floor', 'temp_c', 'status'), ('metrics',)) for x in _list(top['aisles'], 16))],

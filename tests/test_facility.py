@@ -56,6 +56,7 @@ BROKEN = [edit(['schema_version'], 'xoc.facility-state/9'), edit(['sequence'], -
           edit(['assets', 0, 'id'], 'Chiller 01'), edit(['assets', 0, 'status'], 'ok'), edit(['assets', 0, 'metrics', 0, 'label'], '<b>x</b>'),
           edit(['assets', 0, 'metrics', 0, 'value'], float('inf')), edit(['assets', 0, 'metrics', 0, 'value'], None),
           edit(['assets', 0, 'metrics', 0, 'key'], 'Capacity'), edit(['assets', 0, 'answer'], '정답'),
+          edit(['assets', 0, 'title'], '<i>냉동기</i>'), edit(['assets', 0, 'title'], ''), edit(['assets', 0, 'title'], 'x'*61),
           edit(['aisles', 0, 'floor'], '10F'), edit(['aisles', 0, 'temp_c'], '22'), edit(['alarms', 0, 'level'], 'info'),
           edit(['alarms', 0, 'message'], 'x'*201), edit(['alarms', 0, 'asset_id'], 5), edit(['faults', 0, 'handle'], 'abc'),
           edit(['faults', 0, 'target'], '../etc'), edit(['faults', 0, 'requested_by'], 'a\nb'), edit(['catalog', 'faults', 0, 'system'], 'it'),
@@ -69,7 +70,9 @@ def test_platform_check_and_contract_agree(application):
     from control.facility import checked
     document = sample()
     assert not list(STATE.iter_errors(document))
-    assert checked(document)['assets'][0]['id'] == 'chiller-01'
+    assert checked(document)['assets'][0]['id'] == 'chiller-01' and 'title' not in checked(document)['assets'][0]
+    named = copy.deepcopy(document); named['assets'][0]['title'] = '수랭식 냉동기'   # the name is optional
+    assert not list(STATE.iter_errors(named)) and checked(named)['assets'][0]['title'] == '수랭식 냉동기'
     for change in BROKEN:
         broken = copy.deepcopy(document); change(broken)
         assert list(STATE.iter_errors(broken)), broken

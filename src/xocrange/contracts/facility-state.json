@@ -162,6 +162,12 @@
                 }
               }
             }
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 60,
+            "pattern": "^[^\\u0000-\\u001f<>]*$"
           }
         }
       }
