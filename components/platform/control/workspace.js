@@ -26,7 +26,7 @@ async function workspaceView(sequence){
  if(!session.navigation?.some(p=>view==='module'?p.route==='/core/#module/'+tab:p.id===view)){$('system-view').innerHTML='<div class="panel">'+empty('설치되지 않은 기능','현재 선택한 구성에서 사용할 수 없습니다.')+'</div>';$('sync-status').textContent='선택 설치 필요';return;}
  if(view==='academy'){await Academy.view(sequence);return;}
  const d=await api(view==='noc'?'noc':'registry');if(sequence!==loadSequence)return;workspaceData=d;
- if(view==='module'){const panel=d.panels.find(p=>p.route==='/core/#module/'+tab);d.assets=d.assets.filter(a=>a.component_id===panel.component_id);d.components=d.components.filter(c=>c.id===panel.component_id);$('page-title').textContent=panel.title;}
+ if(view==='module'){const panel=d.panels.find(p=>p.route==='/core/#module/'+tab);d.assets=d.assets.filter(a=>a.component_id===panel.component_id);d.components=d.components.filter(c=>c.id===panel.component_id);$('page-title').textContent=panel.title;if(Facility.owns(d.components[0])){$('page-description').textContent='전력·냉방·소방·출입 설비의 상태를 보고, 장애를 넣어 대응을 연습합니다.';await Facility.view(sequence);return;}}
  let content=workspaceSummary(d)+observationNote(d);
  if(view!=='noc'){
   content+=`<section class="panel"><div class="toolbar"><div class="toolbar-title">작업 공간</div><span class="tag">${esc((d.edition||{}).label||'Community')}${(d.edition||{}).state==='expired'?' · 만료':''}</span></div><div class="launch-grid">${d.panels.filter(p=>p.id!=='portal').map(p=>`<div class="launch-card">${icon(p.id==='noc'?'wave':p.id==='fw'?'shield':'grid')}<div><strong>${esc(p.title)}</strong><small>${esc(p.component_id)}</small></div>${panelLink(p,'열기')}</div>`).join('')}</div></section>`;

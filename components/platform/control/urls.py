@@ -1,5 +1,5 @@
 from django.urls import path
-from . import views, console, workspace, datacenter, academy
+from . import views, console, workspace, datacenter, academy, facility
 
 urlpatterns = [path('core/api/datacenter', datacenter.endpoint),
                path('core/api/academy', academy.catalog),
@@ -17,6 +17,7 @@ urlpatterns = [path('core/api/datacenter', datacenter.endpoint),
                path('core/api/modules/<str:identifier>', workspace.module_status),
                path('core/api/datacenter/design/<str:floor>', datacenter.design),
                path('core/api/datacenter/floors/<str:floor>', datacenter.endpoint),
+               path('core/api/facility', facility.state), path('core/api/facility/requests', facility.request_change),
                path('core/api/lab', workspace.lab), path('core/api/license', workspace.license_status),
                path('core/api/registry', workspace.inventory),
                path('core/api/noc', workspace.inventory, {'screen':'noc'}),

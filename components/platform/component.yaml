@@ -12,6 +12,7 @@ requires:
   capabilities: []
 provides:
 - platform.health
+- facility-state
 conflicts: []
 networks:
 - int
@@ -42,6 +43,8 @@ build_inputs:
 - control/datacenter.css
 - control/datacenter-workspaces.js
 - control/facility-catalog.json
+- control/facility.py
+- control/facility.js
 - control/brand.css
 - control/workspace.py
 - control/entitlements.py

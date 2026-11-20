@@ -94,6 +94,14 @@ def prepare(engine, project, root, selected, host=None, state=STATE, tls=TLS_STA
         volume('console-'+device+'-state', 33 if device=='waf' else 0)
         if 'console-'+device in selected:
             volume('console-'+device+'-socket', 33 if device=='waf' else 0, 33, 0o770)
+    services = (planned or {}).get('compose', {}).get('services', {})
+    writers = [v for v in services.values() if 'facility-state:/run/xoc-facility' in v.get('volumes', [])]
+    if writers:
+        # ADR 0014: the module writes its state, the platform only reads it; the platform writes
+        # requests, the module only reads them. Each side owns the directory it writes.
+        uid, gid = (int(x) for x in str(writers[0]['user']).split(':'))
+        volume('facility-state', uid, gid, 0o755)
+        volume('facility-requests', 65532, 65532, 0o755)
     if 'office-pc' in selected:
         from .office_setup import account
         account(volume('office-config', 0), config)

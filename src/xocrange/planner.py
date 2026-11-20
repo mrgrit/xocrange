@@ -93,6 +93,13 @@ EVIDENCE = "evidence-query"
 ACTIVITY_VOLUME, ACTIVITY_TARGET = "activity-{}", "/run/xoc-activity"
 
 
+FACILITY = "facility-state"
+# ADR 0014: the facility module writes its state for the platform to read, and reads the
+# requests the platform writes. Files only: no network path and no socket between them.
+FACILITY_STATE = ("facility-state", "/run/xoc-facility")
+FACILITY_REQUESTS = ("facility-requests", "/run/xoc-facility-requests")
+
+
 def evidence_volumes(identifier):
     """(volume, mount target) pairs a module receives under ADR-0008."""
     return ((f"evidence-{identifier}", "/run/xoc-evidence"), (f"module-{identifier}-credentials", "/run/xoc-module"))
@@ -280,6 +287,19 @@ def plan(root: Path, *, preset="bootstrap", include=(), without=(), allow_fixtur
         for name, owner in owners.items():
             if owner == identifier:
                 compose['services'][name]['volumes'].append(f'{ACTIVITY_VOLUME.format(identifier)}:{ACTIVITY_TARGET}')
+    holders = [i for i in selected if FACILITY in entries[i]["manifest"]["requires"]["capabilities"]]
+    if holders:
+        manifest = entries[holders[0]]["manifest"]
+        if len(holders) > 1 or manifest["kind"] != "module" or not manifest["commercial"]:
+            raise XocError("capability_not_permitted", "One commercial module may hold the facility state.")
+        if 'management' not in selected:
+            raise XocError("missing_capability", "The facility module needs the Core management screen.")
+        for (volume, target), module_mode, platform_mode in ((FACILITY_STATE, '', ':ro'), (FACILITY_REQUESTS, ':ro', '')):
+            compose.setdefault('volumes', {})[volume] = {}
+            compose['services']['platform']['volumes'].append(f'{volume}:{target}{platform_mode}')
+            for name, owner in owners.items():
+                if owner == holders[0]:
+                    compose['services'][name].setdefault('volumes', []).append(f'{volume}:{target}{module_mode}')
     if 'int' in compose['networks']:
         compose['networks']['int'] = backend_network(compose['networks']['int'])
     check_addresses(compose)

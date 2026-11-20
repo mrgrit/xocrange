@@ -53,11 +53,13 @@ window.DataCenter=(()=>{
   const list=data.facilities||[],f=list.find(x=>x.id===selectedFacility),floor=data.floors.find(x=>x.id===designFloor);
   node.hidden=false;$('dc-stage')?.classList.add('has-selection');
   const head=`<div class="dc-inspector-heading"><span class="dc-kicker">${f?'FACILITY DETAILS':'FACILITY INVENTORY'}</span>${f?'<button class="dc-icon-button" data-dc-facility-close aria-label="시설 상세 닫기">×</button>':''}</div>`;
-  const baseline='<span class="badge" title="시설 시뮬레이터(M4)가 없어 대장의 정격·설정값을 보여 줍니다">기준값 · 시뮬레이터 없음</span>';
+  const live=data.simulator?data.facility_live:null,panel=(session.navigation||[]).find(p=>p.component_id===live?.module?.id);
+  const baseline=live?'<span class="badge allow" title="시설 모듈의 시뮬레이터가 계산한 현재 값입니다">실시간 · 시설 시뮬레이터</span>':'<span class="badge" title="시설 시뮬레이터(M4)가 없어 대장의 정격·설정값을 보여 줍니다">기준값 · 시뮬레이터 없음</span>';
+  const now=id=>live?Facility.status(live,id):null;
   if(!f){
    const groups={};list.forEach(x=>(groups[x.system_title||'기타']=groups[x.system_title||'기타']||[]).push(x));
    node.innerHTML=head+`<h3>${esc(designFloor+' · '+(floor?.title||''))}</h3><p class="dc-note">시설을 선택하면 역할·배치·장애 영향·점검 항목과 기준값을 볼 수 있습니다. ${baseline}</p>`+
-    Object.entries(groups).map(([g,xs])=>`<h4 class="dc-facility-group">${esc(g)}</h4><div class="dc-rack-list">${xs.map(x=>`<button data-dc-facility-pick="${esc(x.id)}"><span><strong>${esc(x.name)}</strong><small>${esc(x.title)}</small></span><span class="dc-row-arrow">›</span></button>`).join('')}</div>`).join('');
+    Object.entries(groups).map(([g,xs])=>`<h4 class="dc-facility-group">${esc(g)}</h4><div class="dc-rack-list">${xs.map(x=>`<button data-dc-facility-pick="${esc(x.id)}"><span><strong>${esc(x.name)}</strong><small>${esc(x.title)}</small></span>${now(x.id)?.badge||''}<span class="dc-row-arrow">›</span></button>`).join('')}</div>`).join('');
    return;
   }
   const chain=(data.facility_systems||{})[f.system]?.chain;
@@ -65,8 +67,9 @@ window.DataCenter=(()=>{
    <p class="dc-device-description">${esc(f.role)}</p>
    <dl class="dc-facts"><div><dt>배치</dt><dd>${esc(f.placement)}</dd></div><div><dt>장애 영향</dt><dd>${esc(f.impact)}</dd></div>${chain?`<div><dt>${esc(f.system_title)} 계통</dt><dd>${esc(chain)}</dd></div>`:''}</dl>
    <section class="dc-net"><h4>점검 항목</h4><ul class="dc-checks">${(f.checks||[]).map(c=>`<li>${esc(c)}</li>`).join('')}</ul>
+   ${now(f.id)?`<h4>현재 상태 ${now(f.id).badge}</h4><div class="dc-live-metrics">${now(f.id).metrics||'<span class="dc-note">측정값이 없습니다.</span>'}</div>`:''}
    <h4>기준값 <small>대장의 정격·설정값</small></h4>${table(['항목','값'],(f.baseline||[]).map(b=>[b.label,String(b.value)]))}</section>
-   <p class="dc-note">${esc(data.facility_note||'')} 실시간 상태와 장애 주입은 Live Fire의 시설 모듈에서 제공합니다.</p>`;
+   <p class="dc-note">${live?(panel?`장애 실습은 <a href="${esc(panel.route.slice(6))}">${esc(panel.title)}</a> 화면에서 합니다.`:''):esc(data.facility_note||'')+' 실시간 상태와 장애 주입은 Live Fire의 시설 모듈에서 제공합니다.'}</p>`;
  }
  function inspector(){
   const node=$('dc-inspector');if(!node||!data)return;
@@ -146,6 +149,7 @@ window.DataCenter=(()=>{
  document.addEventListener('pointerdown',e=>{const host=e.target.closest('#dc-scene');if(!host||e.button!==0||e.target.closest('.commercial-workspace')||e.target.closest('[data-dc-rack],[data-dc-facility],[data-dc-learning-route],.dc-level-active,.dc-level-preview'))return;drag={x:e.clientX,y:e.clientY,px:pan.x,py:pan.y,host,id:e.pointerId};host.setPointerCapture(e.pointerId);host.classList.add('dc-dragging');});
  document.addEventListener('pointermove',e=>{if(!drag||drag.id!==e.pointerId||!box)return;const factor=box.width/drag.host.clientWidth;pan={x:Math.max(-box.width,Math.min(box.width,drag.px+(e.clientX-drag.x)*factor)),y:Math.max(-box.height,Math.min(box.height,drag.py+(e.clientY-drag.y)*factor))};updateCamera();});
  const end=()=>{if(drag){drag.host.classList.remove('dc-dragging');drag=null;}};document.addEventListener('pointerup',end);document.addEventListener('pointercancel',end);window.addEventListener('blur',end);
+ setInterval(()=>{if(view!=='datacenter'||mode!=='facility'||!data?.facility_live?.installed||document.hidden||drag)return;api('facility').then(v=>{if(view!=='datacenter'||mode!=='facility'||!data)return;data.facility_live=v;data.simulator=v.simulator;const node=$('dc-inspector'),top=node?.scrollTop;inspector();if(node)node.scrollTop=top;}).catch(()=>{});},5000);
  return {clear(){home();data=null;camera=null;box=null;sshUser=null;resize?.disconnect();cancelAnimationFrame(resizeFrame);},get interacting(){return Boolean(drag)||loading||view==='datacenter'&&['design','learning','facility'].includes(mode);},async load(sequence){
   if(!session.navigation?.some(p=>p.id==='datacenter')){$('system-view').innerHTML='<div class="panel">'+empty('설치되지 않은 기능','NOC 구성요소를 선택 설치하면 데이터센터를 볼 수 있습니다.')+'</div>';return;}
   const fresh=await api('datacenter');if(sequence!==loadSequence)return;let content;if(['design','learning'].includes(mode)&&['6F','7F'].includes(designFloor)&&session.navigation?.some(n=>n.id==='academy'))content=await DataCenterWorkspaces.snapshot();if(sequence!==loadSequence)return;data=fresh;if(content)data.learning_snapshot=content;if(sshUser===null)sshUser=data.host_access.username_hint||'';

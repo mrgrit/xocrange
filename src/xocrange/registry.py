@@ -16,6 +16,7 @@ SERVICE_LABELS = {
     'lab-client': ('연결 시험용 클라이언트', 'client'),
     'office-pc': ('업무용 리눅스 PC', 'client'),
     'attacker': ('공격 실습 단말', 'client'),
+    'm4-facility': ('시설 시뮬레이터', 'service'),
     'dvwa': ('DVWA', 'target'), 'juiceshop': ('OWASP Juice Shop', 'target'),
 }
 

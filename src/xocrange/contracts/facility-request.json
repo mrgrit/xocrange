@@ -1,0 +1,131 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Facility request v0.1 (Core to M4 facility module, ADR 0014)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "request_id",
+    "created_at",
+    "requested_by",
+    "action"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "xoc.facility-request/0.1.0"
+    },
+    "request_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{32}$"
+    },
+    "created_at": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\\.[0-9]{1,6})?Z$"
+    },
+    "requested_by": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 150,
+      "pattern": "^[^\\u0000-\\u001f<>]*$"
+    },
+    "action": {
+      "enum": [
+        "inject",
+        "clear",
+        "clear_all",
+        "shed",
+        "restore",
+        "time_scale"
+      ]
+    },
+    "fault": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{0,47}$"
+    },
+    "target": {
+      "type": "string",
+      "pattern": "^(?:\\*|[a-z][a-z0-9-]{0,63}|[1-9]F|B1|SITE)$"
+    },
+    "minutes": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 120
+    },
+    "handle": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{32}$"
+    },
+    "group": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{0,63}$"
+    },
+    "value": {
+      "type": "number",
+      "minimum": 0.1,
+      "maximum": 120
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "action": {
+            "const": "inject"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "fault",
+          "target",
+          "minutes"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "action": {
+            "const": "clear"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "handle"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "action": {
+            "enum": [
+              "shed",
+              "restore"
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "group"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "action": {
+            "const": "time_scale"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "value"
+        ]
+      }
+    }
+  ]
+}

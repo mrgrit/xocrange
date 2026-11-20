@@ -175,7 +175,9 @@ def endpoint(request, floor=None):
                      preview_floors=[f[0] for f in FLOORS if f[0] not in ('2F',)+FACILITY_FLOORS] if request.user.profile.role=='admin' else [])
         if floor in FACILITY_FLOORS:
             catalog = facility_catalog()
-            value.update(facility_view=True, simulator=False, assets=[], racks=[],
+            from .facility import overview
+            live = overview(data)
+            value.update(facility_view=True, simulator=live['simulator'], facility_live=live, assets=[], racks=[],
                          facilities=[f for f in catalog['facilities'] if f.get('floor') == floor],
                          facility_systems=catalog['systems'], facility_note=catalog.get('note', ''))
         return JsonResponse(value)

@@ -55,3 +55,6 @@
 .dc-facility-group{font-size:11px;color:#86a9bf;margin:16px 0 0;letter-spacing:.5px}.dc-checks{margin:0;padding-left:18px;color:#bdd0df;font-size:12px;line-height:1.8}
 .dc-link{color:#b8eee9;font-size:11px;text-decoration:none;border:1px solid #58416f;border-radius:5px;padding:7px 10px;white-space:nowrap}.dc-link:hover{background:#44305a}
 @media(max-width:720px){.dc-link{display:none}}
+.dc-live-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 12px;margin:8px 0 14px}
+.dc-live-metrics div{display:flex;flex-direction:column;gap:2px}
+.dc-live-metrics strong{font-size:15px}
