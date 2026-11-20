@@ -264,7 +264,9 @@ class Collector:
             self.store.set_cursor('native-input-enabled', True)
             revision=hashlib.sha256(b''.join((root/'components/siem'/name).read_bytes() for name in ('Dockerfile','native-decoders.xml','native-rules.xml'))).hexdigest()
             if self.store.cursor('native-rules-revision') != revision:
-                self.store.db.execute("UPDATE native_inputs SET error=NULL,sent=NULL WHERE error='native_decoder_missing'")
+                # Only unconfirmed inputs carry this mark; the filter lets the pending index
+                # find them instead of reading the whole table at start-up.
+                self.store.db.execute("UPDATE native_inputs SET error=NULL,sent=NULL WHERE confirmed IS NULL AND error='native_decoder_missing'")
                 self.store.set_cursor('native-rules-revision',revision)
             if not self.indexer:
                 self.store.db.execute("DELETE FROM health WHERE source IN ('indexer','native-indexer')")

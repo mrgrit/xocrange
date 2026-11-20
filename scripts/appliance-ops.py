@@ -10,6 +10,7 @@ p.add_argument('action', choices=['checkpoint', 'rollback', 'restore', 'prune-ch
 p.add_argument('path', type=Path)
 args = p.parse_args()
 if args.action == 'checkpoint':
+    operations.rollback_room(args.path.parent)      # before anything is stopped
     result = operations.create(args.path, portable=False, keep_stopped=True)
 elif args.action == 'prune-checkpoints':
     result = operations.prune_checkpoints(args.path)

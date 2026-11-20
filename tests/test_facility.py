@@ -201,7 +201,8 @@ def test_only_the_module_and_the_platform_share_the_facility_volumes(checkout, i
            requires={'components': [], 'capabilities': ['facility-state']})
     result = plan(checkout, preset='security-path', include=['M7', 'noc'], entitlement_dir=_licensed(tmp_path, issuer), allow_experimental=True)
     compose = result['compose']
-    assert compose['services']['m7']['volumes'] == ['facility-state:/run/xoc-facility', 'facility-requests:/run/xoc-facility-requests:ro']
+    assert compose['services']['m7']['volumes'] == ['facility-state:/run/xoc-facility', 'facility-requests:/run/xoc-facility-requests:ro',
+                                                     'module-M7-credentials:/run/xoc-module:ro']   # class-wide faults come from Range Control
     assert {'facility-state:/run/xoc-facility:ro', 'facility-requests:/run/xoc-facility-requests'} <= set(compose['services']['platform']['volumes'])
     others = [n for n, s in compose['services'].items() if n not in ('m7', 'platform') and any('facility-' in str(v) for v in s.get('volumes', []))]
     assert others == [] and {'facility-state', 'facility-requests'} <= set(compose['volumes'])

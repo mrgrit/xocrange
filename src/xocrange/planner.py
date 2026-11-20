@@ -300,6 +300,14 @@ def plan(root: Path, *, preset="bootstrap", include=(), without=(), allow_fixtur
             for name, owner in owners.items():
                 if owner == holders[0]:
                     compose['services'][name].setdefault('volumes', []).append(f'{volume}:{target}{module_mode}')
+        # The school's Range Control hands this module class-wide faults (ADR 0010 §4): it needs the
+        # range's client credentials, the same read-only volume evidence modules get (ADR 0008).
+        volume, target = evidence_volumes(holders[0])[1]
+        compose['volumes'][volume] = {}
+        for name, owner in owners.items():
+            mount = f'{volume}:{target}:ro'
+            if owner == holders[0] and mount not in compose['services'][name]['volumes']:
+                compose['services'][name]['volumes'].append(mount)
     if 'int' in compose['networks']:
         compose['networks']['int'] = backend_network(compose['networks']['int'])
     check_addresses(compose)
