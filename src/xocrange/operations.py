@@ -379,7 +379,8 @@ def rollback_room(backups=None, free=None):
     available = shutil.disk_usage(base).free if free is None else free
     if available < needed:
         raise XocError('update_space', f'An update needs about {needed // 1024**2} MiB free to be able to roll back; '
-                       f'{available // 1024**2} MiB is free. Old copies under {STATE}/failed-state are not removed automatically.')
+                       f'{available // 1024**2} MiB is free. Old copies under {STATE}/failed-state are not removed automatically; '
+                       'unused images and the Docker build cache can also be cleared.')
     return {'status': 'ok', 'needed_bytes': needed, 'free_bytes': available}
 
 

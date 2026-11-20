@@ -6,10 +6,12 @@ from pathlib import Path
 from xocrange import operations
 
 p = argparse.ArgumentParser()
-p.add_argument('action', choices=['checkpoint', 'rollback', 'restore', 'prune-checkpoints'])
+p.add_argument('action', choices=['checkpoint', 'room', 'rollback', 'restore', 'prune-checkpoints'])
 p.add_argument('path', type=Path)
 args = p.parse_args()
-if args.action == 'checkpoint':
+if args.action == 'room':
+    result = operations.rollback_room(args.path)
+elif args.action == 'checkpoint':
     operations.rollback_room(args.path.parent)      # before anything is stopped
     result = operations.create(args.path, portable=False, keep_stopped=True)
 elif args.action == 'prune-checkpoints':
