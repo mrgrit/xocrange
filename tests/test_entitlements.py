@@ -320,3 +320,32 @@ def test_registry_login_sends_the_active_license_on_stdin(monkeypatch, tmp_path)
     monkeypatch.setattr(host, 'grant', lambda root, directory=None: None)
     with pytest.raises(XocError):
         host.registry_login(ROOT, 'registry.example:5443', directory=tmp_path)
+
+
+def test_license_renewal_takes_only_this_ranges_valid_license(issuer, tmp_path, monkeypatch):
+    """`xoc license renew`: Range Control's answer is verified like any license file; a wrong or
+    unsigned one leaves the active license untouched."""
+    from xocrange import entitlements
+    sign, keys = issuer
+    directory = _grant_dir(tmp_path, sign, keys)
+    monkeypatch.setattr(entitlements.os, 'geteuid', lambda: 0)
+    real_run = subprocess.run                                                             # no collector restart in tests
+    monkeypatch.setattr(entitlements.subprocess, 'run', lambda cmd, *a, **k: None if cmd[0] == 'systemctl' else real_run(cmd, *a, **k))
+    monkeypatch.setattr(entitlements.Path, 'exists', lambda self, _real=Path.exists: False if str(self) == '/var/lib/xocrange/last-install.json' else _real(self))
+    answer = {}
+    monkeypatch.setattr(entitlements, 'fetch_license', lambda credentials=None: answer['license'])
+    answer['license'] = sign(license_id='renewed', modules={'M7': '>=1.0.0 <2.0.0', 'm4-facility': '>=0.1.0 <1.0.0'})
+    assert entitlements.renew(ROOT, directory=directory)['license_id'] == 'renewed'
+    assert 'm4-facility' in json.loads((directory/'license.json').read_text())['payload']['modules']
+    assert json.loads((directory/'identity.json').read_text()) == IDENTITY and (directory/'trust/ephemeral-test.pem').exists()
+    for bad in (sign(license_id='other', range_id='someone-else'), dict(sign(license_id='forged'), signature='AAAA'),
+                sign(license_id='old', expires_at='2021-01-01T00:00:00Z')):
+        answer['license'] = bad
+        with pytest.raises(XocError):
+            entitlements.renew(ROOT, directory=directory)
+        assert json.loads((directory/'license.json').read_text())['payload']['license_id'] == 'renewed'
+    assert not list(tmp_path.glob('.license-*'))                                        # the fetched copy is not left behind
+    with pytest.raises(XocError) as error:                                               # a Core that never enrolled
+        monkeypatch.undo(); monkeypatch.setattr(entitlements.os, 'geteuid', lambda: 0)
+        entitlements.renew(ROOT, credentials=tmp_path/'none', directory=directory)
+    assert error.value.code == 'not_enrolled'

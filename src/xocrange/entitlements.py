@@ -159,6 +159,61 @@ def sync_platform(volume, directory=DEFAULT):
             shutil.rmtree(staging)
 
 
+LIVEFIRE_CREDENTIALS = Path('/etc/xocrange/livefire/credentials')
+
+
+def fetch_license(credentials=LIVEFIRE_CREDENTIALS):
+    """Ask the school's Range Control for this range's current license over the outbound gateway,
+    with the range certificate from enrollment (ADR 0011)."""
+    import ssl, urllib.error, urllib.request
+    try:
+        url = (credentials/'range-control.url').read_text().strip().rstrip('/')
+        if not url.startswith('https://'):
+            raise ValueError('url')
+        context = ssl.create_default_context(cafile=str(credentials/'ca.crt'))
+        context.minimum_version = ssl.TLSVersion.TLSv1_2
+        context.load_cert_chain(str(credentials/'client.crt'), str(credentials/'client.key'))
+    except (OSError, ValueError, ssl.SSLError) as exc:
+        raise XocError('not_enrolled', 'This Core has no Range Control enrollment to renew a license with.') from exc
+    request = urllib.request.Request(url + '/v1/range/license', data=b'{}', method='POST',
+                                     headers={'content-type': 'application/json', 'user-agent': 'xoc-license/1'})
+    try:
+        with urllib.request.urlopen(request, context=context, timeout=30) as response:
+            raw = response.read(65537)
+    except urllib.error.HTTPError as exc:
+        raise XocError('license_refused', f'Range Control refused to renew the license (HTTP {exc.code}).') from exc
+    except (OSError, ssl.SSLError) as exc:
+        raise XocError('range_control_unreachable', 'Range Control could not be reached.') from exc
+    try:
+        value = json.loads(raw)
+        if len(raw) > 65536 or not isinstance(value.get('license'), dict):
+            raise ValueError('license')
+    except (ValueError, AttributeError) as exc:
+        raise XocError('license_refused', 'Range Control did not return a license.') from exc
+    return value['license']
+
+
+def renew(root, *, credentials=LIVEFIRE_CREDENTIALS, directory=DEFAULT):
+    """Replace the active license with the one Range Control issues now (for example after the
+    school's certificate gained a module). The new license is verified offline like any other and
+    must be for this same institution and range; a refused one leaves the active license as it is."""
+    if os.geteuid() != 0:
+        raise XocError('root_required', 'Entitlement configuration requires sudo.')
+    try:
+        identity = json.loads((directory/'identity.json').read_text())
+        institution, range_id = identity['institution_id'], identity['range_id']
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        raise XocError('commercial_unavailable', 'No license is active on this Core.') from exc
+    envelope = fetch_license(credentials)
+    fd, name = tempfile.mkstemp(prefix='.license-', dir=directory.parent)
+    try:
+        with os.fdopen(fd, 'w') as stream:
+            json.dump(envelope, stream)
+        return manage(root, 'activate', file=Path(name), institution=institution, range_id=range_id, directory=directory)
+    finally:
+        os.unlink(name)
+
+
 def manage(root, action, *, file=None, key_id=None, institution=None, range_id=None, directory=DEFAULT):
     api = verifier(root)
     if action == 'status':
