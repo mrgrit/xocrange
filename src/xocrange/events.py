@@ -219,9 +219,11 @@ def normalize(source: str, raw: bytes, context: Context):
         raise XocError("input_size", "Expected a nonempty input of at most 1 MiB.")
     from .endpoint_events import osquery, sysmon, auditd, apache_access, apache_error
     from .agent_events import xoc_agent
+    from .facility_events import xoc_facility
     adapters = {"suricata": suricata, "modsecurity": modsecurity, "nftables": nftables,
                 "osquery": osquery, "sysmon": sysmon, "auditd": auditd,
-                "apache-access": apache_access, "apache-error": apache_error, "xoc-agent": xoc_agent}
+                "apache-access": apache_access, "apache-error": apache_error, "xoc-agent": xoc_agent,
+                "xoc-facility": xoc_facility}
     if source not in adapters:
         raise XocError("unknown_source", "Unknown source adapter.")
     try:

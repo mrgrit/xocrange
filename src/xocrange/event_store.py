@@ -131,8 +131,9 @@ class Store:
         for event in events:
             self.db.execute("INSERT INTO events(id,ref,producer,observed,event) VALUES (?,?,?,?,?)",
                             (event["event_id"], ref, source, observed, canonical(event).decode()))
-        # Agent activity (C1 v0.3) has no Wazuh decoder; it stays a normalized C1 record.
-        if error is None and source != 'xoc-agent' and self.cursor('native-input-enabled'):
+        # Agent activity (C1 v0.3) and facility events (C1 v0.4) have no Wazuh decoder; they stay
+        # normalized C1 records.
+        if error is None and source not in ('xoc-agent', 'xoc-facility') and self.cursor('native-input-enabled'):
             from .native_input import register
             register(self, ref, source, raw, events, observed)
         return ref

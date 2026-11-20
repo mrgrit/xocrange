@@ -189,6 +189,11 @@ def test_added_agent_mapping_reexports_only_agent_events(tmp_path):
     assert old_digest == __import__('hashlib').sha256(json.dumps(previous, sort_keys=True).encode()).hexdigest()
     assert reexport_scope(mapping_digest(template), template) is None
     assert reexport_scope(old_digest, template) == ('xoc-agent',)
+    # The facility mapping (C1 v0.4) is scoped the same way; both additions at once reach both producers.
+    before_facility = copy.deepcopy(template); del before_facility['template']['mappings']['properties']['facility']
+    assert reexport_scope(mapping_digest(before_facility), template) == ('xoc-facility',)
+    neither = copy.deepcopy(previous); del neither['template']['mappings']['properties']['facility']
+    assert reexport_scope(mapping_digest(neither), template) == ('xoc-agent', 'xoc-facility')
     other = copy.deepcopy(previous); other['template']['mappings']['properties']['producer'] = {'type': 'text'}
     assert reexport_scope(mapping_digest(other), template) == ()        # any other change: full re-export
     assert reexport_scope(None, template) == ()
