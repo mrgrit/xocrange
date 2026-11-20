@@ -101,7 +101,10 @@ def prepare(engine, project, root, selected, host=None, state=STATE, tls=TLS_STA
         # requests, the module only reads them. Each side owns the directory it writes.
         uid, gid = (int(x) for x in str(writers[0]['user']).split(':'))
         volume('facility-state', uid, gid, 0o755)
-        volume('facility-requests', 65532, 65532, 0o755)
+        requests = volume('facility-requests', 65532, 65532, 0o755)
+        # Docker copies an image directory's owner onto a volume that is empty at first mount.
+        # A module image that carries this path must not be able to take the directory that way.
+        write(requests/'.core', b'', 0, 0o444)
     if 'office-pc' in selected:
         from .office_setup import account
         account(volume('office-config', 0), config)
