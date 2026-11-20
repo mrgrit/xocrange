@@ -14,3 +14,10 @@
 .facility-metrics{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:12px}
 .facility-metrics span{white-space:nowrap}
 .facility-time{white-space:nowrap;width:1%;color:var(--muted,#667085)}
+.facility-summary{grid-template-columns:repeat(auto-fill,minmax(190px,1fr));row-gap:16px}
+.facility-summary .metric{border-right:0;border-left:1px solid var(--line,#e1e7ef)}
+.facility-cluster{background:#f8f7ff}
+.facility-drill h3{margin-top:0;font-size:15px}
+.facility-assets-filter{display:flex;gap:6px;flex-wrap:wrap}
+.facility-assets-filter button{font-size:11px;padding:4px 9px;border:1px solid #d6dfed;background:#fff;color:#4d6079}
+.facility-assets-filter button[aria-pressed=true]{background:#245dd6;color:#fff;border-color:#245dd6}
