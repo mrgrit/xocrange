@@ -60,6 +60,8 @@ bash install.sh
 
 Apache의 요청 전 연결 종료 로그(`"-" 400/408`, 새 형식의 `"-" "-"` 포함 여부와 무관, xoc_id 포함)는 별도 `xoc-apache-empty-request` 디코더가 IP·상태·크기를 추출하고, Wazuh 기본 web-log 규칙 31100(level 0)과 archive receipt로 처리 완료를 확인한다. HTTP 요청 줄을 합성하지 않는다.
 
+프로토콜이 없는 요청 줄(2026-11-20): Apache는 받은 요청 줄을 그대로 적는다. 길이 제한에서 잘린 줄(414), HTTP/0.9 요청, HTTP가 아닌 바이트(400)는 끝에 ` HTTP/x.y`가 없어 기본 `web-accesslog` 디코더가 받지 않고, 기본 pure-ftpd 전송 로그 디코더(`pure-transfer`)가 대신 받았다. 그 입력은 처리 확인이 되지 않아 SIEM이 보존 기간 내내 `degraded`였고 설치·업데이트의 `siem-telemetry` 단계가 실패했다(192.168.16.51에서 8 KB 요청 한 건으로 발생). 조치: `xoc-apache-partial-request`(`"METHOD /경로"`: 출발지·메서드·URL·상태)와 `xoc-apache-malformed-request`(그 밖: 출발지·상태) 디코더를 추가하고, 이 실습 환경에 없는 pure-ftpd 디코더·규칙 파일을 Manager 설정에서 제외했다. 기본 웹 규칙(31100 계열, 긴 URL 31115)이 그대로 적용된다. 격리한 Wazuh 엔진에서 `tests/integration/native_rules.py --inside candidate` 40개 사례 통과.
+
 ### 실습 요청 User-Agent 검증 (2026-11-15, 개발 VM 설치본 `livefire-integration` `67f4663`)
 
 att VM(192.168.16.99)에서 `Host: dvwa.xoc.range`로 User-Agent 5종 요청: curl·따옴표 포함 브라우저 200, sqlmap·gobuster·Nuclei는 CRS가 403 차단. SIEM 원본 5건 모두 User-Agent 포함(따옴표는 `\"`로 이스케이프), 저장된 SHA-256과 재계산 일치. 스캐너 3건은 `111303`(level 6) 경보로 C1 이벤트에 연결. 관리 화면 `/core/` 줄은 이전 형식(질의·User-Agent 없음) 유지, 처리 격리 0건. 개별 판정 사례 33개는 설치된 Wazuh 이미지에서 `tests/integration/native_rules.py --inside candidate`로 통과.

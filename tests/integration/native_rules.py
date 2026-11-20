@@ -63,6 +63,15 @@ def cases(root, legacy=False):
             ('ua-sqli-keeps-31103','/?q=select%20password%20from%20users',403,'sqlmap/1.8.4','31103')]:
         add(name,'apache-access',ua.format(url,status,agent),rule,'web-accesslog',old_rule='',old_decoder='')
     add('apache-empty-ua','apache-access','192.0.2.10 - - [15/Nov/2026:13:00:00 +0000] "-" 408 0 "-" "-" xoc_id=-','31100','xoc-apache-empty-request',{'http_status':'408','response_bytes':'0'},old_rule='',old_decoder='')
+    partial='192.0.2.10 - - [19/Nov/2026:08:45:58 +0000] "{}" {} 288 "-" "curl/8.5.0" xoc_id=fixture'
+    for name,line,status,rule,fields in [('apache-partial-414','GET /'+'a'*8185,414,'31115',{'id':'414','protocol':'GET'}),
+            ('apache-partial-short','GET /abc?x=1',400,'31101',{'id':'400','protocol':'GET','url':'/abc?x=1'}),
+            ('apache-partial-http09','GET /',200,'31108',{'id':'200','url':'/'}),
+            ('apache-partial-not-http','\\x16\\x03\\x01\\x02',400,'31101',{'id':'400'}),
+            ('apache-partial-quote','GET /a\\"b',400,'31101',{'id':'400'})]:
+        add(name,'apache-access',partial.format(line,status),rule,'xoc-apache-partial-request' if 'url' in fields or name.endswith('414') else 'xoc-apache-malformed-request',fields,old_rule='',old_decoder='')
+    add('apache-partial-management','apache-access','192.0.2.10 - - [19/Nov/2026:08:45:58 +0000] "GET /'+'a'*8185+'" 414 288 xoc_id=fixture','31115','xoc-apache-partial-request',{'id':'414'},old_rule='',old_decoder='')
+    add('apache-full-stays-stock','apache-access','192.0.2.10 - - [19/Nov/2026:08:45:58 +0000] "GET /'+'a'*8000+' HTTP/1.1" 414 288 "-" "curl/8.5.0" xoc_id=fixture','31115','web-accesslog',{'id':'414'},old_rule='',old_decoder='')
     add('apache-error','apache-error',(fixtures/'apache-error.log').read_bytes(),'30315','apache-errorlog')
     base=json.loads((fixtures/'modsecurity-audit.json').read_bytes())
     variants=[('normal',[],200,'ENABLED','119670',None),
@@ -96,7 +105,8 @@ def inside(mode):
             shutil.copyfile('/src/components/siem/native-'+kind+'.xml',root/'etc'/('test-'+kind)/'native.xml')
     (root/'etc/ossec.conf').write_text('''<ossec_config><global><jsonout_output>yes</jsonout_output></global>
       <ruleset><decoder_dir>etc/test-decoders</decoder_dir><decoder_dir>ruleset/decoders</decoder_dir>
-      <rule_dir>ruleset/rules</rule_dir><rule_exclude>0215-policy_rules.xml</rule_exclude>
+      <decoder_exclude>ruleset/decoders/0240-pure-ftpd_decoders.xml</decoder_exclude>
+      <rule_dir>ruleset/rules</rule_dir><rule_exclude>0215-policy_rules.xml</rule_exclude><rule_exclude>0180-pure-ftpd_rules.xml</rule_exclude>
       <list>etc/lists/audit-keys</list><list>etc/lists/amazon/aws-eventnames</list><list>etc/lists/security-eventchannel</list>
       <list>etc/lists/malicious-ioc/malicious-ip</list><list>etc/lists/malicious-ioc/malicious-domains</list>
       <list>etc/lists/malicious-ioc/malware-hashes</list><rule_dir>etc/test-rules</rule_dir></ruleset></ossec_config>''')
@@ -128,7 +138,7 @@ def inside(mode):
                 for part in key.split('.'):data=data.get(part,{}) if isinstance(data,dict) else None
                 return str(data)
             fields=all(get_field(result.get('data',{}),k)==str(v) for k,v in case['fields'].items())
-            levels={'4100':0,'4101':5,'86601':3,'24010':3,'111201':3,'111203':3,'111211':3,'31100':0,'80700':0,'80704':10,'31108':0,'31101':5,'31122':5,'31103':7,'111303':6,'30315':5,'119670':3,'119671':5,'119672':7,'':None}
+            levels={'4100':0,'4101':5,'86601':3,'24010':3,'111201':3,'111203':3,'111211':3,'31100':0,'80700':0,'80704':10,'31108':0,'31101':5,'31122':5,'31103':7,'31115':13,'111303':6,'30315':5,'119670':3,'119671':5,'119672':7,'':None}
             level_matches=case['rule'].startswith('!') or rule.get('level')==levels[case['rule']]
             results.append(dict(name=case['name'],passed=matched and decoder==case['decoder'] and fields and level_matches,
                 expected_rule=case['rule'],rule=identifier,level=rule.get('level'),decoder=decoder,

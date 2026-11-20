@@ -30,3 +30,20 @@
   <regex type="pcre2">^(\S+) \S+ \S+ \[[^\]]+\] "-" (400|408) (\d+|-)(?: "(?:[^"\\]|\\.)*" "(?:[^"\\]|\\.)*")? xoc_id=\S+$</regex>
   <order>srcip,http_status,response_bytes</order>
 </decoder>
+<!-- Apache logs the request line as received. A line cut at LimitRequestLine (414),
+     an HTTP/0.9 request or bytes that are not HTTP (400) has no " HTTP/x.y" at its end,
+     so the stock web-accesslog decoder does not take it. Two decoders, because a decoder
+     uses only its first child: one for "METHOD /path" (method, URL, status), one for
+     anything else (status only). Neither invents a missing part of the request. -->
+<decoder name="xoc-apache-partial-request">
+  <type>web-log</type>
+  <prematch type="pcre2">^\S+ \S+ \S+ \[[^\]]+\] "[A-Z]+ /[^" \\]*" \d{3} (?:\d+|-)(?: "(?:[^"\\]|\\.)*" "(?:[^"\\]|\\.)*")? xoc_id=\S+$</prematch>
+  <regex type="pcre2">^(\S+) \S+ \S+ \[[^\]]+\] "([A-Z]+) (/[^" \\]*)" (\d{3}) </regex>
+  <order>srcip,protocol,url,id</order>
+</decoder>
+<decoder name="xoc-apache-malformed-request">
+  <type>web-log</type>
+  <prematch type="pcre2">^\S+ \S+ \S+ \[[^\]]+\] "(?!-")(?![A-Z]+ /[^" \\]*")(?!(?:[^"\\]|\\.)*? HTTP/\d\.\d" )[^"\\]*+(?:\\.[^"\\]*+)*+" \d{3} (?:\d+|-)(?: "(?:[^"\\]|\\.)*" "(?:[^"\\]|\\.)*")? xoc_id=\S+$</prematch>
+  <regex type="pcre2">^(\S+) \S+ \S+ \[[^\]]+\] "[^"\\]*+(?:\\.[^"\\]*+)*+" (\d{3}) </regex>
+  <order>srcip,id</order>
+</decoder>

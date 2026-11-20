@@ -11,7 +11,8 @@ from .events import SOURCES
 LOCATION = re.compile(r'^xoc-native/([a-f0-9]{64})/(' + '|'.join(SOURCES) + r')$')
 DECODERS = {'nftables': {'xoc-nftables', 'kernel'}, 'suricata': {'json'},
             'modsecurity': {'json'}, 'osquery': {'json'}, 'sysmon': {'json'},
-            'auditd': {'auditd'}, 'apache-access': {'web-accesslog', 'json', 'xoc-apache-empty-request'},
+            'auditd': {'auditd'}, 'apache-access': {'web-accesslog', 'json', 'xoc-apache-empty-request', 'xoc-apache-partial-request',
+                              'xoc-apache-malformed-request'},
             'apache-error': {'apache-errorlog'}}
 MAX_FRAME = 60000
 
