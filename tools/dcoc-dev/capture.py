@@ -1,17 +1,18 @@
 """테스트 서버 Core의 읽기 전용 응답을 한 번 저장한다(GET만 보낸다).
 
-저장된 브라우저 세션(xocrange-videos/tools/xoc_browser.py의 new_context)을 쓴다.
+저장된 브라우저 세션 도구(xoc_browser.py의 new_context)가 있는 폴더를 XOC_BROWSER_TOOLS 환경 변수로 지정한다.
 요청(POST)은 보내지 않는다. 결과는 captured/ 아래에 두며 git에 올리지 않는다.
 
-    python tools/dcoc-dev/capture.py [https://192.168.16.61]
+    XOC_BROWSER_TOOLS=<폴더> python tools/dcoc-dev/capture.py https://<Core 주소>
 """
 import asyncio
 import json
+import os
 import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-VIDEOS = Path(__file__).resolve().parents[5] / "xocrange-videos" / "tools"
+VIDEOS = Path(os.environ.get("XOC_BROWSER_TOOLS", "."))
 OUT = HERE / "captured"
 PATHS = ["session", "registry", "datacenter", "datacenter/floors/B1", "datacenter/floors/SITE",
          "datacenter/floors/2F", "datacenter/floors/6F", "facility", "academy", "noc", "lab", "license"]
@@ -41,4 +42,6 @@ async def main(base: str) -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(asyncio.run(main(sys.argv[1] if len(sys.argv) > 1 else "https://192.168.16.61")))
+    if len(sys.argv) != 2:
+        sys.exit("사용법: capture.py https://<Core 주소>")
+    sys.exit(asyncio.run(main(sys.argv[1])))
