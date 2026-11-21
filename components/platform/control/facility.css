@@ -65,6 +65,10 @@ body.facility-view,.facility-view .workspace-main{background:var(--fc-bg)}
 .fc-panel-head h3{display:flex;align-items:center;gap:10px;font-size:21px;font-weight:700;margin:0;color:var(--fc-ink);letter-spacing:-.3px}
 .fc-panel-head h3 .fc-ic{width:24px;height:24px;color:var(--fc-accent)}
 .fc-panel-sub{color:var(--fc-muted);font-size:15px}
+/* 여러 판을 하나로 묶는 제목(전력·냉각 계통 현황) */
+.fc-group{display:flex;flex-direction:column;gap:12px;min-width:0}
+.fc-group-title{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin:0;font-size:24px;font-weight:700;letter-spacing:-.3px;color:var(--fc-ink)}
+.fc-group-title span{font-size:15px;font-weight:500;letter-spacing:0;color:var(--fc-muted)}
 .fc-panel-tools{margin-left:auto;display:flex;gap:8px;align-items:center}
 .fc-row{display:grid;gap:18px;min-width:0}
 .fc-chains{grid-template-columns:repeat(2,minmax(0,1fr))}

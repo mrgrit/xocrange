@@ -275,7 +275,7 @@ const Facility=(()=>{
  function html(d){
   const s=d.state;
   return `<div class="fc-root"><div class="fc-sticky">${K.banner(d,{done:false})}</div>${K.banner(d,{live:false})}${toolbar(d)}${guide()}${kpis(d)}${chips(d)}`+
-   `<div class="fc-row fc-chains">${panel('power-chain','전력 계통','bolt',chain(s,POWER,'power')+legend('power'),{sub:'한전 수전 → 변전·변압 → ATS → UPS → 부스바·분전반 → 랙'})}${panel('cooling-chain','냉각 계통','snow',chain(s,COOL,'cooling')+legend('chilled'),{sub:'냉각탑 ↔ 냉동기·열교환기 ↔ 항온항습기·CDU → 구역'})}</div>`+
+   `<section class="fc-group" data-panel="systems"><h2 class="fc-group-title">전력·냉각 계통 현황<span lang="en">Power &amp; Cooling Systems</span></h2><div class="fc-row fc-chains">${panel('power-chain','전력 계통','bolt',chain(s,POWER,'power')+legend('power'),{sub:'한전 수전 → 변전·변압 → ATS → UPS → 부스바·분전반 → 랙'})}${panel('cooling-chain','냉각 계통','snow',chain(s,COOL,'cooling')+legend('chilled'),{sub:'냉각탑 ↔ 냉동기·열교환기 ↔ 항온항습기·CDU → 구역'})}</div></section>`+
    `<div class="fc-row fc-row-trend">${panel('trend','추이','wave',trend(d))}${alarms(d)}</div>`+
    `<div class="fc-row fc-row-aisles">${aisles(d)}<div class="fc-col">${work(d)}${siteOps(d)}</div></div>`+
    `${assets(d)}${cluster(d)}${events(d)}${instructor(d)}${selection(d)}</div>`;}
