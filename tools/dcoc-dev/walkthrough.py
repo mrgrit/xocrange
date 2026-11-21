@@ -41,7 +41,7 @@ async def main() -> int:
         await ctx.add_init_script("try{localStorage.removeItem('xoc-dcoc-guide')}catch{}")
         page = await ctx.new_page()
         page.on("pageerror", lambda e: errors.append(str(e)))
-        page.on("console", lambda m: errors.append(m.text) if m.type == "error" and "404" not in m.text else None)
+        page.on("console", lambda m: errors.append(m.text) if m.type == "error" and "Failed to load resource" not in m.text else None)
         shot = lambda name, full=False: page.screenshot(path=str(out / f"wt-{name}-{w}.png"), full_page=full)
         req = lambda body: page.evaluate("b=>api('facility/requests',b)", body)
         state = lambda: page.evaluate("()=>api('facility').then(d=>d.state)")
@@ -58,6 +58,7 @@ async def main() -> int:
         await page.wait_for_timeout(6000)
         check("지도: 설비에 실시간 상태가 입혀짐", await page.locator(".dc-world .fc-live").count() > 20)
         check("지도: 머리줄 실시간 요약", await page.locator("#dc-live .dc-live-chip").count() >= 3)
+        check("지도: 움직이는 흐름선 없음", await page.locator(".fc-map-flow,.fc-map-flows").count() == 0)
         await shot("map-normal")
 
         # 2. DCOC 첫 화면 + 안내
@@ -124,6 +125,7 @@ async def main() -> int:
         await node.dispatch_event("click")
         await page.wait_for_timeout(1500)
         check("지도: 설비를 누르면 인스펙터와 조치", await page.locator("#dc-inspector [data-panel=operate]").count() == 1)
+        check("지도: 고른 설비의 연결만 정적인 선으로", await page.locator(".fc-map-link").count() >= 1 and await page.locator(".fc-map-flow").count() == 0)
         await shot("map-inspector")
         # B1 층 안
         await page.locator("[data-dc-mode=building]").click()
@@ -179,7 +181,21 @@ async def main() -> int:
         urllib.request.urlopen(f"{a.base}/dev/class-drill?stop=1").read()
         await page.wait_for_timeout(3000)
 
-        # 9. 조회자: 조작 버튼 없음
+        # 9. 운영자(학생): 강사 도구가 없고, API로 보내도 거절된다. 조치·배속은 쓸 수 있다.
+        dev("role=operator")
+        await page.reload()
+        await page.wait_for_timeout(4000)
+        check("운영자: 강사 도구 서랍·버튼 없음(DOM)", await page.locator("[data-panel=instructor],[data-action=instructor-toggle],#facility-fault,[data-facility=inject],[data-facility=clear_all]").count() == 0)
+        check("운영자: 배속 선택은 있음", await page.locator("#facility-scale").count() == 1)
+        post = "async b=>{const r=await fetch('/core/api/facility/requests',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json','X-CSRFToken':csrf},body:JSON.stringify(b)});return [r.status,await r.json()];}"
+        for body in ({"action": "inject", "fault": "crac_fail", "target": "crac-01", "minutes": 5}, {"action": "clear_all"}, {"action": "clear", "handle": "a" * 32}):
+            status, answer = await page.evaluate(post, body)
+            check(f"운영자: {body['action']} 요청은 403", status == 403 and answer == {"error": "permission_denied"}, str(status))
+        status, _ = await page.evaluate(post, {"action": "time_scale", "value": 3})
+        check("운영자: 배속 변경은 허용", status == 202, str(status))
+        await shot("operator")
+
+        # 10. 조회자: 조작 버튼 없음
         dev("role=viewer")
         await page.reload()
         await page.wait_for_timeout(4000)

@@ -1,5 +1,6 @@
 'use strict';
-/* 데이터센터 관제 지도: 아이소메트릭 장면의 설비에 실시간 상태(발광·값 배지·흐름선·층 경보)를 입힌다.
+/* 데이터센터 관제 지도: 아이소메트릭 장면의 설비에 실시간 상태(발광·값 배지·끊김 표시·층 경보)를 입힌다.
+ * 움직이는 선은 쓰지 않는다. 설비를 고르면 그 설비의 위·아래 연결만 정적인 선으로 잠깐 보여 준다.
  * 상태는 FacilityKit 저장소(시설 모듈이 보낸 값)에서만 온다. 시뮬레이터가 없으면 아무것도 바꾸지 않는다. */
 window.FacilityMap=(()=>{
  const K=()=>window.FacilityKit;
@@ -49,23 +50,36 @@ window.FacilityMap=(()=>{
   const layer=el('g',{class:'fc-map-layer','pointer-events':'none'});
   const labels=root.querySelector(':scope>.dc-world-labels');
   root.insertBefore(layer,labels||null);
-  // 흐름선: 두 끝이 모두 지도에 있는 고리만
-  const flows=el('g',{class:'fc-map-flows'});layer.append(flows);
   const boxes=new Map([...found].map(([id,n])=>[id,box(root,n)]).filter(([,b])=>b));
-  for(const e of K().EDGES){
-   if(e[2]==='air')continue;
-   const a=boxes.get(e[0]),b=boxes.get(e[1]);if(!a||!b)continue;
-   if(building&&K().floorOf(e[0])!==K().floorOf(e[1]))continue;   // 분해도에서 층을 건너는 선은 어지럽다: 같은 층 안의 고리만
-   const state=K().edgeState(e,s);
-   const p0=[a.x+a.w/2,a.y+a.h*.62],p1=[b.x+b.w/2,b.y+b.h*.62],dist=Math.hypot(p1[0]-p0[0],p1[1]-p0[1]);
-   const bend=Math.min(140,dist*.25),mx=(p0[0]+p1[0])/2,my=(p0[1]+p1[1])/2-bend;
-   const dpath=`M${p0[0].toFixed(1)} ${p0[1].toFixed(1)}Q${mx.toFixed(1)} ${my.toFixed(1)} ${p1[0].toFixed(1)} ${p1[1].toFixed(1)}`;
-   const w=(building?2.2:3)/k;
-   flows.append(el('path',{d:dpath,class:'fc-map-flow-base','stroke-width':w*2.4}));
-   const f=el('path',{d:dpath,class:'fc-map-flow','data-state':state,'data-sys':e[2],'stroke-width':w});f.style.strokeDasharray=state==='flow'?`${6/k} ${8/k}`:state==='broken'?'none':`${2/k} ${8/k}`;
-   f.style.setProperty('--dash',(-14/k*4).toFixed(2)+'px');flows.append(f);
-   if(state==='broken'){const cx=.25*p0[0]+.5*mx+.25*p1[0],cy=.25*p0[1]+.5*my+.25*p1[1],r=9/k;const x=el('g',{class:'fc-map-x',transform:`translate(${cx.toFixed(1)} ${cy.toFixed(1)})`});
-    x.append(el('circle',{r,'stroke-width':2/k}),el('path',{d:`M${-r/2} ${-r/2}L${r/2} ${r/2}M${r/2} ${-r/2}L${-r/2} ${r/2}`,'stroke-width':2.4/k}));flows.append(x);}
+  const pipes=K().EDGES.filter(e=>e[2]!=='air');
+  // 끊긴 계통: 원인은 경보가 이름을 대는 설비만 짚는다(숨긴 장애를 따로 알려 주지 않는다).
+  // 원인 위에는 작은 '끊김' 표시, 그 아래쪽(하류) 설비에는 '영향' 테두리. 움직이는 선은 쓰지 않는다.
+  const named=new Set(s.alarms.map(a=>a.asset_id).filter(Boolean));
+  const causes=new Set();
+  for(const e of pipes)if(K().edgeState(e,s)==='broken'){if(named.has(e[0]))causes.add(e[0]);else if(named.has(e[1]))causes.add(e[1]);}
+  const affected=new Set(),queue=[...causes];
+  while(queue.length){const id=queue.shift();for(const e of pipes)if(e[0]===id&&!affected.has(e[1])&&!causes.has(e[1])){affected.add(e[1]);queue.push(e[1]);}}
+  const marks=el('g',{class:'fc-map-marks'});layer.append(marks);
+  for(const id of affected){const b=boxes.get(id);if(!b)continue;const pad=4/k;
+   marks.append(el('rect',{class:'fc-map-affected',x:b.x-pad,y:b.y-pad,width:b.w+pad*2,height:b.h+pad*2,rx:6/k,'stroke-width':1.6/k,'stroke-dasharray':`${5/k} ${4/k}`}));}
+  for(const id of causes){const b=boxes.get(id);if(!b)continue;const r=11;
+   const g=el('g',{class:'fc-map-cut',transform:`translate(${(b.x+b.w).toFixed(2)} ${(b.y+b.h).toFixed(2)}) scale(${(1/k).toFixed(4)})`});
+   g.append(el('title',{},'끊김: '+(live.get(id)?.title||id)),el('rect',{x:-r*2,y:-r,width:r*4,height:r*2,rx:r,'stroke-width':1.6}),
+    el('path',{d:'M-15-4l8 8M-7-4l-8 8','stroke-width':2.2,fill:'none'}),el('text',{x:-3,y:5,'font-size':13},'끊김'));
+   marks.append(g);}
+  // 고른 설비: 위·아래로 바로 이어진 설비를 바닥면을 따르는 얇은 정적인 선으로(선택을 풀면 사라진다)
+  if(selected&&boxes.has(selected)){
+   const [ux,uy]=window.DataCenterArchitecture?.iso(1,0,0)||[28,8],links=el('g',{class:'fc-map-links'});layer.insertBefore(links,marks);
+   const foot=b=>[b.x+b.w/2,b.y+b.h];
+   const p0=foot(boxes.get(selected));
+   const ends=[];
+   for(const e of pipes){const other=e[0]===selected?e[1]:e[1]===selected?e[0]:null;if(!other||!boxes.has(other)||ends.some(x=>x[0]===other))continue;
+    if(building&&K().floorOf(other)!==K().floorOf(selected))continue;ends.push([other,e[2]]);}
+   for(const [other,sys] of ends){
+    const p1=foot(boxes.get(other)),dx=p1[0]-p0[0],dy=p1[1]-p0[1],a=(dx/ux+dy/uy)/2,c=[p0[0]+a*ux,p0[1]+a*uy];
+    links.append(el('path',{class:'fc-map-link','data-sys':sys,d:`M${p0[0].toFixed(1)} ${p0[1].toFixed(1)}L${c[0].toFixed(1)} ${c[1].toFixed(1)}L${p1[0].toFixed(1)} ${p1[1].toFixed(1)}`,'stroke-width':1.6/k}),
+     el('circle',{class:'fc-map-link-end','data-sys':sys,cx:p1[0].toFixed(1),cy:p1[1].toFixed(1),r:3.5/k}));}
+   links.append(el('circle',{class:'fc-map-link-end','data-sys':'self',cx:p0[0].toFixed(1),cy:p0[1].toFixed(1),r:4.5/k}));
   }
   // 값 배지: 겹치면 덜 중요한 것을 뺀다
   const badges=el('g',{class:'fc-map-badges'});layer.append(badges);
