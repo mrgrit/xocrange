@@ -84,7 +84,7 @@ function arrangeBuilding(outlines,mainIds,frame) {
   const root=el('g',{'data-camera':''});svg.append(root);
   const labels=[];
   if(building){
-   const rooms=new Map(data.floors.map(f=>[f.id,arch.room(f.id)]));
+   const rooms=new Map(data.floors.map(f=>[f.id,arch.room(f.id,true)]));
    for(const node of rooms.values())root.append(node);
    const outlines=new Map([...rooms].map(([id,room])=>[id,buildingOutline(room)]));
    const frame={width:Math.max(1,svg.clientWidth-22),height:Math.max(1,svg.clientHeight-22)};
@@ -95,11 +95,11 @@ function arrangeBuilding(outlines,mainIds,frame) {
     const g=el('g',{'data-dc-floor':f.id,transform:`translate(${x} ${y})`,class:active?'dc-level-active':preview?'dc-level-preview':'dc-level-locked','aria-disabled':String(!active&&!preview)});
     if(active||preview){g.setAttribute('role','button');g.setAttribute('tabindex','0');g.setAttribute('aria-label',f.title+(active?' 내부 보기':' 디자인 보기'));}
     g.append(rooms.get(f.id));root.append(g);
-    const position=arch.iso(8.2,7.8,.22);labels.push({x:x+position[0],y:y+position[1]+20,title:(f.id==='XOC'?'':f.id+' · ')+f.title,active});
+    const position=arch.iso(8.2,7.8,.22);labels.push({x:x+position[0],y:y+position[1]+20,title:(f.id==='XOC'?'':f.id+' · ')+f.title,active,floor:f.id});
    }
   }else{
    const facility=mode==='facility';
-   const room=arch.room(['design','learning','facility'].includes(mode)?designFloor:'2F',facility);root.append(room);
+   const room=arch.room(['design','learning','facility'].includes(mode)?designFloor:'2F',facility||mode==='floor');root.append(room);
    if(facility){
     const known=new Map((data.facilities||[]).map(f=>[f.id,f]));
     for(const node of room.querySelectorAll('[data-facility]')){
@@ -128,14 +128,14 @@ function arrangeBuilding(outlines,mainIds,frame) {
   for(const l of labels){
    const size=building?(W<500?9:11):11,pad=8;
    const span=[...l.title].reduce((n,c)=>n+(c.charCodeAt(0)>0x2000?size:size*.57),0)+pad*2;
-   const label=el('g',{transform:`translate(${l.x} ${l.y}) scale(${1/scale})`});
+   const label=el('g',{transform:`translate(${l.x} ${l.y}) scale(${1/scale})`,...(l.floor?{'data-label-floor':l.floor}:{})});
    const top=l.sub?-15:-11,h=l.sub?35:25;
    label.append(el('rect',{x:-span/2,y:top,width:span,height:h,rx:5,fill:l.active?'#173447':'#151e26',stroke:l.active?'#a9d5df':'#5f6d78','stroke-width':1,opacity:.96}));
    label.append(el('text',{x:0,y:l.sub?-1:5,'text-anchor':'middle',fill:l.active?'#ddf4ff':'#adbac4','font-size':size,'font-family':'system-ui,sans-serif',stroke:'none',text:l.title}));
    if(l.sub)label.append(el('text',{x:0,y:12,'text-anchor':'middle',fill:'#93b0c2','font-size':9,'font-family':'system-ui,sans-serif',stroke:'none',text:l.sub}));
    layer.append(label);
   }
-  return {svg,world:root,box};
+  return {svg,world:root,box,scale};
  }
  return {render};
 })();

@@ -1291,9 +1291,12 @@ function drawControlCenterRoom(fid,detail) {
   node=node.cloneNode(true);
   for(const el of node.querySelectorAll('[tabindex],[role],[href]'))for(const a of ['tabindex','role','href'])el.removeAttribute(a);
   // Facility floors keep data-facility so Core can attach its own read-only selection (ADR 0010).
+  if(keepFacilities)for(const n of node.querySelectorAll('[data-asset^="preview-gpu-"]'))n.setAttribute('data-facility','gpu-'+String(Number(n.getAttribute('data-asset').slice(12))+1).padStart(2,'0'));
   const strip=keepFacilities?['data-asset','data-worker']:['data-asset','data-worker','data-facility'];
   for(const el of node.querySelectorAll('[data-asset],[data-worker],[data-facility]'))for(const a of strip)el.removeAttribute(a);
   return node;
  }
- return {prepare,room,defs:sceneDefs,iso,el};
+ // 시설 id → 층(옥외는 SITE). 시설 화면이 설비를 층별로 묶을 때 쓴다.
+ function facilityFloors(){const out={};for(const rows of Object.values(REFERENCE.facility))for(const f of rows)out[f.id]=f.location==='outdoor'?'SITE':f.floor;return out;}
+ return {prepare,room,defs:sceneDefs,iso,el,facilityFloors};
 })();

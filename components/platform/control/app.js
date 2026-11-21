@@ -35,7 +35,7 @@ async function refreshSession(){
 }
 async function load(){
  if(!session.authenticated||session.must_change_password)return;
- const sequence=++loadSequence;current=null;document.body.classList.toggle('datacenter-view',view==='datacenter');document.body.classList.toggle('academy-view',view==='academy');document.body.classList.toggle('academy-study',view==='academy'&&tab==='lesson');
+ const sequence=++loadSequence;current=null;document.body.classList.remove('facility-view');document.body.classList.toggle('datacenter-view',view==='datacenter');document.body.classList.toggle('academy-view',view==='academy');document.body.classList.toggle('academy-study',view==='academy'&&tab==='lesson');
  deviceSwitch();for(const b of document.querySelectorAll('[data-nav]')){const n=b.dataset.nav,on=n===view||(n==='devices'&&['fw','ips','waf'].includes(view))||(n==='access'&&view==='users'&&!b.closest('.tabs'));b.classList.toggle('active',on);if(b.closest('.tabs'))b.setAttribute('aria-selected',String(n===view));const t=b.querySelector('span')?.textContent||labels[n]||n;b.setAttribute('aria-label',t);b.title=t;}
  $('crumb').textContent=labels[view];$('page-title').textContent=labels[view]+(['fw','ips','waf'].includes(view)?' 정책':'');$('page-description').textContent=descriptions[view];$('eyebrow').textContent=view==='fw'?'NETWORK SECURITY':view==='ips'?'THREAT PREVENTION':view==='waf'?'APPLICATION SECURITY':view==='lab'?'TRAINING RANGE':'SYSTEM MANAGEMENT';
  const device=['fw','ips','waf'].includes(view);$('device-view').hidden=!device;$('system-view').hidden=device;$('sync-status').textContent='상태를 불러오는 중…';$('refresh').disabled=true;

@@ -45,6 +45,9 @@ build_inputs:
 - control/facility-catalog.json
 - control/facility.py
 - control/facility.js
+- control/facility-kit.js
+- control/facility-map.js
+- control/facility.css
 - control/brand.css
 - control/workspace.py
 - control/entitlements.py
