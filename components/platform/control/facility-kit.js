@@ -29,7 +29,7 @@ window.FacilityKit=(()=>{
   info:'M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0-18 0M12 11v5M12 8h.01',clock:'M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0-18 0M12 7v5l3 2',play:'M7 4l13 8-13 8z',stop:'M6 6h12v12H6z',
   x:'M6 6l12 12M18 6 6 18',chev:'M9 6l6 6-6 6',search:'M10 10m-6 0a6 6 0 1 0 12 0a6 6 0 1 0-12 0M15 15l6 6',ext:'M14 4h6v6M20 4l-9 9M18 14v6H4V6h6',star:'M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z',
   layers:'M12 3 2 8l10 5 10-5zM2 13l10 5 10-5',map:'M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3zM9 3v15M15 6v15',help:'M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0-18 0M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 1-1 1.7M12 17h.01',
-  scale:'M4 12h16M4 12l4-4M4 12l4 4M20 12l-4-4M20 12l-4 4'};
+  scale:'M4 12h16M4 12l4-4M4 12l4 4M20 12l-4-4M20 12l-4 4',list:'M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01',wave:'M2 12h5l3-8 4 16 3-8h5'};
  const ic=(name,cls='')=>`<svg class="fc-ic ${cls}" viewBox="0 0 24 24" aria-hidden="true"><path d="${P[name]||P.info}"/></svg>`;
  const statusIcon={normal:'check',warning:'alert',critical:'octagon',off:'pause'};
  const esc2=v=>esc(String(v??''));
@@ -298,14 +298,14 @@ window.FacilityKit=(()=>{
   return `<label class="fc-scale">${ic('scale')}<span>시간 배속</span><select id="facility-scale" data-action="time-scale">${scales.map(x=>`<option value="${x}" ${v===x?'selected':''}>${x}배</option>`).join('')}${scales.includes(v)?'':`<option selected value="${esc2(String(v))}">${esc2(String(v))}배</option>`}</select></label>`;}
  function classDrill(s){const hidden=s.faults.filter(f=>f.fault==='hidden');if(!hidden.length)return null;
   return {until:hidden.map(f=>f.expires_at).sort().at(-1),by:hidden[0].requested_by};}
- function banner(d,{scale=true,full=true}={}){
-  const s=d.state,dr=s.drill,cd=classDrill(s);let out='';
+ function banner(d,{scale=true,full=true,live=true,done=true}={}){
+  const s=d.state,dr=s.drill,cd=live?classDrill(s):null;let out='';
   if(cd)out+=`<div class="fc-banner" data-kind="class" data-panel="drill" data-drill-kind="class">${ic('flag')}<div class="fc-banner-main"><span class="fc-banner-kicker">강사 진행 훈련 · 반 전체</span><strong>강사가 반 전체에 장애를 냈습니다</strong><span>원인은 공개되지 않습니다. 경보와 계통 그림에서 증상을 찾아 대응하세요. 자동 종료까지 ${left(cd.until)}</span></div></div>`;
-  if(dr&&dr.status==='running'){const pct=clamp((dr.elapsed_min||0)/dr.minutes*100,0,100);
+  if(live&&dr&&dr.status==='running'){const pct=clamp((dr.elapsed_min||0)/dr.minutes*100,0,100);
    out+=`<div class="fc-banner" data-kind="drill" data-panel="drill" data-drill-kind="scenario" data-drill="${esc2(dr.id)}">${ic('flag')}<div class="fc-banner-main"><span class="fc-banner-kicker">시나리오 훈련 진행 중</span><strong>${esc2(dr.title)}</strong>`+
     `<div class="fc-progress">${bar(pct,'normal')}<span>${num(dr.elapsed_min??0)} / ${dr.minutes}분 <small>시뮬레이션 시간</small></span></div></div>`+
     `<div class="fc-banner-tools">${full?`<button class="fc-btn ghost" data-action="drill-brief" data-drill="${esc2(dr.id)}">${ic('info')}브리핑</button>`:''}${scale?scaleSelect(s,d.can_operate):''}${d.can_operate?`<button class="fc-btn danger" data-action="drill-stop" data-facility="drill_stop">${ic('stop')}${Date.now()-(ui.stopArm||0)<5000?'한 번 더 눌러 중지':'훈련 중지'}</button>`:''}</div></div>`;}
-  else if(dr&&full&&!ui.dismissed?.[dr.started_at])out+=`<div class="fc-banner" data-kind="done" data-panel="drill" data-drill-kind="scenario">${ic('check')}<div class="fc-banner-main"><span class="fc-banner-kicker">지난 시나리오 훈련</span><strong>${esc2(dr.title)}</strong><span>${dr.status==='finished'?'시간 종료':'중지'}${dr.ended_at?' · '+esc2(date(dr.ended_at)):''} · 해결하지 못한 장애 ${esc2(String(dr.open_faults))}건</span></div><button class="fc-icon-btn" data-action="drill-dismiss" data-started="${esc2(dr.started_at)}" aria-label="닫기">${ic('x')}</button></div>`;
+  else if(done&&dr&&dr.status!=='running'&&full&&!ui.dismissed?.[dr.started_at])out+=`<div class="fc-banner" data-kind="done" data-panel="drill" data-drill-kind="scenario">${ic('check')}<div class="fc-banner-main"><span class="fc-banner-kicker">지난 시나리오 훈련</span><strong>${esc2(dr.title)}</strong><span>${dr.status==='finished'?'시간 종료':'중지'}${dr.ended_at?' · '+esc2(date(dr.ended_at)):''} · 해결하지 못한 장애 ${esc2(String(dr.open_faults))}건</span></div><button class="fc-icon-btn" data-action="drill-dismiss" data-started="${esc2(dr.started_at)}" aria-label="닫기">${ic('x')}</button></div>`;
   return out;}
  function gallery(d){
   const s=d.state,list=s.catalog.drills||[],g=ui.gallery||(ui.gallery={course:'fac',level:0,pick:null});

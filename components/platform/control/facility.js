@@ -25,7 +25,7 @@ const Facility=(()=>{
   const s=d.state,crit=s.alarms.filter(a=>a.level==='critical'),warn=s.alarms.filter(a=>a.level==='warning');
   const bad=s.assets.filter(a=>a.status==='critical');
   const level=crit.length||bad.length?'critical':warn.length?'warning':'normal';
-  const top=crit[0]||warn[0],target=top?.asset_id||bad[0]?.id;
+  const top=crit[0]||warn[0],target=top?.asset_id;
   const head={critical:'위험 — 지금 대응이 필요합니다',warning:'주의 — 지켜봐야 할 항목이 있습니다',normal:'정상 — 모든 설비가 정상 범위입니다'}[level];
   return `<div class="fc-verdict" data-status="${level}"><span class="fc-verdict-icon">${ic(level==='normal'?'check':level==='warning'?'alert':'octagon')}</span><div class="fc-verdict-main"><strong>${head}</strong>`+
    `<span>${top?`${K.pill(top.level)} ${esc(top.message)}`:'활성 경보가 없습니다.'}${target?` <button class="fc-link" data-asset="${esc(target)}">먼저 볼 곳: ${esc(K.assetOf(s,target)?.title||target)} ${ic('chev')}</button>`:''}</span></div>`+
@@ -274,7 +274,7 @@ const Facility=(()=>{
  function selection(d){if(!sel)return '';const html=K.inspector(sel);if(!html){sel=null;return '';}return `<aside class="fc-drawer" aria-label="설비 상세">${html}</aside>`;}
  function html(d){
   const s=d.state;
-  return `<div class="fc-root"><div class="fc-sticky">${K.banner(d)}</div>${toolbar(d)}${guide()}${kpis(d)}${chips(d)}`+
+  return `<div class="fc-root"><div class="fc-sticky">${K.banner(d,{done:false})}</div>${K.banner(d,{live:false})}${toolbar(d)}${guide()}${kpis(d)}${chips(d)}`+
    `<div class="fc-row fc-chains">${panel('power-chain','전력 계통','bolt',chain(s,POWER,'power')+legend('power'),{sub:'한전 수전 → 변전·변압 → ATS → UPS → 부스바·분전반 → 랙'})}${panel('cooling-chain','냉각 계통','snow',chain(s,COOL,'cooling')+legend('chilled'),{sub:'냉각탑 ↔ 냉동기·열교환기 ↔ 항온항습기·CDU → 구역'})}</div>`+
    `<div class="fc-row fc-row-trend">${panel('trend','추이','wave',trend(d))}${alarms(d)}</div>`+
    `<div class="fc-row fc-row-aisles">${aisles(d)}<div class="fc-col">${work(d)}${siteOps(d)}</div></div>`+

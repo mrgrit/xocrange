@@ -16,6 +16,7 @@ body.facility-view,.facility-view .workspace-main{background:var(--fc-bg)}
 .facility-view .content-footer{color:var(--fc-muted)}
 .facility-view #system-view>.panel{background:var(--fc-panel);border-color:var(--fc-line);color:var(--fc-ink)}
 
+.fc-root,.fc-insp,.fc-dialog{word-break:keep-all;overflow-wrap:anywhere}
 .fc-root{color:var(--fc-ink);font-size:16px;line-height:1.5;display:flex;flex-direction:column;gap:18px}
 .fc-ic{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;vertical-align:middle}
 .fc-root button,.fc-dialog button,.fc-insp button,.dc-live button{font:inherit;cursor:pointer}
@@ -334,7 +335,7 @@ body.facility-view,.facility-view .workspace-main{background:var(--fc-bg)}
 .fc-insp .fc-net-row .fc-label{width:100%;font-size:14px}
 .fc-mini{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:8px;border:1px solid color-mix(in srgb,var(--st) 55%,var(--fc-line));background:color-mix(in srgb,var(--st) 10%,var(--fc-panel));color:var(--fc-ink);font-size:14px}
 .fc-mini .fc-ic{width:16px;height:16px;color:var(--st)}
-.fc-mini.wide{display:grid;grid-template-columns:auto 1fr;gap:4px 8px;text-align:left;width:100%}
+.fc-mini.wide{display:grid;grid-template-columns:auto 1fr;gap:4px 8px;text-align:left;width:100%;justify-items:start}
 .fc-mini.wide .fc-bar{grid-column:1/-1;margin:0}
 
 /* 기록 */
