@@ -103,7 +103,8 @@ def facility(app, registry_files, issuer, tmp_path, monkeypatch):
 
 def test_without_the_module_the_datacenter_shows_baseline_only(app, facility):
     login(app)
-    assert app.get('/core/api/facility').json() == {'installed': False, 'simulator': False, 'reason': 'not_installed', 'can_operate': False}
+    assert app.get('/core/api/facility').json() == {'installed': False, 'simulator': False, 'reason': 'not_installed', 'can_operate': False,
+                                                    'can_instruct': False}
     floor = app.get('/core/api/datacenter/floors/B1').json()
     assert floor['simulator'] is False and floor['facility_live']['installed'] is False
     assert send(app, 'facility/requests', {'action': 'clear_all'}).status_code == 404
@@ -115,7 +116,8 @@ def test_unlicensed_or_silent_module_is_never_shown_as_a_simulator(app, facility
     assert app.get('/core/api/facility').json()['reason'] == 'commercial_unavailable'
     install()
     assert app.get('/core/api/facility').json() == {'installed': True, 'simulator': False, 'reason': 'absent', 'read_only': False,
-                                                    'module': {'id': 'm4-facility', 'version': '0.1.0'}, 'can_operate': False}
+                                                    'module': {'id': 'm4-facility', 'version': '0.1.0'}, 'can_operate': False,
+                                                    'can_instruct': False}
     old = sample(); old['generated_at'] = stamp(-120); (state/'state.json').write_text(json.dumps(old))
     value = app.get('/core/api/facility').json()
     assert value['simulator'] is False and value['reason'] == 'stale' and value['can_operate'] is False
@@ -132,7 +134,7 @@ def test_live_state_reaches_the_screen_and_requests_become_files(app, facility):
     install, state, requests = facility; install(); login(app)
     (state/'state.json').write_text(json.dumps(sample()))
     value = app.get('/core/api/facility').json()
-    assert value['simulator'] is True and value['can_operate'] is True and value['state']['faults'][0]['target'] == 'crac-01'
+    assert value['simulator'] is True and value['can_operate'] is True and value['can_instruct'] is True and value['state']['faults'][0]['target'] == 'crac-01'
     floor = app.get('/core/api/datacenter/floors/B1').json()
     assert floor['simulator'] is True and floor['facility_live']['state']['assets'][0]['id'] == 'chiller-01'
     response = send(app, 'facility/requests', {'action': 'inject', 'fault': 'crac_fail', 'target': 'crac-01', 'minutes': 10})
@@ -181,9 +183,36 @@ def test_viewers_read_but_do_not_operate_and_an_expired_license_is_read_only(app
     assert app.get('/core/api/facility').json()['can_operate'] is True
     install(expires_at='2021-01-01T00:00:00Z')
     value = app.get('/core/api/facility').json()
-    assert value['simulator'] is True and value['read_only'] is True and value['can_operate'] is False
-    assert send(app, 'facility/requests', {'action': 'clear_all'}).json() == {'error': 'entitlement_expired'}
+    assert value['simulator'] is True and value['read_only'] is True and value['can_operate'] is False and value['can_instruct'] is False
+    assert send(app, 'facility/requests', {'action': 'time_scale', 'value': 3}).json() == {'error': 'entitlement_expired'}
     assert not list(requests.glob('*.json'))
+
+
+def test_only_instructors_inject_or_undo_faults(app, facility):
+    """Students (operators) keep operations, trainings, shedding and time scale; injecting and undoing
+    faults is an instructor (administrator) tool. A refused request is audited and writes no file."""
+    from control.models import Audit
+    install, state, requests = facility; install()
+    (state/'state.json').write_text(json.dumps(sample()))
+    login(app, 'operator')
+    value = app.get('/core/api/facility').json()
+    assert value['can_operate'] is True and value['can_instruct'] is False
+    for body in ({'action': 'inject', 'fault': 'crac_fail', 'target': 'crac-01', 'minutes': 10},
+                 {'action': 'clear', 'handle': 'a'*32}, {'action': 'clear_all'}):
+        answer = send(app, 'facility/requests', body)
+        assert answer.status_code == 403 and answer.json() == {'error': 'permission_denied'}, body
+    assert not list(requests.glob('*.json'))
+    assert sorted(Audit.objects.filter(outcome='denied', action__startswith='facility_').values_list('action', flat=True)) == \
+        ['facility_clear', 'facility_clear_all', 'facility_inject']
+    for body in ({'action': 'operate', 'op': 'replace_filter', 'target': 'crac-01'}, {'action': 'time_scale', 'value': 10},
+                 {'action': 'drill_start', 'drill': 'fac01a'}, {'action': 'drill_stop'},
+                 {'action': 'shed', 'group': 'batch'}, {'action': 'restore', 'group': 'batch'}):
+        assert send(app, 'facility/requests', body).status_code == 202, body
+    send(app, 'logout', {}); login(app, 'admin')
+    assert app.get('/core/api/facility').json()['can_instruct'] is True
+    for body in ({'action': 'inject', 'fault': 'crac_fail', 'target': 'crac-01', 'minutes': 10},
+                 {'action': 'clear', 'handle': 'a'*32}, {'action': 'clear_all'}):
+        assert send(app, 'facility/requests', body).status_code == 202, body
 
 
 def _licensed(tmp_path, issuer):

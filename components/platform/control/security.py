@@ -4,7 +4,8 @@ from django.http import JsonResponse
 from .models import Audit, DevicePolicy, Profile
 
 ROLES = {'viewer': {'devices.read'}, 'operator': {'devices.read', 'devices.preview'},
-         'admin': {'devices.read', 'devices.preview', 'devices.policy', 'users.manage', 'audit.read'}}
+         'admin': {'devices.read', 'devices.preview', 'devices.policy', 'users.manage', 'audit.read', 'facility.instruct'}}
+# facility.instruct: 강사 도구(시설 장애 넣기·되돌리기). 학생 계정은 운영자, 강사는 관리자 역할로 운영한다.
 for permissions in ROLES.values():
     permissions.update({'registry.read', 'content.read'})
 

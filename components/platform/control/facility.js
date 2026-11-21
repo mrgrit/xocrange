@@ -33,7 +33,7 @@ const Facility=(()=>{
  function toolbar(d){
   const s=d.state;
   return `<div class="fc-toolbar">${verdict(d)}<div class="fc-actions"><button class="fc-btn primary" data-action="drill-open">${ic('flag')}시나리오 훈련</button>`+
-   `${s.drill?.status==='running'?'':K.scaleSelect(s,d.can_operate)}${d.can_operate?`<button class="fc-btn ghost" data-action="instructor-toggle" aria-expanded="${drawerOpen(d)}">${ic('bolt')}강사 도구</button>`:''}`+
+   `${s.drill?.status==='running'?'':K.scaleSelect(s,d.can_operate)}${d.can_instruct?`<button class="fc-btn ghost" data-action="instructor-toggle" aria-expanded="${drawerOpen(d)}">${ic('bolt')}강사 도구</button>`:''}`+
    `<a class="fc-btn ghost" href="#datacenter">${ic('map')}관제 지도</a><button class="fc-icon-btn" data-action="guide-open" aria-label="사용법" title="사용법">${ic('help')}</button></div>`+
    `<div class="fc-sync">${ic('clock')}시뮬레이터 갱신 ${esc(K.clock(s.generated_at))} · ${esc(String(s.time_scale))}배속${d.read_only?' · 라이선스 만료: 조회만 가능':''}</div></div>`;}
  function guide(){
@@ -251,7 +251,7 @@ const Facility=(()=>{
  /* ── 강사 도구(접이식): 기존 선택자를 그대로 둔다 ───────── */
  const drawerOpen=d=>drawer??(lsGet('xoc-dcoc-instructor')??(session.role==='admin'?'open':'closed'))==='open';
  function instructor(d){
-  const s=d.state,can=d.can_operate;if(!can)return '';
+  const s=d.state;if(!d.can_instruct)return '';   // 강사(관리자) 권한이 없으면 서랍 자체를 그리지 않는다
   const open=drawerOpen(d),list=s.catalog.faults;
   if(!list.some(f=>f.id===form.fault))form.fault=list[0]?.id||'';
   const chosen=list.find(f=>f.id===form.fault);if(chosen&&!chosen.targets.some(t=>t.id===form.target))form.target=chosen.targets[0]?.id||'';

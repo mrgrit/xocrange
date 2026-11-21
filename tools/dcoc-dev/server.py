@@ -44,10 +44,18 @@ CONTROL = REPO / "components" / "platform" / "control"
 BRANDING = REPO / "assets" / "branding"
 
 DEV = {"role": "admin", "license": "active"}          # /dev 페이지에서 바꾼다
-ROLES = {"viewer": {"devices.read"}, "operator": {"devices.read", "devices.preview"},
-         "admin": {"devices.read", "devices.preview", "devices.policy", "users.manage", "audit.read"}}
-for _p in ROLES.values():
-    _p.update({"registry.read", "content.read"})
+
+
+def _roles() -> dict:
+    """security.py의 권한 표를 그대로 읽는다(그 파일은 Django 모델을 불러서 통째로 import하지 않는다)."""
+    text = (CONTROL / "security.py").read_text(encoding="utf-8")
+    block = text[text.index("ROLES = {"):text.index("\n\n\ndef ")]
+    space: dict = {}
+    exec(block, space)
+    return space["ROLES"]
+
+
+ROLES = _roles()
 READ_ACTIONS = {"read", "export", "stop"}             # entitlements.py와 같다
 
 

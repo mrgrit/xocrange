@@ -14,7 +14,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET, require_POST
-from .security import protected, audit
+from .security import protected, audit, ROLES
 from . import entitlements
 
 CAPABILITY = 'facility-state'
@@ -38,6 +38,10 @@ ACTIONS = {'inject': ('fault', 'target', 'minutes'), 'clear': ('handle',), 'clea
            'restore': ('group',), 'time_scale': ('value',), 'operate': ('op', 'target'), 'drill_start': ('drill',),
            'drill_stop': ()}
 OPTIONAL = {'operate': ('value',)}
+# Instructor tools: a fault injected or undone changes everyone's exercise, so only administrators
+# (instructors) may send these. Operators (students) keep operations, trainings, shedding and time scale.
+INSTRUCT = 'facility.instruct'
+INSTRUCTOR_ACTIONS = ('inject', 'clear', 'clear_all')
 
 
 def _state_dir():
@@ -235,7 +239,9 @@ def state(request):
     from .workspace import registry
     try:
         value = overview(registry())
-        value['can_operate'] = bool(value.get('simulator')) and not value.get('read_only') and request.user.profile.role in ('operator', 'admin')
+        role = request.user.profile.role
+        value['can_operate'] = bool(value.get('simulator')) and not value.get('read_only') and role in ('operator', 'admin')
+        value['can_instruct'] = value['can_operate'] and INSTRUCT in ROLES.get(role, set())
         return JsonResponse(value)
     except (OSError, ValueError, KeyError, TypeError):
         return JsonResponse({'error': 'registry_unavailable'}, status=503)
@@ -288,6 +294,9 @@ def request_change(request):
     except (ValueError, ValidationError):
         return JsonResponse({'error': 'invalid_input'}, status=400)
     target = document.get('fault') or document.get('op') or document.get('drill') or document.get('group') or document.get('handle') or ''
+    if action in INSTRUCTOR_ACTIONS and INSTRUCT not in ROLES.get(request.user.profile.role, set()):
+        audit(request, 'facility_' + action, 'denied', target)
+        return JsonResponse({'error': 'permission_denied'}, status=403)
     try:
         component = module(registry())
         if component is None:

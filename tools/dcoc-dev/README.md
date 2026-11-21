@@ -16,6 +16,7 @@ python tools/dcoc-dev/server.py --port 8765 --state tools/dcoc-dev/.run   # 상�
 ```
 
 - 화면: <http://127.0.0.1:8765/core/#module/m4-facility> (DCOC), <http://127.0.0.1:8765/core/#datacenter> (관제 지도)
+- 권한 운영 방식: 학생 계정은 운영자(operator), 강사는 관리자(admin) 역할로 만든다. 강사 도구(장애 넣기·되돌리기)는 관리자에게만 보이고 서버도 관리자 요청만 받는다(`facility.instruct`).
 - 조작: <http://127.0.0.1:8765/dev> — 권한(관리자·운영자·조회자), 라이선스(유효·만료·없음), 강사 반 전체 장애(원인 숨김/공개) 흉내
 - 필요: Python 3.12, `pyyaml`. 시뮬레이터 레포 위치가 다르면 `--livefire <경로>`.
 
