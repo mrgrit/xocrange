@@ -75,10 +75,35 @@ arguments_sha256·result_sha256·module)를 추가했다. 기존 생성 주체�
 - 내용: 정책이 허용한 호출(`outcome: allowed`)과 거부한 호출(`blocked`, severity 30) 모두 남는다. 인자와
   결과는 해시만 남고 내용은 남지 않는다. 식별 discriminator는 `receipt`.
 - Wazuh 원본 입력으로 보내지 않는다(디코더 없음). 네트워크 출발지가 없으므로 출발지별 집계에 주소로 나타나지 않는다.
-- Wazuh C1 경로: 전달 큐는 `xoc.event/0.2.0`과 `0.3.0`을 받고, 규칙 110000이 두 버전을 묶으며 110009가
+- Wazuh C1 경로: 전달 큐는 `xoc.event/0.2.0`과 `0.3.0`(v0.4부터 `0.4.0`도)을 받고, 규칙 110000이 이 버전들을 묶으며 110009가
   `xoc-agent`를 확인한다(Wazuh 정규식에는 `[23]` 같은 문자 묶음이 없어 `|`로 쓴다).
 - SIEM UI 인덱스 매핑에 `agent.*`(keyword)를 더했다. 매핑이 바뀌면 원래는 기존 이벤트 전체를 다시 내보내는데, 큰
   저장소에서는 이 갱신이 서비스 시작 제한(600초)을 넘었다(2026-11-16 데모 Core). 그래서 저장된 매핑 digest가
   "새 매핑에서 `agent`만 뺀 것"과 같으면 `xoc-agent` 이벤트만 다시 내보낸다(`indexer.SCOPED_FIELDS`). 그 밖의 매핑
   변경은 전과 같이 전체를 다시 내보낸다.
 - Core는 기록만 저장한다. 에이전트 실행·모델 호출은 유료 모듈 쪽에 있다.
+
+## v0.4 — 시설 사건(`xoc-facility`)
+
+생성 주체 `xoc-facility`, category `facility`, 선택 필드 `facility`(kind·level·alarm·asset_id·fault·target·
+requested_by·message)를 추가했다. 기존 생성 주체는 그대로 `0.2.0`, `xoc-agent`는 `0.3.0`이고 `xoc-facility`
+이벤트만 `xoc.event/0.4.0`이다.
+
+- 원천: 시설 시뮬레이터 모듈(Live Fire M4, [ADR 0014](../adr/0014-facility-module-channel.md))이 자기 상태 볼륨의
+  `events.jsonl`에 사건마다 `xoc.facility-event/0.1.0` JSON 한 줄을 쓴다. 사건 종류(`kind`)는 경보 발생
+  `alarm`, 경보 해제 등 `info`, 장애 넣기 `inject`, 되돌리기 `clear`, 자동 복구 `recover`, 운영 조작 `action`.
+  모듈 0.2.0부터 같은 종류로 더 남긴다: 운영 조치 시작·완료 `action`(`target`·`requested_by`), 학생이 시작한
+  훈련 시작 `inject`·중지/종료 `clear`(이름만, 장애 이름·대상 없음), 연쇄 장애 발생 `inject`·운영자 조치로 해소
+  `recover`(`fault`·`target`). 원인을 숨긴 장애(학생 훈련, 원인 숨김 강사 반 전체 장애와 그 안에서 번진 연쇄
+  장애)는 `fault`·`target`과 장애 이름을 남기지 않는다.
+  파일이 4 MiB를 넘으면 모듈이 `events.jsonl.xoc-<시각>`으로 바꿔 두고(수집기가 끝까지 읽는다) 최근 2세대만 남긴다.
+- 수집: 호스트 수집기가 수집원 `facility-events`로 읽어 필드를 하나씩 검사한다(`<`·`>`·제어 문자 금지, 길이·형식
+  제한, 모르는 필드는 버림). tenant_id/range_id는 수집기의 서버 측 식별에서만 온다.
+- 심각도: 경보는 `critical` 80, `warning` 50. 장애 넣기 30, 그 밖은 10~20. event.type은 경보 `alert`, 넣기·
+  되돌리기·조작 `audit`, 복구·해제 `observation`.
+- Wazuh: 원본 입력으로는 보내지 않는다(디코더 없음). C1 경로에서 규칙 110010(시설 사건, 수준 3),
+  110011(장애 넣기, 5), 110012(주의 경보, 7), 110013(위험 경보, 12)이 확인한다. 실제 엔진 확인은
+  `tests/integration/c1_rules.py`(일회용 Manager 컨테이너).
+- SIEM UI 인덱스 매핑에 `facility.*`(keyword)를 더했다. `agent`와 같이 범위가 정해진 추가라서
+  (`indexer.SCOPED_FIELDS`) 기존 이벤트 전체를 다시 내보내지 않는다.
+- Core는 기록만 저장한다. 시뮬레이터와 장애 주입은 유료 모듈 쪽에 있다.

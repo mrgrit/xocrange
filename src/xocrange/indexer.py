@@ -119,7 +119,7 @@ def export(store, client):
 # Mapping additions whose fields only these producers carry. Adding one re-exports just
 # those events; a full re-export of a multi-GiB store cannot finish within the service
 # start deadline (it rewrites every row before the Indexer sees one).
-SCOPED_FIELDS = {'agent': ('xoc-agent',)}
+SCOPED_FIELDS = {'agent': ('xoc-agent',), 'facility': ('xoc-facility',)}
 
 
 def mapping_digest(template, without=()):

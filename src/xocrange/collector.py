@@ -242,6 +242,17 @@ class Collector:
                     or volume.get('Driver') != 'local' or not mount.is_absolute() or any(p.is_symlink() for p in (mount, *mount.parents))):
                 raise XocError('untrusted_log_volume', 'Activity volume ownership differs from the validated plan.')
             self.activity['agent-' + name.removeprefix('activity-')] = mount / 'activity.jsonl'
+        # C1 v0.4: what happened in the facility simulator (ADR 0014). The module writes
+        # events.jsonl on its state volume; one module at most holds that volume.
+        self.facility = None
+        if 'facility-state' in (result['compose'].get('volumes') or {}):
+            volume, = json.loads(self.engine.run(['volume', 'inspect', result['compose']['name'] + '_facility-state']))
+            labels = volume.get('Labels') or {}
+            mount = Path(volume['Mountpoint'])
+            if (labels.get('com.docker.compose.project') != result['compose']['name'] or labels.get('com.docker.compose.volume') != 'facility-state'
+                    or volume.get('Driver') != 'local' or not mount.is_absolute() or any(p.is_symlink() for p in (mount, *mount.parents))):
+                raise XocError('untrusted_log_volume', 'Facility volume ownership differs from the validated plan.')
+            self.facility = mount / 'events.jsonl'
         from .entitlements import collection_identity
         self.store = Store(directory, identity=collection_identity(root))
         self.indexer = None
@@ -253,7 +264,9 @@ class Collector:
             self.store.set_cursor('native-input-enabled', True)
             revision=hashlib.sha256(b''.join((root/'components/siem'/name).read_bytes() for name in ('Dockerfile','native-decoders.xml','native-rules.xml'))).hexdigest()
             if self.store.cursor('native-rules-revision') != revision:
-                self.store.db.execute("UPDATE native_inputs SET error=NULL,sent=NULL WHERE error='native_decoder_missing'")
+                # Only unconfirmed inputs carry this mark; the filter lets the pending index
+                # find them instead of reading the whole table at start-up.
+                self.store.db.execute("UPDATE native_inputs SET error=NULL,sent=NULL WHERE confirmed IS NULL AND error='native_decoder_missing'")
                 self.store.set_cursor('native-rules-revision',revision)
             if not self.indexer:
                 self.store.db.execute("DELETE FROM health WHERE source IN ('indexer','native-indexer')")
@@ -491,12 +504,15 @@ class Collector:
                 self.store.health(source_id, 'ready' if chunks else 'awaiting-file')
             except (XocError, OSError, ValueError, subprocess.TimeoutExpired) as exc:
                 self.store.health(source_id, getattr(exc, 'code', 'collection_failed'))
-        for source_id, path in getattr(self, 'activity', {}).items():
+        sources = [('xoc-agent', source_id, path) for source_id, path in getattr(self, 'activity', {}).items()]
+        if getattr(self, 'facility', None):
+            sources.append(('xoc-facility', 'facility-events', self.facility))
+        for source, source_id, path in sources:
             try:
                 chunks = self.read_files(source_id, None, None, str(path))
                 with self.store.transaction():
                     for chunk in chunks:
-                        self.accept_chunk('xoc-agent', source_id, chunk)
+                        self.accept_chunk(source, source_id, chunk)
                 self.store.health(source_id, 'ready' if chunks else 'awaiting-file')
             except (XocError, OSError, ValueError, subprocess.TimeoutExpired) as exc:
                 self.store.health(source_id, getattr(exc, 'code', 'collection_failed'))

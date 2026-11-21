@@ -63,7 +63,7 @@ def parser():
     platform = commands.add_parser('platform', help='Local platform administrator access')
     platform.add_argument('action', choices=['credentials', 'targets'])
     licensing = commands.add_parser('license', help='Offline C7 verification and public trust keys')
-    licensing.add_argument('action', choices=['status', 'trust', 'activate'])
+    licensing.add_argument('action', choices=['status', 'trust', 'activate', 'renew'])
     licensing.add_argument('--file', type=Path)
     licensing.add_argument('--key-id')
     licensing.add_argument('--institution')
@@ -151,6 +151,11 @@ def run(args):
         return serve()
     if args.command == 'license':
         from .entitlements import manage
+        if args.action == 'renew':            # the school's Range Control issues the current license again
+            from .entitlements import renew
+            from .operations import operation_lock
+            with operation_lock():
+                return renew(args.root)
         if args.action != 'status' and not args.file:
             raise XocError('missing_arguments', 'A public key or signed entitlement --file is required.')
         if args.action == 'status':

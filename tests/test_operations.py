@@ -318,3 +318,20 @@ def test_evidence_service_is_stopped_backed_up_restored_and_resumed(monkeypatch)
     ops.resume(['xocrange-core.service', 'xocrange-collector.service', 'xocrange-evidence.service'])
     started = [a[2] for a in calls if a[:2] == ['systemctl', 'start']]
     assert started == ['xocrange-core.service', 'xocrange-collector.service', 'xocrange-evidence.service']
+
+
+def test_update_is_refused_when_its_rollback_would_not_fit(tmp_path):
+    backups = tmp_path/'backups'
+    assert ops.rollback_room(backups) == {'status': 'unknown'}           # first update: nothing to estimate from
+    for name, expanded in (('before-install-20261119T000000-1', 10), ('before-install-20261120T000000-2', 1024**3)):
+        (backups/name).mkdir(parents=True)
+        (backups/name/'manifest.json').write_text(json.dumps({'files': {
+            'state-siem.tar.gz': {'bytes': expanded // 2, 'expanded_bytes': expanded},
+            'images.tar': {'bytes': 50 * 1024**3, 'expanded_bytes': 50 * 1024**3}}}))
+    needed = int(1024**3 // 2 + 1024**3 * 2.2 + 4 * 1024**3)             # the newest checkpoint, images left out
+    assert ops.rollback_room(backups, free=needed) == {'status': 'ok', 'needed_bytes': needed, 'free_bytes': needed}
+    with pytest.raises(XocError) as error:
+        ops.rollback_room(backups, free=needed - 1)
+    assert error.value.code == 'update_space' and 'failed-state' in str(error.value)
+    (backups/'before-install-20261120T000000-2'/'manifest.json').write_text('{}')
+    assert ops.rollback_room(backups) == {'status': 'unknown'}

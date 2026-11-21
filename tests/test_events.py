@@ -177,3 +177,32 @@ def test_agent_activity_fails_closed(context, change):
     import json
     with pytest.raises(XocError):
         normalize("xoc-agent", json.dumps(AGENT | change).encode(), context)
+
+
+FACILITY = {"schema_version": "xoc.facility-event/0.1.0", "at": "2026-11-20T12:26:46Z", "kind": "alarm", "level": "critical",
+            "alarm": "crac_stopped.crac-01", "asset_id": "crac-01", "message": "경보: 항온항습기 정지 (항온항습기 A)"}
+
+
+def test_facility_event_is_c1_v04_with_server_side_identity(context):
+    event, = normalize("xoc-facility", json.dumps(FACILITY).encode(), context)
+    assert event["schema_version"] == "xoc.event/0.4.0" and event["producer"] == "xoc-facility"
+    assert event["event"] == {"category": "facility", "type": "alert", "action": "alarm", "outcome": "observed", "severity": 80}
+    assert event["facility"] == {k: FACILITY[k] for k in ("kind", "message", "level", "alarm", "asset_id")}
+    assert event["timestamp"].startswith("2026-11-20T12:26:46")
+    warning, = normalize("xoc-facility", json.dumps(FACILITY | {"level": "warning"}).encode(), context)
+    assert warning["event"]["severity"] == 50
+    injected, = normalize("xoc-facility", json.dumps({"schema_version": FACILITY["schema_version"], "at": FACILITY["at"],
+                          "kind": "inject", "fault": "crac_fail", "target": "crac-01", "requested_by": "student01",
+                          "message": "장애 주입: 항온항습기 정지 (항온항습기 A), 3분"}).encode(), context)
+    assert injected["event"]["type"] == "audit" and injected["facility"]["requested_by"] == "student01"
+    forged, = normalize("xoc-facility", json.dumps(FACILITY | {"tenant_id": "other", "range_id": "other"}).encode(), context)
+    assert forged["tenant_id"] == "community" and forged["range_id"] == "range-01"     # identity is server-side
+    assert forged["facility"] == event["facility"]                                     # unknown keys are not copied
+
+
+@pytest.mark.parametrize("change", [{"schema_version": "x"}, {"kind": "grade"}, {"level": "info"}, {"message": ""},
+                                    {"message": "<b>x</b>"}, {"message": "x" * 241}, {"alarm": "a b"}, {"asset_id": "CRAC 01"},
+                                    {"fault": "rm -rf"}, {"target": "../etc"}, {"requested_by": "a\nb"}, {"message": None}])
+def test_facility_event_fails_closed(context, change):
+    with pytest.raises(XocError):
+        normalize("xoc-facility", json.dumps(FACILITY | change).encode(), context)

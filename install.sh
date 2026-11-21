@@ -462,6 +462,17 @@ sysctl -w net.bridge.bridge-nf-call-iptables=0
 
 stage image-build
 if [[ -f $state/last-install.json ]]; then
+    # An update builds its images while the running installation is still untouched: a build that
+    # fails here ends the update with nothing stopped and nothing to restore. The running services
+    # keep their own retained images (images.lock.json), so new tags do not affect them. The build
+    # after the checkpoint then comes from the cache.
+    # Space for a rollback is checked first (seconds), then again by the checkpoint after the
+    # build has taken its share.
+    "$runtime/bin/python" "$release/scripts/appliance-ops.py" room "$state/backups"
+    if [[ ! -f $release/.local/plans/$plan_name/images.lock.json ]]; then
+        "${compose[@]}" pull --ignore-buildable
+        "${compose[@]}" build
+    fi
     checkpoint=$state/backups/before-install-$run_id
     "$runtime/bin/python" "$release/scripts/appliance-ops.py" checkpoint "$checkpoint"
     stage update-transaction

@@ -244,9 +244,12 @@ def test_agent_activity_is_stored_without_native_forwarding_and_left_out_of_sour
                "tool": "siem_search", "decision": "allow", "receipt": "rcpt-0123456789abcdef", "module": "m7-operator"}
     store.ingest('xoc-agent', 'agent-m7-operator', 1, json.dumps(receipt).encode(), observed='2026-11-14T00:20:01.000000Z')
     store.ingest('suricata', 'ips-eve', 1, suricata(ATTACKER, 9100001), observed='2026-11-14T00:10:01.000000Z')
+    alarm = {"schema_version": "xoc.facility-event/0.1.0", "at": "2026-11-14T00:21:00Z", "kind": "alarm", "level": "warning",
+             "alarm": "aisle_temp_high.A", "message": "경보: 구역 온도 상승 (2F A열)"}
+    store.ingest('xoc-facility', 'facility-events', 1, json.dumps(alarm).encode(), observed='2026-11-14T00:21:01.000000Z')
     store.db.commit()
     rows = [tuple(r) for r in store.db.execute("SELECT producer, json_extract(event,'$.schema_version') FROM events ORDER BY producer")]
-    assert rows == [('suricata', 'xoc.event/0.2.0'), ('xoc-agent', 'xoc.event/0.3.0')]
+    assert rows == [('suricata', 'xoc.event/0.2.0'), ('xoc-agent', 'xoc.event/0.3.0'), ('xoc-facility', 'xoc.event/0.4.0')]
     assert [r[0] for r in store.db.execute('SELECT source FROM native_inputs')] == ['suricata']
     sources = Sources(tmp_path / 'siem' / 'events.sqlite3', now=lambda: __import__('datetime').datetime(2026, 11, 14, 12, tzinfo=__import__('datetime').timezone.utc))
     result = evaluate(sources, {'schema_version': QUERY_V2, 'request_id': 'r1', 'checks': [

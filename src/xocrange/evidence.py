@@ -405,6 +405,18 @@ def evidence_modules(result):
     return modules
 
 
+def credential_modules(result):
+    """Selected modules that hold a Range Control credentials volume: id -> (service names, container uid)."""
+    modules = {}
+    services = result['compose']['services']
+    for identifier in result['lock']['selected']:
+        owned = [name for name, service in services.items()
+                 if f'module-{identifier}-credentials:/run/xoc-module:ro' in service.get('volumes', [])]
+        if owned:
+            modules[identifier] = (owned, int(str(services[owned[0]]['user']).split(':')[0]))
+    return modules
+
+
 def host_sources(engine, result):
     project = result['compose']['name']
     policy = {}
@@ -532,9 +544,9 @@ def install_credentials(identifier, source: Path):
     if os.geteuid() != 0:
         raise XocError('root_required', 'Module credentials require sudo.')
     _, engine, result = _installed()
-    modules = evidence_modules(result)
+    modules = credential_modules(result)
     if identifier not in modules:
-        raise XocError('module_not_entitled', 'The module is not installed with evidence-query.')
+        raise XocError('module_not_entitled', 'The module is not installed with a Range Control credentials volume.')
     target = _volume(engine, result['compose']['name'], f'module-{identifier}-credentials')
     uid = modules[identifier][1]
     for name in CREDENTIAL_FILES:

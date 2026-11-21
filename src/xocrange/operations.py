@@ -357,6 +357,33 @@ def create(output, *, portable=True, keep_stopped=False):
     return {'status':'complete', 'path':str(output), 'archives':len(metadata['files']), 'bytes':sum(v['bytes'] for v in metadata['files'].values()), 'portable':portable}
 
 
+def rollback_room(backups=None, free=None):
+    """Refuse an update whose rollback could not run.
+
+    A failed update is undone by restoring its checkpoint, which needs free space for the
+    checkpoint itself and for staging the restore (see restore()). Found too late, the
+    appliance is left stopped and waiting for manual recovery. The newest earlier checkpoint
+    tells how large this one will be; without one there is nothing to estimate from."""
+    base = Path(backups) if backups else STATE/'backups'
+    earlier = sorted((p for p in base.glob('before-install-*') if (p/'manifest.json').is_file() and not p.is_symlink()),
+                     key=lambda p: p.name) if base.is_dir() else []
+    if not earlier:
+        return {'status': 'unknown'}
+    try:
+        files = json.loads((earlier[-1]/'manifest.json').read_text())['files']
+        expanded = sum(i['expanded_bytes'] for n, i in files.items() if n != 'images.tar')
+        stored = sum(i['bytes'] for n, i in files.items() if n != 'images.tar')
+    except (OSError, ValueError, KeyError, TypeError):
+        return {'status': 'unknown'}
+    needed = int(stored + expanded * 2.2 + 4*1024**3)
+    available = shutil.disk_usage(base).free if free is None else free
+    if available < needed:
+        raise XocError('update_space', f'An update needs about {needed // 1024**2} MiB free to be able to roll back; '
+                       f'{available // 1024**2} MiB is free. Old copies under {STATE}/failed-state are not removed automatically; '
+                       'unused images and the Docker build cache can also be cleared.')
+    return {'status': 'ok', 'needed_bytes': needed, 'free_bytes': available}
+
+
 def prune_checkpoints(current, backups=None):
     """Keep only the checkpoint of the install that just completed.
 

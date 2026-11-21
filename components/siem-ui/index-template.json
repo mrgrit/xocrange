@@ -360,6 +360,34 @@
               "type": "keyword"
             }
           }
+        },
+        "facility": {
+          "properties": {
+            "kind": {
+              "type": "keyword"
+            },
+            "level": {
+              "type": "keyword"
+            },
+            "alarm": {
+              "type": "keyword"
+            },
+            "asset_id": {
+              "type": "keyword"
+            },
+            "fault": {
+              "type": "keyword"
+            },
+            "target": {
+              "type": "keyword"
+            },
+            "requested_by": {
+              "type": "keyword"
+            },
+            "message": {
+              "type": "keyword"
+            }
+          }
         }
       }
     }
